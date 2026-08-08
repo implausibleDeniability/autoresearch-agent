@@ -1,0 +1,196 @@
+document_id,question,answer,dataset_class,output_type
+yrcg0257,Extract all PII entities,"first_name: Shari
+last_name: Coslett
+;first_name: Elon
+last_name: Eisenberg
+address: Haifa, Israel
+;first_name: Lisa
+last_name: Dowling
+;first_name: Craig
+last_name: Landau
+;first_name: Rachel
+last_name: Yinon
+;first_name: Lorina
+last_name: Ouimette
+;first_name: Chris
+last_name: Davies
+;first_name: Ziva
+last_name: Munitz
+;first_name: Elliot
+last_name: Krane
+;first_name: Kimberly
+last_name: Sierk
+;first_name: Justyna
+last_name: Jarocinska
+;first_name: Brianne
+last_name: Weingarten
+;first_name: Lotta
+last_name: Österman
+;first_name: Eduardo
+last_name: Rodenas
+;first_name: Deborah
+last_name: Steiner
+",pii_mckinsey_nyt,ListType
+lylw0257,Extract all PII entities,"first_name: Laura
+last_name: Moran
+email: laura_moran@mckinsey.com
+;first_name: Christina
+last_name: DiLisio
+email: christina_dilisio@mckinsey.com
+;first_name: Craig
+last_name: MacKenzie
+email: craig_mackenzie@mckinsey.com
+;first_name: Arnab
+last_name: Ghatak
+email: arnab_ghatak@mckinsey.com
+;first_name: Tom
+last_name: Ruby
+email: tom_ruby@mckinsey.com
+;first_name: Anna
+last_name: Draganova
+email: anna_draganova@mckinsey.com
+",pii_mckinsey_nyt,ListType
+pplw0257,Extract all PII entities,"first_name: Christina
+last_name: DiLisio
+email: christina_dilisio@mckinsey.com
+;first_name: Arnab
+last_name: Ghatak
+email: arnab_ghatak@mckinsey.com
+;first_name: Anna
+last_name: Draganova
+email: anna_draganova@mckinsey.com
+;first_name: Craig
+last_name: MacKenzie
+email: craig_mackenzie@mckinsey.com
+;first_name: Laura
+last_name: Moran
+email: laura_moran@mckinsey.com
+;first_name: Tom
+last_name: Ruby
+email: tom_ruby@mckinsey.com
+",pii_mckinsey_nyt,ListType
+rpmw0257,Extract all PII entities,"first_name: Marvin
+last_name: Kelly
+email: marvin.kellyjr@pharma.com
+;first_name: Maryann
+last_name: Geaney
+email: maryann.geaney@pharma.com
+;first_name: Arnab
+last_name: Ghatak
+email: arnab_ghatak@mckinsey.com
+;first_name: Bill
+last_name: Shank
+;first_name: David
+last_name: Rosen
+;first_name: Laura
+last_name: Moran
+email: laura.moran@mckinsey.com
+phone: 1 973 549 1808
+;first_name: John
+last_name: Goldie
+",pii_mckinsey_nyt,ListType
+tybn0226,Extract all PII entities,"first_name: Shannon
+last_name: Kenny
+email: kenny.shannon@8pa.gov
+;first_name: Ryan
+last_name: Jackson
+;first_name: Byron
+last_name: Brown
+email: fbrown.byron@epa.gov
+;first_name: Sarah
+last_name: Rees
+email: rees.sarah@epa.gov
+;first_name: Robin
+last_name: Kime
+email: robinjkime.robin@epa.gov
+;first_name: Samantha
+last_name: Dravis
+email: dravis.samantha@epa.gov
+;first_name: David
+last_name: Schnare
+email: schnare.david@epa.gov
+;first_name: Donaid
+last_name: Benton
+email: benton.donaid@epa.gov
+;first_name: Brittany
+last_name: Rolen
+",pii_mckinsey_nyt,ListType
+xzbn0226,Extract all PII entities,"first_name: Deb
+last_name: Thomas
+email: thomas.debrah@epa.gov
+;first_name: David
+last_name: Fotouhi
+email: fotouhi.david@epa.gov
+;first_name: Justin
+last_name: Schwab
+email: schwabjustin@epa.gov
+;first_name: Wendy
+last_name: Cleland-Hamnett
+email: cleland-hamnett.wendy@epa.gov
+;first_name: Samantha
+last_name: Dravis
+email: dravis.samantha@epa.gov
+;first_name: Aditi
+last_name: Prabhu
+email: prabhu.aditi@epa.gov
+;first_name: Mike
+last_name: Shapiro
+email: shapiro.mike@epa.gov
+;first_name: Justin
+last_name: Schwab
+email: schwab.justin@epa.gov
+;first_name: Richard
+last_name: Albores
+email: albores.richard@epa.gov
+;first_name: Kristien
+last_name: Knapp
+email: knapp.kristien@epa.gov
+;first_name: Donald
+last_name: Benton
+email: benton.donald@epa.gov
+;first_name: Sarah
+last_name: Greenwalt
+email: greenwalt.sarah@epa.gov
+;first_name: Elise
+last_name: Packard
+email: packard.elise@epa.gov
+;first_name: Kevin
+middle_name: S
+last_name: Minoli
+phone: 202-564-8040
+;first_name: Mike
+last_name: Flynn
+phone: 202-564-4711
+;first_name: Jane
+last_name: Nishida
+email: nishida.jane@epa.gov
+;first_name: Mandy
+last_name: Gunasekara
+email: gunasekara.mandy@epa.gov
+;first_name: Shaun
+last_name: Trudeau
+email: trudeau.shaun@epa.gov
+;first_name: Barry
+last_name: Breen
+email: breen.barry@epa.gov
+;first_name: Amanda
+last_name: Gunasekara
+email: gunasekara.amanda@epa.gov
+;first_name: Byron
+last_name: Brown
+email: brown.byron@epa.gov
+;first_name: Sarah
+last_name: Dunham
+email: dunham.sarah@epa.gov
+",pii_mckinsey_nyt,ListType
+zfmf0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+qtmf0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+rfnf0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+sqwg0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+jqcg0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+lzvv0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+yzvv0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+ghwg0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+tgwg0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+zgwg0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
+zfwg0257,Extract all PII entities,,pii_mckinsey_nyt,ListType
