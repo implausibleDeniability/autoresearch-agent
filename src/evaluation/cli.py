@@ -10,10 +10,10 @@ from typing import Dict, List, Literal, Mapping, Sequence, Tuple
 
 import tiktoken
 
-from evaluation import EvaluationResult, evaluate
-from pii_item import PIIItem
 from src.cost_metering.accounting import CostReport, PRICE_TABLE_VERSION
 from src.cost_metering.proxy import MeteringProxy
+from src.evaluation.metrics import EvaluationResult, evaluate
+from src.evaluation.models import PIIItem
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -92,7 +92,7 @@ def _run_solution(
     meter: MeteringProxy,
     timeout: float,
 ) -> Dict[str, List[PIIItem]]:
-    command = [sys.executable, "-m", "evaluation_runner", "--worker", "--module", module]
+    command = [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module]
     completed = subprocess.run(
         command,
         input=json.dumps(texts),
@@ -156,13 +156,15 @@ def _print_result(result: EvaluationResult, *, cost: CostReport, source_tokens: 
 
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
-    parser.add_argument("--dataset", choices=Dataset.all(), required=True)
+    parser.add_argument("--dataset", choices=Dataset.all())
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)
     parsed = parser.parse_args(arguments)
     if parsed.worker and not parsed.module:
         parser.error("--worker requires --module")
+    if not parsed.worker and not parsed.dataset:
+        parser.error("--dataset is required")
     return parsed
 
 

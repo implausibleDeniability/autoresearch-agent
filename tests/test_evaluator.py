@@ -5,10 +5,10 @@ from typing import Mapping, Sequence
 
 import pytest
 
-from evaluation import EvaluationResult, Metrics, evaluate
-from evaluation_runner import Dataset, _parse_arguments
-from pii_item import PIIItem
 from solution import _has_candidate_content
+from src.evaluation.cli import Dataset, _parse_arguments
+from src.evaluation.metrics import EvaluationResult, Metrics, evaluate
+from src.evaluation.models import PIIItem
 
 
 def test_cli_requires_dataset():

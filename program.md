@@ -29,7 +29,7 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Use `uv run python evaluator.py --dataset debug` to debug the pipeline cheaply. Use `uv run python evaluator.py --dataset dev-5k` for routine quality decisions and `uv run python evaluator.py --dataset dev-50k` for broader validation.
+The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Use `uv run python -m src.evaluation.cli --dataset debug` to debug the pipeline cheaply. Use `uv run python -m src.evaluation.cli --dataset dev-5k` for routine quality decisions and `uv run python -m src.evaluation.cli --dataset dev-50k` for broader validation.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
@@ -86,7 +86,7 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
-4. If the change could break execution, first run `uv run python evaluator.py --dataset debug > run.log 2>&1`. Then run the routine quality evaluation with `uv run python evaluator.py --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `dev-50k` only when its expected cost also stays within the per-run limit.
+4. If the change could break execution, first run `uv run python -m src.evaluation.cli --dataset debug > run.log 2>&1`. Then run the routine quality evaluation with `uv run python -m src.evaluation.cli --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `dev-50k` only when its expected cost also stays within the per-run limit.
 5. Read out the results: `grep -E '^(people|entity)_(precision|recall|f1)=|^(document_accuracy|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)

@@ -9,7 +9,7 @@ from openai import APIError, OpenAI
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel, ConfigDict, Field
 
-from pii_item import PIIItem, PIIValues
+from src.evaluation.models import PIIItem, PIIValues
 
 DETECTION_MODEL = "gpt-4o-mini-2024-07-18"
 STRUCTURING_MODEL = "gpt-4o-2024-08-06"
