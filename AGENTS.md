@@ -10,4 +10,5 @@
 - In the main workspace, check out `main` and pull the latest remote `main` before creating the feature branch. Do not create the branch or worktree unless the pull succeeds.
 - Create the feature branch from the updated `main`.
 - Choose a filesystem-safe branch name and create its worktree at `/Users/maxon/Documents/code/aaMachineLearning/projects/pii-autoresearch-worktrees/<branch-name>`, using the branch name as the feature folder name.
+- Before beginning work in the new worktree, identify development-critical files that are intentionally excluded from Git, such as `.env` and other local configuration or credential files required by the project. Copy each required file from the main workspace into the equivalent location in the new worktree, preserve restrictive permissions, and confirm that it remains ignored by Git. Do not copy unrelated ignored files or commit secrets.
 - Perform all implementation and validation inside the feature worktree. Leave the main workspace on `main` and unchanged after the worktree is created.
