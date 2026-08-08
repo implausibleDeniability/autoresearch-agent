@@ -1,5 +1,6 @@
 # Commit Discipline
 
+- Always squash pull requests when merging them into `main`.
 - When making changes directly on `main`, stage and commit every file that belongs to the change before finishing. Do not include unrelated changes.
 - When working in a separate worktree, committing is optional unless the user explicitly requests it.
 - When the user asks for a correction to a previous related change, make the correction and squash it into the original commit. Do not create a series of follow-up commits for iterations on the same change.
