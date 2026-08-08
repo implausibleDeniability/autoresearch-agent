@@ -1,0 +1,37 @@
+[project]
+name = "pii-autoresearch"
+version = "0.1.0"
+description = "Autonomous research for improving PII extraction quality and cost"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-text-splitters>=1.0.0",
+    "openai>=2.0.0",
+    "pydantic>=2.0.0",
+    "tiktoken>=0.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.0.0",
+    "flake8>=7.0.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=6.0.0",
+]
+
+[tool.black]
+line-length = 110
+target-version = ["py312"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not live'"
+markers = [
+    "live: uses the OpenAI API and incurs cost",
+]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
