@@ -4,11 +4,12 @@ from typing import Dict, List, Sequence
 
 import pytest
 
-from baseline_solution import extract_pii
-from evaluator import DEFAULT_GROUND_TRUTH_PATH, EvaluationResult, evaluate
+from solution import extract_pii
+from evaluation import EvaluationResult, evaluate
 from pii_item import PIIItem
 
-DEV_TEXTS = Path("data/dev/texts")
+DEV_TEXTS = Path("data/dev-50k/texts")
+DEV_GROUND_TRUTH = Path("data/dev-50k/ground_truth.json")
 SMALL_DOCUMENTS = ("fjwg0257", "pzvv0257", "nrbn0226")
 LARGE_DOCUMENT = "rtbn0226"
 
@@ -32,6 +33,8 @@ def test_live_synthetic_positive_and_negative_extraction():
 def test_live_development_evaluation(tmp_path: Path):
     # setup
     small_ground_truth = _filter_ground_truth(tmp_path, document_ids=SMALL_DOCUMENTS)
+    full_document_ids = (*SMALL_DOCUMENTS, LARGE_DOCUMENT)
+    full_ground_truth = _filter_ground_truth(tmp_path, document_ids=full_document_ids)
 
     # operate: evaluate the three smaller documents first
     predictions = _extract_documents(SMALL_DOCUMENTS)
@@ -42,7 +45,7 @@ def test_live_development_evaluation(tmp_path: Path):
 
     # operate: add the large document and evaluate the complete visible split
     predictions[LARGE_DOCUMENT] = extract_pii(_read_document(LARGE_DOCUMENT))
-    full_result = evaluate(predictions)
+    full_result = evaluate(predictions, ground_truth_path=full_ground_truth)
 
     # check: report and retain a minimal quality floor
     print(f"small_dev={small_result}")
@@ -60,7 +63,7 @@ def _read_document(document_id: str) -> str:
 
 def _filter_ground_truth(tmp_path: Path, *, document_ids: Sequence[str]) -> Path:
     target = tmp_path / "ground_truth.json"
-    ground_truth = json.loads(DEFAULT_GROUND_TRUTH_PATH.read_text())
+    ground_truth = json.loads(DEV_GROUND_TRUTH.read_text())
     selected = {document_id: ground_truth[document_id] for document_id in document_ids}
     target.write_text(json.dumps(selected))
     return target

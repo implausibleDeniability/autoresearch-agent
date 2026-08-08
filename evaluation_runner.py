@@ -6,18 +6,18 @@ import subprocess
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Mapping, Sequence
+from typing import Dict, List, Literal, Mapping, Sequence, Tuple
 
 import tiktoken
 
-from evaluator import EvaluationResult, evaluate
+from evaluation import EvaluationResult, evaluate
 from pii_item import PIIItem
 from src.cost_metering.accounting import CostReport, PRICE_TABLE_VERSION
 from src.cost_metering.proxy import MeteringProxy
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
-SOLUTION_MODULES = {"baseline": "baseline_solution", "candidate": "solution"}
+SOLUTION_MODULE = "solution"
 WORKER_RESULT_PREFIX = "EVALUATION_RESULT="
 DEFAULT_TIMEOUT_SECONDS = 300.0
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
@@ -32,6 +32,19 @@ SENSITIVE_CHILD_ENVIRONMENT = {
     "OPENAI_PROJECT_ID",
     UPSTREAM_BASE_URL_ENVIRONMENT,
 }
+
+
+class Dataset:
+    DEBUG = "debug"
+    DEV_5K = "dev-5k"
+    DEV_50K = "dev-50k"
+
+    @classmethod
+    def all(cls) -> Tuple[str, ...]:
+        return cls.DEBUG, cls.DEV_5K, cls.DEV_50K
+
+
+DatasetName = Literal["debug", "dev-5k", "dev-50k"]
 
 
 def main(arguments: Sequence[str] = ()) -> int:
@@ -49,7 +62,7 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
     with MeteringProxy(api_key=api_key, upstream_base_url=upstream_base_url) as meter:
         predictions = _run_solution(
             texts,
-            module=SOLUTION_MODULES[arguments.solution],
+            module=SOLUTION_MODULE,
             meter=meter,
             timeout=arguments.timeout,
         )
@@ -143,8 +156,7 @@ def _print_result(result: EvaluationResult, *, cost: CostReport, source_tokens: 
 
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
-    parser.add_argument("--dataset", choices=("dev", "test"), default="dev")
-    parser.add_argument("--solution", choices=tuple(SOLUTION_MODULES), default="candidate")
+    parser.add_argument("--dataset", choices=Dataset.all(), required=True)
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)

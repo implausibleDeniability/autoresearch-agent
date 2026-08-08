@@ -5,8 +5,29 @@ from typing import Mapping, Sequence
 
 import pytest
 
-from evaluator import EvaluationResult, Metrics, evaluate
+from evaluation import EvaluationResult, Metrics, evaluate
+from evaluation_runner import Dataset, _parse_arguments
 from pii_item import PIIItem
+from solution import _has_candidate_content
+
+
+def test_cli_requires_dataset():
+    with pytest.raises(SystemExit):
+        _parse_arguments(())
+
+
+@pytest.mark.parametrize("dataset", [Dataset.DEV_5K, Dataset.DEV_50K])
+def test_cli_accepts_dev_dataset(dataset: str):
+    assert _parse_arguments(("--dataset", dataset)).dataset == dataset
+
+
+def test_cli_accepts_debug_dataset():
+    assert _parse_arguments(("--dataset", Dataset.DEBUG)).dataset == Dataset.DEBUG
+
+
+def test_candidate_detection_skips_punctuation_only_chunks():
+    assert not _has_candidate_content(".......")
+    assert _has_candidate_content("John Doe")
 
 
 def test_perfect_predictions_score_canonical_labels_and_negative_documents(tmp_path: Path):

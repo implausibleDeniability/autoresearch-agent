@@ -19,7 +19,7 @@ You conduct the research to minimize the cost of the PII-extracting system while
 
 Your PII-extracting system lives in the file `solution.py`. You can change the prompt, add and remove LLM steps, use hard-coded heuristics and algorithms in addition to LLM calls to reduce the cost while preserving the quality. You're not limited to just those three -- you can get creative and make other improvements as well.
 
-The goal is to get the smallest possible cost, such that the precision and recall on the dev set is not worse than the passed thresholds.
+The goal is to get the smallest possible cost, such that the precision and recall on the development sets are not worse than the passed thresholds.
 
 Cost is measured in USD per million source-document tokens:
 
@@ -29,16 +29,19 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). You launch it simply as: `python evaluator.py --dataset dev --solution candidate`
+The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Use `uv run python evaluator.py --dataset debug` to debug the pipeline cheaply. Use `uv run python evaluator.py --dataset dev-5k` for routine quality decisions and `uv run python evaluator.py --dataset dev-50k` for broader validation.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
+
+Every individual evaluation must cost no more than $0.05. Do not start a run when its cost cannot
+be bounded below that limit.
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.1% cost reduction that adds 20 lines of hacky code? Probably not worth it. A 0.1% cost reduction from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
 
 ## Restrictions
 - You can NOT use models from the gpt-5 and later family, and other LLM providers, such as Google or Anthropic. Only use gpt-4o and gpt-4o-mini from OpenAI.
-- You can NOT access files in `data/test` or `data/raw` in any way. These are hidden data: don't read them and don't write scripts, searches, or Git commands that interact with them.
+- You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You may modify and commit only `solution.py` as the experiment implementation.
 - You may create or update `results.tsv`, `REQUESTS.md`, and `run.log` only for experiment logging and communication. Do not commit these files. Do not intentionally modify any other repository files.
 
@@ -83,8 +86,8 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
-4. Run the evaluation: `python evaluator.py --dataset dev --solution candidate > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
-5. Read out the results: `grep -E '^(people|entity)_(precision|recall)=|^cost_usd_per_million_source_tokens=' run.log`
+4. If the change could break execution, first run `uv run python evaluator.py --dataset debug > run.log 2>&1`. Then run the routine quality evaluation with `uv run python evaluator.py --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `dev-50k` only when its expected cost also stays within the per-run limit.
+5. Read out the results: `grep -E '^(people|entity)_(precision|recall|f1)=|^(document_accuracy|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
 8. Keep the baseline. For later experiments, keep the commit only if precision and recall meet their passed thresholds and cost is lower than the incumbent. At equal cost and quality, keep the change only if the implementation is simpler.

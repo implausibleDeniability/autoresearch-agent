@@ -2,7 +2,7 @@ import pytest
 import tiktoken
 from openai.types.chat import ChatCompletion
 
-from baseline_solution import (
+from solution import (
     INNER_CHUNK_SIZE,
     INNER_SEPARATORS,
     OUTPUT_END_TAG,

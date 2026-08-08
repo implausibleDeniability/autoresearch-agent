@@ -127,7 +127,7 @@ def test_evaluator_cli_reports_quality_and_immediate_cost(tmp_path: Path):
 
     # operate
     completed = subprocess.run(
-        [sys.executable, str(repository / "evaluator.py"), "--dataset", "dev", "--solution", "candidate"],
+        [sys.executable, str(repository / "evaluator.py"), "--dataset", "debug"],
         cwd=tmp_path,
         env=environment,
         text=True,
@@ -182,11 +182,11 @@ class _CliUpstreamHandler(BaseHTTPRequestHandler):
 
 
 def _write_cli_fixture(directory: Path) -> None:
-    text_directory = directory / "data" / "dev" / "texts"
+    text_directory = directory / "data" / "debug" / "texts"
     text_directory.mkdir(parents=True)
     (text_directory / "doc.txt").write_text("John")
     ground_truth = {"doc": [{"first_name": ["John"]}]}
-    (directory / "data" / "dev" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (directory / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
     (directory / "solution.py").write_text("""from openai import OpenAI
 from pii_item import PIIItem
 
