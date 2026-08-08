@@ -5,14 +5,15 @@ import os
 import subprocess
 import sys
 from dataclasses import asdict
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Dict, List, Literal, Mapping, Sequence, Tuple
+from typing import Dict, List, Mapping, Sequence, Tuple
 
 import tiktoken
 
 from src.cost_metering.accounting import CostReport, PRICE_TABLE_VERSION
-from src.cost_metering.proxy import MeteringProxy
-from src.evaluation.metrics import EvaluationResult, evaluate
+from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
+from src.evaluation.metrics import EntityMetrics, evaluate
 from src.evaluation.models import PIIItem
 
 DATA_DIRECTORY = Path("data")
@@ -20,6 +21,7 @@ SOURCE_ENCODING = "o200k_base"
 SOLUTION_MODULE = "solution"
 WORKER_RESULT_PREFIX = "EVALUATION_RESULT="
 DEFAULT_TIMEOUT_SECONDS = 300.0
+USD_PER_CENT = Decimal("0.01")
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
 UPSTREAM_BASE_URL_ENVIRONMENT = "OPENAI_UPSTREAM_BASE_URL"
 SENSITIVE_CHILD_ENVIRONMENT = {
@@ -44,9 +46,6 @@ class Dataset:
         return cls.DEBUG, cls.DEV_5K, cls.DEV_50K
 
 
-DatasetName = Literal["debug", "dev-5k", "dev-50k"]
-
-
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
     if parsed.worker:
@@ -59,17 +58,41 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
     source_tokens = _count_source_tokens(texts)
     api_key = _required_environment("OPENAI_API_KEY")
     upstream_base_url = os.environ.get(UPSTREAM_BASE_URL_ENVIRONMENT, DEFAULT_UPSTREAM_BASE_URL)
-    with MeteringProxy(api_key=api_key, upstream_base_url=upstream_base_url) as meter:
-        predictions = _run_solution(
-            texts,
-            module=SOLUTION_MODULE,
-            meter=meter,
-            timeout=arguments.timeout,
-        )
-        cost = meter.seal_and_report()
-    result = evaluate(predictions, ground_truth_path=DATA_DIRECTORY / arguments.dataset / "ground_truth.json")
-    _print_result(result, cost=cost, source_tokens=source_tokens)
+    spending_limit_usd = arguments.cents_limit * USD_PER_CENT
+    predictions, cost = _run_metered_solution(
+        texts,
+        api_key=api_key,
+        upstream_base_url=upstream_base_url,
+        spending_limit_usd=spending_limit_usd,
+        timeout=arguments.timeout,
+    )
+    metrics = evaluate(
+        predictions,
+        ground_truth_path=DATA_DIRECTORY / arguments.dataset / "ground_truth.json",
+    )
+    _print_result(metrics, cost=cost, source_tokens=source_tokens)
     return 0
+
+
+def _run_metered_solution(
+    texts: Mapping[str, str],
+    *,
+    api_key: str,
+    upstream_base_url: str,
+    spending_limit_usd: Decimal,
+    timeout: float,
+) -> Tuple[Dict[str, List[PIIItem]], CostReport]:
+    with MeteringProxy(
+        api_key=api_key,
+        upstream_base_url=upstream_base_url,
+        spending_limit_usd=spending_limit_usd,
+    ) as meter:
+        try:
+            predictions = _run_solution(texts, module=SOLUTION_MODULE, meter=meter, timeout=timeout)
+        except Exception:
+            meter.seal_and_report()
+            raise
+        return predictions, meter.seal_and_report()
 
 
 def _load_texts(dataset: str) -> Dict[str, str]:
@@ -140,14 +163,10 @@ def _run_worker(module_name: str) -> int:
     return 0
 
 
-def _print_result(result: EvaluationResult, *, cost: CostReport, source_tokens: int) -> None:
-    print(f"people_precision={result.people.precision:.6f}")
-    print(f"people_recall={result.people.recall:.6f}")
-    print(f"people_f1={result.people.f1:.6f}")
-    print(f"entity_precision={result.entities.precision:.6f}")
-    print(f"entity_recall={result.entities.recall:.6f}")
-    print(f"entity_f1={result.entities.f1:.6f}")
-    print(f"document_accuracy={result.document_accuracy:.6f}")
+def _print_result(metrics: EntityMetrics, *, cost: CostReport, source_tokens: int) -> None:
+    print(f"f_score={metrics.f_score:.6f}")
+    print(f"precision={metrics.precision:.6f}")
+    print(f"recall={metrics.recall:.6f}")
     print(f"source_tokens={source_tokens}")
     print(f"pricing_version={PRICE_TABLE_VERSION}")
     print(f"api_cost_usd={cost.total_usd:.8f}")
@@ -158,6 +177,12 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
     parser.add_argument("--dataset", choices=Dataset.all())
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--cents-limit",
+        type=_positive_decimal,
+        default=DEFAULT_SPENDING_LIMIT_USD / USD_PER_CENT,
+        help="absolute API spending limit in cents (default: 8)",
+    )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)
     parsed = parser.parse_args(arguments)
@@ -165,6 +190,16 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         parser.error("--worker requires --module")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
+    return parsed
+
+
+def _positive_decimal(value: str) -> Decimal:
+    try:
+        parsed = Decimal(value)
+    except InvalidOperation as error:
+        raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}") from error
+    if not parsed.is_finite() or parsed <= 0:
+        raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}")
     return parsed
 
 

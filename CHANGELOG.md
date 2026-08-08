@@ -12,3 +12,5 @@
 ### Changed
 
 - Explain the project's relationship to Karpathy's Autoresearch and provide an editable `solution.py` candidate entry point.
+- Optimize one recall-weighted F-score (`beta² = 5`) and report precision and recall as diagnostics.
+- Set a $1.50-per-million research target and enforce an evaluator-owned 8-cent default absolute run ceiling with an intentional CLI override.

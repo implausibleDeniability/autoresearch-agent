@@ -12,11 +12,13 @@ from pydantic import BaseModel
 from src.cost_metering.accounting import (
     CHAT_COMPLETIONS_PATH,
     MeteringError,
+    ModelUsage,
+    SpendingLimitExceededError,
     StreamUsageParser,
     parse_response_usage,
     prepare_request,
 )
-from src.cost_metering.proxy import MeteringProxy, MeterState
+from src.cost_metering.proxy import SPENDING_LIMIT_STATUS, MeteringProxy, MeterState
 
 
 class _Answer(BaseModel):
@@ -363,6 +365,49 @@ def test_seal_waits_for_admitted_request_and_rejects_new_requests():
     state.close()
 
     assert report.usages == ()
+
+
+def test_observed_spending_over_limit_rejects_retries_and_fails_run():
+    # setup
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    usage = ModelUsage(
+        model="gpt-4o-2024-08-06",
+        input_tokens=40_000,
+        cached_input_tokens=0,
+        output_tokens=0,
+    )
+    assert state.begin_request("Bearer run-token") == 0
+
+    # operate
+    state.finish_request(usage=usage)
+
+    # check
+    assert state.begin_request("Bearer run-token") == SPENDING_LIMIT_STATUS
+    with pytest.raises(SpendingLimitExceededError, match=r"\$0\.10000000.*limit \$0\.08000000"):
+        state.seal_and_report(timeout=1.0)
+    state.close()
+
+
+def test_in_flight_requests_are_counted_before_bounded_overshoot_failure():
+    # setup
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    usage = ModelUsage(
+        model="gpt-4o-2024-08-06",
+        input_tokens=20_000,
+        cached_input_tokens=0,
+        output_tokens=0,
+    )
+    assert state.begin_request("Bearer run-token") == 0
+    assert state.begin_request("Bearer run-token") == 0
+
+    # operate
+    state.finish_request(usage=usage)
+    state.finish_request(usage=usage)
+
+    # check
+    with pytest.raises(SpendingLimitExceededError, match=r"\$0\.10000000.*bounded overshoot"):
+        state.seal_and_report(timeout=1.0)
+    state.close()
 
 
 def _chat_response(*, usage="default"):

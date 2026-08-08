@@ -13,10 +13,23 @@ from src.cost_metering.accounting import CostReport, ModelUsage
 from src.cost_metering.proxy import MeteringProxy
 from src.evaluation.cli import (
     _count_source_tokens,
+    _parse_arguments,
     _parse_worker_result,
     _run_solution,
     _solution_environment,
 )
+
+
+def test_cli_uses_eight_cent_default_limit():
+    parsed = _parse_arguments(("--dataset", "debug"))
+
+    assert parsed.cents_limit == Decimal("8")
+
+
+def test_cli_accepts_intentional_cent_limit_override():
+    parsed = _parse_arguments(("--dataset", "debug", "--cents-limit", "20"))
+
+    assert parsed.cents_limit == Decimal("20")
 
 
 def test_source_tokens_count_each_original_document_once():
@@ -146,8 +159,23 @@ def test_evaluator_cli_reports_quality_and_immediate_cost(tmp_path: Path):
 
     # check
     assert completed.returncode == 0, completed.stderr
-    assert "people_precision=1.000000" in completed.stdout
-    assert "api_cost_usd=0.00032500" in completed.stdout
+    assert "f_score=1.000000" in completed.stdout
+    assert "precision=1.000000" in completed.stdout
+    assert "recall=1.000000" in completed.stdout
+    assert not any(
+        name in completed.stdout
+        for name in (
+            "people_precision=",
+            "people_recall=",
+            "people_f1=",
+            "entity_f_score=",
+            "entity_precision=",
+            "entity_recall=",
+            "entity_f1=",
+            "document_accuracy=",
+        )
+    )
+    assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
 
 
@@ -166,13 +194,13 @@ class _CliUpstreamHandler(BaseHTTPRequestHandler):
                     }
                 ],
                 "created": 0,
-                "model": "gpt-4o-2024-08-06",
+                "model": "gpt-4o-mini-2024-07-18",
                 "object": "chat.completion",
                 "usage": {
-                    "prompt_tokens": 100,
-                    "completion_tokens": 10,
-                    "total_tokens": 110,
-                    "prompt_tokens_details": {"cached_tokens": 20},
+                    "prompt_tokens": 1,
+                    "completion_tokens": 0,
+                    "total_tokens": 1,
+                    "prompt_tokens_details": {"cached_tokens": 0},
                 },
             }
         ).encode()
@@ -197,6 +225,6 @@ from src.evaluation.models import PIIItem
 
 
 def extract_pii(text):
-    OpenAI().chat.completions.create(model="gpt-4o-2024-08-06", messages=[{"role": "user", "content": text}])
+    OpenAI().chat.completions.create(model="gpt-4o-mini-2024-07-18", messages=[{"role": "user", "content": text}])
     return [PIIItem(first_name=(text,))]
 """)
