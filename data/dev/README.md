@@ -8,3 +8,5 @@ This split contains four deliberately selected documents from the Industry Docum
 - `rtbn0226`: a related EPA document that adds middle-name coverage and keeps shared people within one split.
 
 The selection balances positive and negative examples while covering both source collections and every field type present in the labels. Documents linked by a labelled person are kept in the same split to prevent person-level leakage.
+
+`ground_truth.json` maps each document ID to its document-scoped list of canonical `PIIItem` values.

@@ -1,10 +1,14 @@
+import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Mapping, Sequence, Set
+from typing import Dict, List, Mapping, Sequence, Set
 
-from pii_ground_truth import DEFAULT_GROUND_TRUTH_PATH, DocumentPII, load_ground_truth
 from pii_matching import MatchIndexes, match_people, match_values
 from pii_item import PIIItem
+
+
+DEFAULT_GROUND_TRUTH_PATH = Path("data/dev/ground_truth.json")
+DocumentPII = Dict[str, List[PIIItem]]
 
 
 @dataclass(frozen=True)
@@ -12,14 +16,12 @@ class Metrics:
     true_positive: int = 0
     false_positive: int = 0
     false_negative: int = 0
-    true_negative: int = 0
 
     def __add__(self, other: "Metrics") -> "Metrics":
         return Metrics(
             true_positive=self.true_positive + other.true_positive,
             false_positive=self.false_positive + other.false_positive,
             false_negative=self.false_negative + other.false_negative,
-            true_negative=self.true_negative + other.true_negative,
         )
 
     @property
@@ -37,24 +39,19 @@ class Metrics:
         total = self.precision + self.recall
         return 2 * self.precision * self.recall / total if total else 0.0
 
-    @property
-    def accuracy(self) -> float:
-        total = self.true_positive + self.false_positive + self.false_negative + self.true_negative
-        return (self.true_positive + self.true_negative) / total if total else 0.0
-
 
 @dataclass(frozen=True)
 class EvaluationResult:
     people: Metrics
     entities: Metrics
-    documents: Metrics
+    document_accuracy: float
 
-    def __add__(self, other: "EvaluationResult") -> "EvaluationResult":
-        return EvaluationResult(
-            people=self.people + other.people,
-            entities=self.entities + other.entities,
-            documents=self.documents + other.documents,
-        )
+
+@dataclass(frozen=True)
+class _DocumentResult:
+    people: Metrics
+    entities: Metrics
+    is_correct: bool
 
 
 def evaluate(
@@ -62,10 +59,23 @@ def evaluate(
     *,
     ground_truth_path: Path = DEFAULT_GROUND_TRUTH_PATH,
 ) -> EvaluationResult:
-    ground_truth = load_ground_truth(ground_truth_path)
+    ground_truth = _load_ground_truth(ground_truth_path)
     _validate_prediction_documents(predictions, ground_truth=ground_truth)
     results = [_evaluate_document(predictions.get(key, ()), ground_truth[key]) for key in ground_truth]
     return _sum_results(results)
+
+
+def _load_ground_truth(path: Path) -> DocumentPII:
+    with path.open() as file:
+        serialized = json.load(file)
+    return {
+        document_id: [_deserialize_pii_item(person) for person in people]
+        for document_id, people in serialized.items()
+    }
+
+
+def _deserialize_pii_item(values: Mapping[str, Sequence[str]]) -> PIIItem:
+    return PIIItem(**{field_name: tuple(field_values) for field_name, field_values in values.items()})
 
 
 def _validate_prediction_documents(
@@ -76,19 +86,24 @@ def _validate_prediction_documents(
         raise ValueError(f"Predictions contain unknown document IDs: {unknown}")
 
 
-def _sum_results(results: Sequence[EvaluationResult]) -> EvaluationResult:
-    total = EvaluationResult(people=Metrics(), entities=Metrics(), documents=Metrics())
-    for result in results:
-        total += result
-    return total
-
-
-def _evaluate_document(predictions: Sequence[PIIItem], ground_truth: Sequence[PIIItem]) -> EvaluationResult:
-    matches = match_people(predictions, ground_truth=ground_truth)
+def _sum_results(results: Sequence[_DocumentResult]) -> EvaluationResult:
     return EvaluationResult(
+        people=_sum_metrics([result.people for result in results]),
+        entities=_sum_metrics([result.entities for result in results]),
+        document_accuracy=sum(result.is_correct for result in results) / len(results) if results else 0.0,
+    )
+
+
+def _sum_metrics(metrics: Sequence[Metrics]) -> Metrics:
+    return sum(metrics, Metrics())
+
+
+def _evaluate_document(predictions: Sequence[PIIItem], ground_truth: Sequence[PIIItem]) -> _DocumentResult:
+    matches = match_people(predictions, ground_truth=ground_truth)
+    return _DocumentResult(
         people=_people_metrics(predictions, ground_truth=ground_truth, matches=matches),
         entities=_entity_metrics(predictions, ground_truth=ground_truth, matches=matches),
-        documents=_document_metrics(predictions, ground_truth=ground_truth),
+        is_correct=bool(predictions) == bool(ground_truth),
     )
 
 
@@ -154,14 +169,3 @@ def _unmatched_value_count(people: Sequence[PIIItem], *, matched_indexes: Set[in
 
 def _person_value_count(person: PIIItem) -> int:
     return sum(len(values) for values in asdict(person).values())
-
-
-def _document_metrics(predictions: Sequence[PIIItem], *, ground_truth: Sequence[PIIItem]) -> Metrics:
-    predicted = bool(predictions)
-    expected = bool(ground_truth)
-    return Metrics(
-        true_positive=int(predicted and expected),
-        false_positive=int(predicted and not expected),
-        false_negative=int(not predicted and expected),
-        true_negative=int(not predicted and not expected),
-    )
