@@ -2,7 +2,10 @@
 
 An experiment in autonomous LLM research: can an AI agent improve a system that extracts people—names, surnames, and email addresses—from documents?
 
-The project will provide a labeled dataset, an immutable evaluator, and an agent-editable PII extraction implementation. The agent will run experiments and optimize for extraction quality and cost, while recording each hypothesis and result.
+The project provides a labeled dataset, an immutable evaluator, and an agent-editable PII
+extraction implementation. The agent runs experiments to maximize a recall-weighted entity F-score
+while keeping cost at or below $1.50 per million original source-document tokens, recording each
+hypothesis and result.
 
 Inspired by [Karpathy's Autoresearch](https://github.com/karpathy/autoresearch), this project applies a similar autonomous experimentation loop to improving LLM prompts rather than training neural networks.
 
@@ -53,6 +56,34 @@ API cost:
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-5k
 ```
+
+The primary quality objective is the entity F-score with recall weighted five times as strongly as
+precision:
+
+```
+weighted entity F-score = 6 * precision * recall / (5 * precision + recall)
+```
+
+Entity precision and recall, people-level precision, recall, and F-score, and document accuracy are
+reported as diagnostics. Experiment selection is driven primarily by the weighted entity F-score,
+and only candidates costing at most $1.50 per million original source-document tokens are eligible.
+For effectively equal objective scores, prefer the simpler solution, then the less expensive one.
+
+Before every paid evaluation, estimate both total API cost and normalized cost from the expected
+model calls and the dataset's original source-token count. Do not start an experiment estimated to
+exceed the $1.50 normalized limit.
+
+The evaluator also applies a default absolute guard of $0.08 to every run. Larger intentional runs
+require an explicit limit in cents, for example:
+
+```bash
+uv run python -m src.evaluation.cli --dataset dev-50k --cents-limit 12
+```
+
+An override changes only the absolute guard; it does not relax the $1.50 normalized limit. Larger
+datasets can cost more than $0.08 in total while remaining acceptable per million source tokens, so
+broader validation may need an override after both estimates have been checked. Use the smallest
+justified override and continue to prefer inexpensive development runs.
 
 The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
 short-lived token and redirects the OpenAI SDK through an evaluator-owned localhost meter. The meter
