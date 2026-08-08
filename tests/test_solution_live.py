@@ -8,7 +8,7 @@ from solution import extract_pii
 from evaluation import DEFAULT_GROUND_TRUTH_PATH, EvaluationResult, evaluate
 from pii_item import PIIItem
 
-DEV_TEXTS = Path("data/dev/texts")
+DEV_TEXTS = Path("data/dev-5k/texts")
 SMALL_DOCUMENTS = ("fjwg0257", "pzvv0257", "nrbn0226")
 LARGE_DOCUMENT = "rtbn0226"
 
