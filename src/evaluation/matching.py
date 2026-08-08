@@ -2,8 +2,7 @@ import itertools
 from difflib import SequenceMatcher
 from typing import Callable, Dict, Sequence, Tuple, TypeVar
 
-from pii_item import PIIItem
-
+from src.evaluation.models import PIIItem
 
 SIMILARITY_THRESHOLD = 0.65
 MATCH = 1

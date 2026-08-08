@@ -18,7 +18,7 @@ from solution import (
     _split_text,
     extract_pii,
 )
-from pii_item import PIIItem
+from src.evaluation.models import PIIItem
 
 
 def test_empty_text_returns_without_openai_credentials():

@@ -5,8 +5,8 @@ from typing import Dict, List, Sequence
 import pytest
 
 from solution import extract_pii
-from evaluation import EvaluationResult, evaluate
-from pii_item import PIIItem
+from src.evaluation.metrics import EvaluationResult, evaluate
+from src.evaluation.models import PIIItem
 
 DEV_TEXTS = Path("data/dev-50k/texts")
 DEV_GROUND_TRUTH = Path("data/dev-50k/ground_truth.json")

@@ -9,9 +9,14 @@ from pathlib import Path
 
 import pytest
 
-from evaluation_runner import _count_source_tokens, _parse_worker_result, _run_solution, _solution_environment
 from src.cost_metering.accounting import CostReport, ModelUsage
 from src.cost_metering.proxy import MeteringProxy
+from src.evaluation.cli import (
+    _count_source_tokens,
+    _parse_worker_result,
+    _run_solution,
+    _solution_environment,
+)
 
 
 def test_source_tokens_count_each_original_document_once():
@@ -66,7 +71,7 @@ def test_whitespace_solution_runs_in_subprocess_without_api_calls():
     with MeteringProxy(api_key="real-key", upstream_base_url="http://127.0.0.1:1") as meter:
 
         # operate
-        predictions = _run_solution(texts, module="baseline_solution", meter=meter, timeout=10.0)
+        predictions = _run_solution(texts, module="solution", meter=meter, timeout=10.0)
         report = meter.seal_and_report()
 
     # check
@@ -127,7 +132,7 @@ def test_evaluator_cli_reports_quality_and_immediate_cost(tmp_path: Path):
 
     # operate
     completed = subprocess.run(
-        [sys.executable, str(repository / "evaluator.py"), "--dataset", "debug"],
+        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug"],
         cwd=tmp_path,
         env=environment,
         text=True,
@@ -188,7 +193,7 @@ def _write_cli_fixture(directory: Path) -> None:
     ground_truth = {"doc": [{"first_name": ["John"]}]}
     (directory / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
     (directory / "solution.py").write_text("""from openai import OpenAI
-from pii_item import PIIItem
+from src.evaluation.models import PIIItem
 
 
 def extract_pii(text):

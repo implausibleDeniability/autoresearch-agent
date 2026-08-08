@@ -3,8 +3,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Mapping, Sequence, Set
 
-from pii_matching import MatchIndexes, match_people, match_values
-from pii_item import PIIItem
+from src.evaluation.matching import MatchIndexes, match_people, match_values
+from src.evaluation.models import PIIItem
 
 DEFAULT_GROUND_TRUTH_PATH = Path("data/dev-5k/ground_truth.json")
 DocumentPII = Dict[str, List[PIIItem]]

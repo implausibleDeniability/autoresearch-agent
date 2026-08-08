@@ -34,9 +34,9 @@ people = extract_pii("John Smith can be reached at john@example.com.")
 Evaluate the solution on one complete dataset split:
 
 ```bash
-uv run python evaluator.py --dataset debug
-uv run python evaluator.py --dataset dev-5k
-uv run python evaluator.py --dataset dev-50k
+uv run python -m src.evaluation.cli --dataset debug
+uv run python -m src.evaluation.cli --dataset dev-5k
+uv run python -m src.evaluation.cli --dataset dev-50k
 ```
 
 Use `debug` to check that an experiment works, `dev-5k` for routine quality comparisons, and
@@ -47,11 +47,11 @@ development-data checks.
 
 ## Evaluation and cost
 
-`evaluator.py` runs a baseline or editable candidate solution and reports quality plus immediate API
-cost:
+The evaluation CLI runs a baseline or editable candidate solution and reports quality plus immediate
+API cost:
 
 ```bash
-uv run python evaluator.py --dataset dev-5k
+uv run python -m src.evaluation.cli --dataset dev-5k
 ```
 
 The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
