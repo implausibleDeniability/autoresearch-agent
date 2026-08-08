@@ -9,15 +9,14 @@ import pytest
 from openai import OpenAI
 from pydantic import BaseModel
 
-from cost_accounting import (
+from src.cost_metering.accounting import (
     CHAT_COMPLETIONS_PATH,
     MeteringError,
     StreamUsageParser,
     parse_response_usage,
     prepare_request,
 )
-from cost_meter import MeteringProxy
-from meter_state import MeterState
+from src.cost_metering.proxy import MeteringProxy, MeterState
 
 
 class _Answer(BaseModel):

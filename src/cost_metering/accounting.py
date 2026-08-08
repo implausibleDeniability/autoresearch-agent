@@ -3,13 +3,40 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Mapping, Optional, Tuple, cast
 
-from model_pricing import model_price, supported_models
-
 CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
 RESPONSES_PATH = "/v1/responses"
 SUPPORTED_PATHS = (CHAT_COMPLETIONS_PATH, RESPONSES_PATH)
 SUPPORTED_SERVICE_TIERS = (None, "default")
 SUPPORTED_TOOL_TYPES = ("function",)
+PRICE_TABLE_VERSION = "2026-08-08"
+
+
+@dataclass(frozen=True)
+class ModelPrice:
+    input_per_million: Decimal
+    cached_input_per_million: Decimal
+    output_per_million: Decimal
+
+
+GPT_4O_PRICE = ModelPrice(Decimal("2.50"), Decimal("1.25"), Decimal("10.00"))
+GPT_4O_MINI_PRICE = ModelPrice(Decimal("0.15"), Decimal("0.075"), Decimal("0.60"))
+MODEL_PRICES = {
+    "gpt-4o": GPT_4O_PRICE,
+    "gpt-4o-2024-08-06": GPT_4O_PRICE,
+    "gpt-4o-2024-11-20": GPT_4O_PRICE,
+    "gpt-4o-mini": GPT_4O_MINI_PRICE,
+    "gpt-4o-mini-2024-07-18": GPT_4O_MINI_PRICE,
+}
+
+
+def model_price(model: str) -> ModelPrice:
+    if model not in MODEL_PRICES:
+        raise ValueError(f"no price configured for model {model!r}")
+    return MODEL_PRICES[model]
+
+
+def supported_models() -> Tuple[str, ...]:
+    return tuple(MODEL_PRICES)
 
 
 class MeteringError(RuntimeError):

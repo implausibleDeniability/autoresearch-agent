@@ -10,11 +10,10 @@ from typing import Dict, List, Mapping, Sequence
 
 import tiktoken
 
-from cost_accounting import CostReport
-from cost_meter import MeteringProxy
 from evaluator import EvaluationResult, evaluate
-from model_pricing import PRICE_TABLE_VERSION
 from pii_item import PIIItem
+from src.cost_metering.accounting import CostReport, PRICE_TABLE_VERSION
+from src.cost_metering.proxy import MeteringProxy
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"

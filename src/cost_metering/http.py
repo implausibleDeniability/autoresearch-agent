@@ -5,8 +5,12 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from cost_accounting import ModelUsage, StreamUsageParser, parse_response_usage, prepare_request
-from meter_state import MeterState
+from .accounting import (
+    ModelUsage,
+    StreamUsageParser,
+    parse_response_usage,
+    prepare_request,
+)
 
 UPSTREAM_HEADER_BLOCKLIST = {
     "authorization",
@@ -24,8 +28,18 @@ UPSTREAM_HEADER_BLOCKLIST = {
 DOWNSTREAM_HEADER_BLOCKLIST = UPSTREAM_HEADER_BLOCKLIST | {"content-encoding"}
 
 
+class MeterStateProtocol(Protocol):
+    api_key: str
+    upstream_base_url: str
+    client: httpx.Client
+
+    def begin_request(self, authorization: Optional[str]) -> int: ...
+
+    def finish_request(self, *, usage: Optional[ModelUsage], error: str = "") -> None: ...
+
+
 class MeterServerProtocol(Protocol):
-    state: MeterState
+    state: MeterStateProtocol
 
 
 class MeterHandler(BaseHTTPRequestHandler):
@@ -47,7 +61,7 @@ class MeterHandler(BaseHTTPRequestHandler):
         finally:
             state.finish_request(usage=usage, error=error)
 
-    def _forward(self, state: MeterState) -> Optional[ModelUsage]:
+    def _forward(self, state: MeterStateProtocol) -> Optional[ModelUsage]:
         path = urlsplit(self.path).path
         body, is_stream = prepare_request(path, self._read_body())
         headers = _upstream_headers(self.headers, api_key=state.api_key)

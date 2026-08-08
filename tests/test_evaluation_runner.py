@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from cost_accounting import CostReport, ModelUsage
-from cost_meter import MeteringProxy
 from evaluation_runner import _count_source_tokens, _parse_worker_result, _run_solution, _solution_environment
+from src.cost_metering.accounting import CostReport, ModelUsage
+from src.cost_metering.proxy import MeteringProxy
 
 
 def test_source_tokens_count_each_original_document_once():
