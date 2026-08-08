@@ -31,6 +31,8 @@ The denominator counts each original document once and excludes system prompts, 
 
 The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). You launch it simply as: `python evaluator.py --dataset dev --solution candidate`
 
+The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
+
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.1% cost reduction that adds 20 lines of hacky code? Probably not worth it. A 0.1% cost reduction from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
 
@@ -82,7 +84,7 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. Run the evaluation: `python evaluator.py --dataset dev --solution candidate > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
-5. Read out the results: <TODO: write the command that greps cost and precision/recall>
+5. Read out the results: `grep -E '^(people|entity)_(precision|recall)=|^cost_usd_per_million_source_tokens=' run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
 8. Keep the baseline. For later experiments, keep the commit only if precision and recall meet their passed thresholds and cost is lower than the incumbent. At equal cost and quality, keep the change only if the implementation is simpler.

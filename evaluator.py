@@ -6,7 +6,6 @@ from typing import Dict, List, Mapping, Sequence, Set
 from pii_matching import MatchIndexes, match_people, match_values
 from pii_item import PIIItem
 
-
 DEFAULT_GROUND_TRUTH_PATH = Path("data/dev/ground_truth.json")
 DocumentPII = Dict[str, List[PIIItem]]
 
@@ -169,3 +168,9 @@ def _unmatched_value_count(people: Sequence[PIIItem], *, matched_indexes: Set[in
 
 def _person_value_count(person: PIIItem) -> int:
     return sum(len(values) for values in asdict(person).values())
+
+
+if __name__ == "__main__":
+    from evaluation_runner import main
+
+    raise SystemExit(main())
