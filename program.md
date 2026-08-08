@@ -31,7 +31,7 @@ The denominator counts each original document once and excludes system prompts, 
 
 The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Use `uv run python evaluator.py --dataset debug` to debug the pipeline cheaply. Use `uv run python evaluator.py --dataset dev-5k` for routine quality decisions and `uv run python evaluator.py --dataset dev-50k` for broader validation.
 
-The evaluator currently prints `cost_usd_per_million_source_tokens=not_measured`. Do not claim a cost improvement until it reports a numeric cost. Record `not_measured` in `results.tsv` while cost measurement is unavailable.
+The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
 Every individual evaluation must cost no more than $0.05. Do not start a run when its cost cannot
 be bounded below that limit.
@@ -57,7 +57,7 @@ commit	cost	status	description
 ```
 
 1. git commit hash (short, 7 chars)
-2. USD per million source-document tokens achieved (e.g. 10.22), or `not_measured` when unavailable — use 0.000000 for crashes
+2. USD per million source-document tokens achieved (e.g. 10.22) — use 0.000000 for crashes
 3. status: `keep`, `discard`, or `crash`
 4. short text description of what this experiment tried
 
@@ -87,10 +87,10 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. If the change could break execution, first run `uv run python evaluator.py --dataset debug > run.log 2>&1`. Then run the routine quality evaluation with `uv run python evaluator.py --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `dev-50k` only when its expected cost also stays within the per-run limit.
-5. Read out the results: `grep -E '^(elapsed_seconds|cost_usd_per_million_source_tokens|people_precision|people_recall|people_f1|entity_precision|entity_recall|entity_f1|document_accuracy)=' run.log`
+5. Read out the results: `grep -E '^(people|entity)_(precision|recall|f1)=|^(document_accuracy|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
-8. Keep the baseline. For later experiments, keep the commit only if precision and recall meet their passed thresholds and cost is lower than the incumbent. If cost is `not_measured`, keep a change only when quality improves or equal quality comes from a simpler implementation. At equal numeric cost and quality, keep the change only if the implementation is simpler.
+8. Keep the baseline. For later experiments, keep the commit only if precision and recall meet their passed thresholds and cost is lower than the incumbent. At equal cost and quality, keep the change only if the implementation is simpler.
 9. If either quality threshold fails, or cost is equal or worse without a simplification win, git reset back to the incumbent.
 10. Stop after 10 experiments and summarize the results for the user.
 

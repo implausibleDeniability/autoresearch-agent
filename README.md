@@ -45,6 +45,27 @@ Use `debug` to check that an experiment works, `dev-5k` for routine quality comp
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
 
+## Evaluation and cost
+
+`evaluator.py` runs a baseline or editable candidate solution and reports quality plus immediate API
+cost:
+
+```bash
+uv run python evaluator.py --dataset dev-5k
+```
+
+The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
+short-lived token and redirects the OpenAI SDK through an evaluator-owned localhost meter. The meter
+supports Chat Completions and Responses requests using the pinned GPT-4o and GPT-4o mini models,
+including structured outputs, local function calling, prompt caching, retries, concurrency, and
+streaming. Missing usage, unknown pricing, unsupported models, and unsupported billable endpoints
+fail the evaluation instead of reporting an incomplete cost.
+
+Cost is reported as total USD and USD per million original source-document tokens. The denominator
+uses `o200k_base` and counts each source document once, independent of solution chunking or repeated
+context. The price table is evaluator-owned and currently uses standard API pricing for the supported
+models.
+
 ## Data
 
 - `data/raw/industry-document-baseline`: the complete, unchanged source dataset.

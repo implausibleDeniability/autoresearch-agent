@@ -6,23 +6,23 @@ from typing import Mapping, Sequence
 import pytest
 
 from evaluation import EvaluationResult, Metrics, evaluate
-from evaluator import Dataset, _parse_args
+from evaluation_runner import Dataset, _parse_arguments
 from pii_item import PIIItem
 from solution import _has_candidate_content
 
 
 def test_cli_requires_dataset():
     with pytest.raises(SystemExit):
-        _parse_args(())
+        _parse_arguments(())
 
 
 @pytest.mark.parametrize("dataset", [Dataset.DEV_5K, Dataset.DEV_50K])
 def test_cli_accepts_dev_dataset(dataset: str):
-    assert _parse_args(("--dataset", dataset)).dataset == dataset
+    assert _parse_arguments(("--dataset", dataset)).dataset == dataset
 
 
 def test_cli_accepts_debug_dataset():
-    assert _parse_args(("--dataset", Dataset.DEBUG)).dataset == Dataset.DEBUG
+    assert _parse_arguments(("--dataset", Dataset.DEBUG)).dataset == Dataset.DEBUG
 
 
 def test_candidate_detection_skips_punctuation_only_chunks():

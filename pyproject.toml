@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Autonomous research for improving PII extraction quality and cost"
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.0",
     "langchain-text-splitters>=1.0.0",
     "openai>=2.0.0",
     "pydantic>=2.0.0",
