@@ -4,8 +4,8 @@ from typing import Dict, List, Sequence
 
 import pytest
 
-from baseline_solution import extract_pii
-from evaluator import DEFAULT_GROUND_TRUTH_PATH, EvaluationResult, evaluate
+from solution import extract_pii
+from evaluation import DEFAULT_GROUND_TRUTH_PATH, EvaluationResult, evaluate
 from pii_item import PIIItem
 
 DEV_TEXTS = Path("data/dev/texts")

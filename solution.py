@@ -19,6 +19,7 @@ OUTER_CHUNK_SIZE = 500
 INNER_CHUNK_SIZE = 100
 STRUCTURING_PASSES = 2
 MAX_WORKERS = 4
+DETECTION_ATTEMPTS = 2
 MIN_SUBSTRING_LENGTH = 4
 OUTPUT_START_TAG = "<personal_information_tokens>"
 OUTPUT_END_TAG = "</personal_information_tokens>"
@@ -26,6 +27,11 @@ OUTPUT_END_TAG = "</personal_information_tokens>"
 OUTER_SEPARATORS = ("\n\n", "\n", ". ", "! ", "? ", " ", "")
 INNER_SEPARATORS = (".\n", "!\n", "?\n", ". ", "! ", "? ", " ", "")
 NAME_FIELDS = ("first_name", "middle_name", "last_name")
+
+
+class MalformedModelResponseError(RuntimeError):
+    pass
+
 
 DETECTION_PROMPT = f"""
 You will be given a small text. Analyze it in two steps.
@@ -159,12 +165,26 @@ class _BaselineExtractor:
         )
         candidates = []
         for inner_index, chunk in enumerate(chunks):
-            stage = f"candidate detection at outer chunk {chunk_index}, inner chunk {inner_index}"
-            response = self._complete(
-                DETECTION_PROMPT.format(text=chunk), model=DETECTION_MODEL, stage=stage, max_tokens=1000
+            if not _has_candidate_content(chunk):
+                continue
+            candidates.extend(
+                self._detect_chunk_candidates(chunk, chunk_index=chunk_index, inner_index=inner_index)
             )
-            candidates.extend(_parse_candidate_response(response, stage=stage))
         return list(dict.fromkeys(candidates))
+
+    def _detect_chunk_candidates(self, text: str, *, chunk_index: int, inner_index: int) -> List[str]:
+        stage = f"candidate detection at outer chunk {chunk_index}, inner chunk {inner_index}"
+        attempt = 0
+        while True:
+            response = self._complete(
+                DETECTION_PROMPT.format(text=text), model=DETECTION_MODEL, stage=stage, max_tokens=1000
+            )
+            try:
+                return _parse_candidate_response(response, stage=stage)
+            except MalformedModelResponseError:
+                attempt += 1
+                if attempt == DETECTION_ATTEMPTS:
+                    raise
 
     def _structure_people(
         self,
@@ -325,8 +345,12 @@ def _tag_content(response: str, *, start_tag: str, end_tag: str, stage: str) -> 
     start = response.find(start_tag)
     end = response.find(end_tag, start + len(start_tag))
     if start == -1 or end == -1:
-        raise RuntimeError(f"OpenAI {stage} response is missing {start_tag} or {end_tag}")
+        raise MalformedModelResponseError(f"OpenAI {stage} response is missing {start_tag} or {end_tag}")
     return response[start + len(start_tag) : end].strip()
+
+
+def _has_candidate_content(text: str) -> bool:
+    return any(character.isalnum() for character in text)
 
 
 def _drop_structured_candidates(
