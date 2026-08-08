@@ -12,3 +12,5 @@
 ### Changed
 
 - Explain the project's relationship to Karpathy's Autoresearch and provide an editable `solution.py` candidate entry point.
+- Track quality with one recall-weighted PII F-score (`beta² = 5`).
+- Enforce a $1.50 normalized cost ceiling and an evaluator-owned 8-cent default absolute run ceiling with an intentional CLI override.

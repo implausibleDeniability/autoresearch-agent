@@ -15,11 +15,11 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-You conduct the research to minimize the cost of the PII-extracting system while preserving the desired precision and recall. These should be given to you when you start running the research.
+You conduct the research to maximize PII extraction quality while staying within the evaluator's cost limits. Quality is tracked with one metric: PII F-score with recall weighted five times as heavily as precision (`beta² = 5`).
 
 Your PII-extracting system lives in the file `solution.py`. You can change the prompt, add and remove LLM steps, use hard-coded heuristics and algorithms in addition to LLM calls to reduce the cost while preserving the quality. You're not limited to just those three -- you can get creative and make other improvements as well.
 
-The goal is to get the smallest possible cost, such that the precision and recall on the development sets are not worse than the passed thresholds.
+The goal is to improve PII F-score while reducing cost. Prefer experiments that improve the score, then lower cost when quality is equivalent.
 
 Cost is measured in USD per million source-document tokens:
 
@@ -33,8 +33,10 @@ The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock 
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
-Every individual evaluation must cost no more than $0.05. Do not start a run when its cost cannot
-be bounded below that limit.
+Every individual evaluation must cost no more than $1.50 per million original source-document tokens.
+The evaluator also enforces an absolute limit of $0.08 per run. A deliberately larger absolute budget
+can be selected with `--cents-limit`, for example `--cents-limit 20`, but the normalized limit remains.
+Do not start a run when its cost cannot be bounded below both applicable limits.
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.1% cost reduction that adds 20 lines of hacky code? Probably not worth it. A 0.1% cost reduction from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
@@ -87,11 +89,11 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. If the change could break execution, first run `uv run python -m src.evaluation.cli --dataset debug > run.log 2>&1`. Then run the routine quality evaluation with `uv run python -m src.evaluation.cli --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `dev-50k` only when its expected cost also stays within the per-run limit.
-5. Read out the results: `grep -E '^(people|entity)_(precision|recall|f1)=|^(document_accuracy|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
+5. Read out the results: `grep -E '^(pii_f_score|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
-8. Keep the baseline. For later experiments, keep the commit only if precision and recall meet their passed thresholds and cost is lower than the incumbent. At equal cost and quality, keep the change only if the implementation is simpler.
-9. If either quality threshold fails, or cost is equal or worse without a simplification win, git reset back to the incumbent.
+8. Keep the baseline. For later experiments, prefer a higher PII F-score. At an equivalent score, keep a change when cost is lower, or when implementation is simpler at equal cost.
+9. If PII F-score regresses without an approved tradeoff, or cost is equal or worse without a quality or simplification win, git reset back to the incumbent.
 10. Stop after 10 experiments and summarize the results for the user.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).

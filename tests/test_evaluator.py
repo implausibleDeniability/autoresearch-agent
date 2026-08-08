@@ -7,7 +7,7 @@ import pytest
 
 from solution import _has_candidate_content
 from src.evaluation.cli import Dataset, _parse_arguments
-from src.evaluation.metrics import EvaluationResult, Metrics, evaluate
+from src.evaluation.metrics import evaluate
 from src.evaluation.models import PIIItem
 
 
@@ -45,12 +45,10 @@ def test_perfect_predictions_score_canonical_labels_and_negative_documents(tmp_p
     result = evaluate({"positive": [positive], "negative": []}, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.people == Metrics(true_positive=1)
-    assert result.entities == Metrics(true_positive=6)
-    assert result.document_accuracy == pytest.approx(1.0)
+    assert result == 1.0
 
 
-def test_relaxed_person_matching_preserves_partial_entity_recall(tmp_path: Path):
+def test_relaxed_person_matching_preserves_partial_pii_score(tmp_path: Path):
     # setup
     ground_truth_path = _write_ground_truth(
         tmp_path,
@@ -62,9 +60,7 @@ def test_relaxed_person_matching_preserves_partial_entity_recall(tmp_path: Path)
     result = evaluate(predictions, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.people == Metrics(true_positive=1)
-    assert result.entities == Metrics(true_positive=1, false_negative=1)
-    assert result.entities.recall == pytest.approx(0.5)
+    assert result == pytest.approx(6 / 11)
 
 
 def test_conflicting_core_fields_prevent_person_match(tmp_path: Path):
@@ -79,8 +75,7 @@ def test_conflicting_core_fields_prevent_person_match(tmp_path: Path):
     result = evaluate(predictions, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.people == Metrics(false_positive=1, false_negative=1)
-    assert result.entities == Metrics(false_positive=2, false_negative=2)
+    assert result == 0.0
 
 
 def test_exact_matches_are_reserved_before_relaxed_matching(tmp_path: Path):
@@ -105,11 +100,10 @@ def test_exact_matches_are_reserved_before_relaxed_matching(tmp_path: Path):
     result = evaluate(predictions, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.people == Metrics(true_positive=2)
-    assert result.entities == Metrics(true_positive=3)
+    assert result == 1.0
 
 
-def test_duplicate_prediction_reduces_precision(tmp_path: Path):
+def test_duplicate_prediction_reduces_pii_f_score(tmp_path: Path):
     # setup
     person = PIIItem(first_name=("John",), last_name=("Doe",))
     ground_truth_path = _write_ground_truth(tmp_path, rows={"document": [person]})
@@ -118,9 +112,33 @@ def test_duplicate_prediction_reduces_precision(tmp_path: Path):
     result = evaluate({"document": [person, person]}, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.people == Metrics(true_positive=1, false_positive=1)
-    assert result.people.precision == pytest.approx(0.5)
-    assert result.entities == Metrics(true_positive=2, false_positive=2)
+    assert result == pytest.approx(6 / 7)
+
+
+def test_pii_f_score_weights_recall_five_times_more_than_precision(tmp_path: Path):
+    # setup
+    low_precision_ground = _write_ground_truth(
+        tmp_path,
+        rows={"document": [PIIItem(first_name=("John",))]},
+    )
+    low_precision = evaluate(
+        {"document": [PIIItem(first_name=("John", "Wrong"))]},
+        ground_truth_path=low_precision_ground,
+    )
+    low_recall_ground = _write_ground_truth(
+        tmp_path,
+        rows={"document": [PIIItem(first_name=("John",), last_name=("Doe",))]},
+    )
+
+    # operate
+    low_recall = evaluate(
+        {"document": [PIIItem(first_name=("John",))]},
+        ground_truth_path=low_recall_ground,
+    )
+
+    # check
+    assert low_precision == pytest.approx(6 / 7)
+    assert low_recall == pytest.approx(6 / 11)
 
 
 def test_entity_values_match_fuzzily_and_one_to_one(tmp_path: Path):
@@ -141,7 +159,7 @@ def test_entity_values_match_fuzzily_and_one_to_one(tmp_path: Path):
     result = evaluate({"document": [prediction]}, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.entities == Metrics(true_positive=3, false_positive=1)
+    assert result == pytest.approx(18 / 19)
 
 
 def test_missing_prediction_document_counts_as_false_negative(tmp_path: Path):
@@ -155,9 +173,7 @@ def test_missing_prediction_document_counts_as_false_negative(tmp_path: Path):
     result = evaluate({}, ground_truth_path=ground_truth_path)
 
     # check
-    assert result.people == Metrics(false_negative=1)
-    assert result.people.f1 == 0.0
-    assert result.document_accuracy == 0.0
+    assert result == 0.0
 
 
 def test_unknown_prediction_document_fails_fast(tmp_path: Path):
@@ -167,7 +183,7 @@ def test_unknown_prediction_document_fails_fast(tmp_path: Path):
         evaluate({"unknown": []}, ground_truth_path=ground_truth_path)
 
 
-def test_prediction_on_negative_document_reduces_accuracy(tmp_path: Path):
+def test_prediction_on_negative_document_scores_zero(tmp_path: Path):
     # setup
     ground_truth_path = _write_ground_truth(tmp_path, rows={"negative": []})
 
@@ -178,9 +194,7 @@ def test_prediction_on_negative_document_reduces_accuracy(tmp_path: Path):
     )
 
     # check
-    assert result.people == Metrics(false_positive=1)
-    assert result.entities == Metrics(false_positive=1)
-    assert result.document_accuracy == 0.0
+    assert result == 0.0
 
 
 def test_empty_dataset_metrics_do_not_divide_by_zero(tmp_path: Path):
@@ -191,10 +205,7 @@ def test_empty_dataset_metrics_do_not_divide_by_zero(tmp_path: Path):
     result = evaluate({}, ground_truth_path=ground_truth_path)
 
     # check
-    assert result == EvaluationResult(people=Metrics(), entities=Metrics(), document_accuracy=0.0)
-    assert result.people.precision == 0.0
-    assert result.people.recall == 0.0
-    assert result.people.f1 == 0.0
+    assert result == 0.0
 
 
 def _write_ground_truth(

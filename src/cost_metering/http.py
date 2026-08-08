@@ -51,15 +51,15 @@ class MeterHandler(BaseHTTPRequestHandler):
         if rejection_status:
             self._send_json(rejection_status, payload={"error": "metering request rejected"})
             return
-        usage = None
+        self._observed_usage = None
         error = ""
         try:
-            usage = self._forward(state)
+            self._observed_usage = self._forward(state)
         except Exception as caught_error:
             error = f"metering failed for {self.path}: {caught_error}"
             self._send_json(502, payload={"error": error})
         finally:
-            state.finish_request(usage=usage, error=error)
+            state.finish_request(usage=self._observed_usage, error=error)
 
     def _forward(self, state: MeterStateProtocol) -> Optional[ModelUsage]:
         path = urlsplit(self.path).path
@@ -74,6 +74,7 @@ class MeterHandler(BaseHTTPRequestHandler):
     def _relay_response(self, response: httpx.Response, *, path: str) -> Optional[ModelUsage]:
         content = response.read()
         usage = parse_response_usage(path, content) if response.is_success else None
+        self._observed_usage = usage
         self._send_response(response, content=content)
         return usage
 

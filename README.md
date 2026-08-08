@@ -47,12 +47,17 @@ development-data checks.
 
 ## Evaluation and cost
 
-The evaluation CLI runs a baseline or editable candidate solution and reports quality plus immediate
-API cost:
+The evaluation CLI runs a baseline or editable candidate solution and reports immediate API cost plus
+one quality metric: PII F-score with recall weighted five times as heavily as precision (`beta² = 5`):
 
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-5k
 ```
+
+Each run has an evaluator-enforced 8-cent absolute API spending limit. Intentional larger runs can
+set a different limit in cents, for example `--cents-limit 20`. Completed responses are charged by
+the evaluator-owned meter; after observed spend crosses the limit, it rejects new requests and fails
+the run. Concurrent requests already in flight may cause bounded overshoot.
 
 The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
 short-lived token and redirects the OpenAI SDK through an evaluator-owned localhost meter. The meter
@@ -64,7 +69,7 @@ fail the evaluation instead of reporting an incomplete cost.
 Cost is reported as total USD and USD per million original source-document tokens. The denominator
 uses `o200k_base` and counts each source document once, independent of solution chunking or repeated
 context. The price table is evaluator-owned and currently uses standard API pricing for the supported
-models.
+models. Runs above $1.50 per million original source-document tokens fail evaluation.
 
 ## Data
 

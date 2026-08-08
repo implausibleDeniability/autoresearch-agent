@@ -5,7 +5,7 @@ from typing import Dict, List, Sequence
 import pytest
 
 from solution import extract_pii
-from src.evaluation.metrics import EvaluationResult, evaluate
+from src.evaluation.metrics import evaluate
 from src.evaluation.models import PIIItem
 
 DEV_TEXTS = Path("data/dev-50k/texts")
@@ -73,6 +73,5 @@ def _contains_person(people: Sequence[PIIItem], *, first_name: str, last_name: s
     return any(first_name in person.first_name and last_name in person.last_name for person in people)
 
 
-def _assert_positive_baseline(result: EvaluationResult) -> None:
-    assert result.people.true_positive > 0, result
-    assert result.entities.true_positive > 0, result
+def _assert_positive_baseline(pii_f_score: float) -> None:
+    assert pii_f_score > 0

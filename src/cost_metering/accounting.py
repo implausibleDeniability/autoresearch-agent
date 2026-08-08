@@ -9,6 +9,7 @@ SUPPORTED_PATHS = (CHAT_COMPLETIONS_PATH, RESPONSES_PATH)
 SUPPORTED_SERVICE_TIERS = (None, "default")
 SUPPORTED_TOOL_TYPES = ("function",)
 PRICE_TABLE_VERSION = "2026-08-08"
+NORMALIZED_COST_LIMIT_USD = Decimal("1.50")
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,10 @@ class MeteringError(RuntimeError):
     pass
 
 
+class SpendingLimitExceededError(MeteringError):
+    pass
+
+
 @dataclass(frozen=True)
 class ModelUsage:
     model: str
@@ -72,6 +77,19 @@ class CostReport:
         if source_tokens <= 0:
             raise ValueError(f"source_tokens must be positive, got {source_tokens}")
         return self.total_usd * Decimal(1_000_000) / Decimal(source_tokens)
+
+    def enforce_normalized_limit(
+        self,
+        *,
+        source_tokens: int,
+        limit_usd: Decimal = NORMALIZED_COST_LIMIT_USD,
+    ) -> None:
+        observed = self.cost_per_million_source_tokens(source_tokens)
+        if observed > limit_usd:
+            raise SpendingLimitExceededError(
+                f"normalized API spending ${observed:.6f} per million source tokens "
+                f"exceeded limit ${limit_usd:.2f}"
+            )
 
 
 class StreamUsageParser:
