@@ -16,8 +16,13 @@ def test_cli_requires_dataset():
         _parse_args(())
 
 
-def test_cli_accepts_dev_dataset():
-    assert _parse_args(("--dataset", Dataset.DEV)).dataset == Dataset.DEV
+@pytest.mark.parametrize("dataset", [Dataset.DEV_5K, Dataset.DEV_50K])
+def test_cli_accepts_dev_dataset(dataset: str):
+    assert _parse_args(("--dataset", dataset)).dataset == dataset
+
+
+def test_cli_accepts_debug_dataset():
+    assert _parse_args(("--dataset", Dataset.DEBUG)).dataset == Dataset.DEBUG
 
 
 def test_candidate_detection_skips_punctuation_only_chunks():

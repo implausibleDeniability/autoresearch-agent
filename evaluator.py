@@ -14,14 +14,16 @@ MAX_DOCUMENT_WORKERS = 4
 
 
 class Dataset:
-    DEV = "dev"
+    DEBUG = "debug"
+    DEV_5K = "dev-5k"
+    DEV_50K = "dev-50k"
 
     @classmethod
-    def all(cls) -> Tuple[str]:
-        return (cls.DEV,)
+    def all(cls) -> Tuple[str, ...]:
+        return cls.DEBUG, cls.DEV_5K, cls.DEV_50K
 
 
-DatasetName = Literal["dev"]
+DatasetName = Literal["debug", "dev-5k", "dev-50k"]
 
 
 @dataclass(frozen=True)

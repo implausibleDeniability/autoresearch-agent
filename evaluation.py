@@ -6,7 +6,7 @@ from typing import Dict, List, Mapping, Sequence, Set
 from pii_matching import MatchIndexes, match_people, match_values
 from pii_item import PIIItem
 
-DEFAULT_GROUND_TRUTH_PATH = Path("data/dev/ground_truth.json")
+DEFAULT_GROUND_TRUTH_PATH = Path("data/dev-5k/ground_truth.json")
 DocumentPII = Dict[str, List[PIIItem]]
 
 

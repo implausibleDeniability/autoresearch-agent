@@ -8,7 +8,8 @@ Inspired by [Karpathy's Autoresearch](https://github.com/karpathy/autoresearch),
 
 ## Method
 
-Development currently uses one visible development set. A separate test split can be added later.
+Development uses a small visible development set. A two-document debug set supports inexpensive
+pipeline checks. A separate test split can be added later.
 
 ## Solution
 
@@ -33,8 +34,13 @@ people = extract_pii("John Smith can be reached at john@example.com.")
 Evaluate the solution on one complete dataset split:
 
 ```bash
-uv run python evaluator.py --dataset dev
+uv run python evaluator.py --dataset debug
+uv run python evaluator.py --dataset dev-5k
+uv run python evaluator.py --dataset dev-50k
 ```
+
+Use `debug` to check that an experiment works, `dev-5k` for routine quality comparisons, and
+`dev-50k` for broader validation.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
@@ -42,6 +48,8 @@ development-data checks.
 ## Data
 
 - `data/raw/industry-document-baseline`: the complete, unchanged source dataset.
-- `data/dev`: all 21 labeled documents currently available during research.
+- `data/debug`: one PII-positive and one PII-negative document totaling less than 1,000 tokens.
+- `data/dev-5k`: 16 complete documents, 4,361 words, 74 labeled people, and 198 labeled PII values.
+- `data/dev-50k`: 20 complete documents, 49,953 words, 93 labeled people, and 230 labeled PII values.
 
 `data/raw` is archival source data and should not be exposed to the research agent.
