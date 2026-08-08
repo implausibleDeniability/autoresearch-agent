@@ -4,6 +4,13 @@
 - When working in a separate worktree, committing is optional unless the user explicitly requests it.
 - When the user asks for a correction to a previous related change, make the correction and squash it into the original commit. Do not create a series of follow-up commits for iterations on the same change.
 
+# Cost Discipline
+
+- Both code-development agents and autoresearch agents must be careful about spending money.
+- Prefer cheaper models when they can complete the task effectively.
+- If an execution could cost $0.10 or more, first try to reduce its cost.
+- If an execution could cost $1.00 or more, obtain explicit human approval before running it.
+
 # Worktree Workflow
 
 - When the user requests a separate worktree, do not make implementation changes in the main workspace.
