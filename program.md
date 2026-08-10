@@ -29,7 +29,7 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Run experiments on `dev-5k` by default with `uv run python -m src.evaluation.cli --dataset dev-5k`. Use `debug` to test a solution without wasting money on the experiment. Use `dev-50k` only in an exceptional case where you have a specific reason that `dev-5k` cannot answer the question; explain that reason and estimate the larger run before starting it.
+The evaluation worker has a **fixed wall-clock budget of 3 minutes**, including subprocess startup, imports, and all document extraction. Run experiments on `dev-5k` by default with `uv run python -m src.evaluation.cli --dataset dev-5k`. Use `debug` to test a solution without wasting money on the experiment. Use `dev-50k` only in an exceptional case where you have a specific reason that `dev-5k` cannot answer the question; explain that reason and estimate the larger run before starting it.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
@@ -100,7 +100,7 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
-**Timeout**: Each experiment should take ~5 minutes total (+ a few seconds for startup and eval overhead). If a run exceeds 7 minutes, kill it and treat it as a failure (discard and revert).
+**Timeout**: Each experiment has a 3-minute wall-clock limit from worker launch, including startup and evaluation. The evaluator terminates the worker at the limit; treat the timeout as a failure, discard the experiment, and revert it.
 
 **Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
 
