@@ -59,6 +59,12 @@ No architecture, number of steps, balance of model and non-model methods, librar
 
 If most completed experiments belong to one narrow family, explicitly justify why continuing that family has higher expected value than exploring alternatives. Before the run ends, record the major directions considered, which were tested, which were deferred, and why.
 
+### External research
+
+Before the first non-baseline experiment, consult relevant primary sources, official documentation, established techniques, available libraries, and prior research. Return to external research when unfamiliar failures or weak progress make it likely to improve the experiment portfolio.
+
+Treat findings as possibilities, not prescribed solutions. Record promising findings in `research.md` with their source, relevance, uncertainty, and cost or runtime implications. If one requires an unavailable package, evaluator capability, or permission, record it in `REQUESTS.md`.
+
 ### Experiment portfolio
 
 Maintain a short, ranked portfolio of promising research hypotheses in `research.md`. For each hypothesis, record:
