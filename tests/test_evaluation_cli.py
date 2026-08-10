@@ -130,7 +130,7 @@ def test_cost_report_normalizes_by_source_tokens():
     assert result == Decimal("0.075")
 
 
-def test_evaluator_cli_reports_quality_and_immediate_cost(tmp_path: Path):
+def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     # setup
     _write_cli_fixture(tmp_path)
     upstream = ThreadingHTTPServer(("127.0.0.1", 0), _CliUpstreamHandler)
@@ -177,6 +177,12 @@ def test_evaluator_cli_reports_quality_and_immediate_cost(tmp_path: Path):
     )
     assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
+    duration_seconds = next(
+        line.removeprefix("duration_seconds=")
+        for line in completed.stdout.splitlines()
+        if line.startswith("duration_seconds=")
+    )
+    assert float(duration_seconds) > 0
 
 
 class _CliUpstreamHandler(BaseHTTPRequestHandler):
