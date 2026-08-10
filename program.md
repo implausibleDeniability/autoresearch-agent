@@ -10,7 +10,8 @@ To set up a new experiment, work with the user to:
 2. **Create the branch**: git checkout -b autoresearch/<tag> from current main.
 3. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
 4. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
-5. **Confirm and go**: Confirm setup looks good.
+5. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every invocation counts as a run even when it exits before an API request.
+6. **Confirm and go**: Confirm setup looks good.
 
 Once you get confirmation, kick off the experimentation.
 
@@ -141,7 +142,7 @@ Stop after 20 evaluation CLI runs or $0.50 in cumulative `budget_cost_usd`, whic
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
-5. Run `uv run python -m src.evaluation.cli --dataset dev-19k > run.log 2>&1`, substituting another allowed dataset when appropriate.
+5. Load `.env` and run the evaluator in the same shell invocation: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k > run.log 2>&1`, substituting another allowed dataset when appropriate.
 6. Read out the results: `grep -E '^(f_score|precision|recall|true_positive|false_positive|false_negative|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 7. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 8. Record the result in `results.tsv` and recompute cumulative spend. Do not commit the file.
