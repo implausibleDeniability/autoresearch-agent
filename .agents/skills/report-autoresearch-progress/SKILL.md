@@ -1,6 +1,6 @@
 ---
 name: report-autoresearch-progress
-description: Report the current PII autoresearch experiment progress, spending, and best result in the required four-line format. Use whenever the user asks about autoresearch progress, status, completed runs, budget usage, spending, the best experiment, or metric improvements.
+description: Report the current PII autoresearch experiment progress, spending, and best result in the required four-bullet format. Use whenever the user asks about autoresearch progress, status, completed runs, budget usage, spending, the best experiment, or metric improvements.
 ---
 
 # Report Autoresearch Progress
@@ -16,13 +16,13 @@ Read existing experiment artifacts only. Do not run evaluations or make paid mod
 7. Average the saved baseline rows for the same dataset. If none exist, use the first non-crash row in the current run.
 8. Calculate metric and cost deltas as best minus baseline. Use the average `cost` column, which is USD per million source tokens, for the best-result cost.
 
-Return exactly these four lines with no heading, bullets, explanation, dataset name, or trailing note:
+Return exactly these four Markdown bullets with no heading, explanation, dataset name, or trailing note. Bold each label, plus the best F-score and best-result cost:
 
-```text
-Completed runs: X out of Y
-Budget: $X.XX out of $Y.YY (P%)
-Best result: X.XXXXXX F-score (+D.XXXXXX), Y.YYYYYY precision (+D.YYYYYY), Z.ZZZZZZ recall (+D.ZZZZZZ)
-Best result cost: $X.XX (+$D.XX)
+```markdown
+- **Completed runs:** X out of Y
+- **Budget:** $X.XX out of $Y.YY (P%)
+- **Best result:** **X.XXXXXX F-score** (+D.XXXXXX), Y.YYYYYY precision (+D.YYYYYY), Z.ZZZZZZ recall (+D.ZZZZZZ)
+- **Best result cost:** **$X.XX** (+$D.XX)
 ```
 
 Preserve six decimal places for metrics and metric deltas. Preserve two decimal places for dollar values and cost deltas. Always show an explicit `+` for nonnegative deltas and `-` for negative deltas; place the sign before `$` for negative cost deltas.
