@@ -1,6 +1,7 @@
 import argparse
 import importlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -20,7 +21,7 @@ DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
 SOLUTION_MODULE = "solution"
 WORKER_RESULT_PREFIX = "EVALUATION_RESULT="
-DEFAULT_TIMEOUT_SECONDS = 300.0
+MAX_TIMEOUT_SECONDS = 180.0
 USD_PER_CENT = Decimal("0.01")
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
 UPSTREAM_BASE_URL_ENVIRONMENT = "OPENAI_UPSTREAM_BASE_URL"
@@ -176,7 +177,7 @@ def _print_result(metrics: EntityMetrics, *, cost: CostReport, source_tokens: in
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
     parser.add_argument("--dataset", choices=Dataset.all())
-    parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--timeout", type=_timeout_seconds, default=MAX_TIMEOUT_SECONDS)
     parser.add_argument(
         "--cents-limit",
         type=_positive_decimal,
@@ -190,6 +191,15 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         parser.error("--worker requires --module")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
+    return parsed
+
+
+def _timeout_seconds(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed <= 0 or parsed > MAX_TIMEOUT_SECONDS:
+        raise argparse.ArgumentTypeError(
+            f"timeout must be greater than 0 and at most {MAX_TIMEOUT_SECONDS:g} seconds"
+        )
     return parsed
 
 
