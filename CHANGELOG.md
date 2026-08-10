@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.1.0] - 2026-08-10
+
+### Added
+
+- Stop evaluations after an 8-cent default API spending limit, with `--cents-limit` available for intentional larger runs.
+
+### Changed
+
+- Optimize one recall-weighted F-score (`beta² = 5`), report precision and recall, and target $1.50 per million source-document tokens.
+
+### Removed
+
+- Remove document accuracy and person-level quality metrics from evaluation output.
+
 ## [0.1.0.0] - 2026-08-08
 
 ### Added

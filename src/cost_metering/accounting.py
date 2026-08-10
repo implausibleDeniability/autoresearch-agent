@@ -43,6 +43,10 @@ class MeteringError(RuntimeError):
     pass
 
 
+class SpendingLimitExceededError(MeteringError):
+    pass
+
+
 @dataclass(frozen=True)
 class ModelUsage:
     model: str

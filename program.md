@@ -15,11 +15,11 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-You conduct the research to minimize the cost of the PII-extracting system while preserving the desired precision and recall. These should be given to you when you start running the research.
+Maximize PII extraction quality and reduce cost, targeting no more than $1.50 per million source-document tokens. Measure quality with F-score (`beta² = 5`).
 
 Your PII-extracting system lives in the file `solution.py`. You can change the prompt, add and remove LLM steps, use hard-coded heuristics and algorithms in addition to LLM calls to reduce the cost while preserving the quality. You're not limited to just those three -- you can get creative and make other improvements as well.
 
-The goal is to get the smallest possible cost, such that the precision and recall on the development sets are not worse than the passed thresholds.
+F-score is the primary objective. Cost is secondary until the solution reaches the $1.50-per-million target; once it does, do not sacrifice meaningful quality for further savings.
 
 Cost is measured in USD per million source-document tokens:
 
@@ -29,12 +29,11 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Use `uv run python -m src.evaluation.cli --dataset debug` to debug the pipeline cheaply. Use `uv run python -m src.evaluation.cli --dataset dev-5k` for routine quality decisions and `uv run python -m src.evaluation.cli --dataset dev-50k` for broader validation.
+The evaluation script runs for a **fixed time budget of 5 minutes** (wall clock evaluation time, excluding startup/compilation). Run experiments on `dev-5k` by default with `uv run python -m src.evaluation.cli --dataset dev-5k`. Use `debug` to test a solution without wasting money on the experiment. Use `dev-50k` only in an exceptional case where you have a specific reason that `dev-5k` cannot answer the question; explain that reason and estimate the larger run before starting it.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
-Every individual evaluation must cost no more than $0.05. Do not start a run when its cost cannot
-be bounded below that limit.
+Target no more than $1.50 per million source tokens—about 1.5 cents on `dev-5k`—and estimate cost before each run. The meter enforces only an 8-cent total limit, overridable with `--cents-limit`, so modest target overruns still return useful results.
 
 **Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.1% cost reduction that adds 20 lines of hacky code? Probably not worth it. A 0.1% cost reduction from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
 
@@ -50,25 +49,28 @@ be bounded below that limit.
 
 When an experiment is done, log it to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions).
 
-The TSV has a header row and 4 columns:
+The TSV has a header row and 7 columns:
 
 ```
-commit	cost	status	description
+commit	score	precision	recall	cost	status	description
 ```
 
 1. git commit hash (short, 7 chars)
-2. USD per million source-document tokens achieved (e.g. 10.22) — use 0.000000 for crashes
-3. status: `keep`, `discard`, or `crash`
-4. short text description of what this experiment tried
+2. recall-weighted F-score — use 0.000000 for crashes
+3. precision — use 0.000000 for crashes
+4. recall — use 0.000000 for crashes
+5. USD per million source-document tokens achieved — use 0.000000 for crashes
+6. status: `keep`, `discard`, or `crash`
+7. short text description of what this experiment tried
 
 Example:
 
 ```tsv
-commit	cost	status	description
-a1b2c3d	10.220000	keep	baseline
-b2c3d4e	9.930000	keep	shorten extraction prompt
-c3d4e5f	10.050000	discard	add a verification call
-d4e5f6g	0.000000	crash	invalid structured output schema
+commit	score	precision	recall	cost	status	description
+a1b2c3d	0.940000	0.960000	0.936000	1.420000	keep	baseline
+b2c3d4e	0.945000	0.950000	0.944000	1.480000	keep	shorten extraction prompt
+c3d4e5f	0.930000	0.970000	0.923000	1.200000	discard	add deterministic filtering
+d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema
 ```
 
 ## Extra communication bugs and required packages:
@@ -86,13 +88,14 @@ Run at most 10 experiments, counting the baseline, crashes, and reruns.
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
-4. If the change could break execution, first run `uv run python -m src.evaluation.cli --dataset debug > run.log 2>&1`. Then run the routine quality evaluation with `uv run python -m src.evaluation.cli --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `dev-50k` only when its expected cost also stays within the per-run limit.
-5. Read out the results: `grep -E '^(people|entity)_(precision|recall|f1)=|^(document_accuracy|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
-6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
-7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
-8. Keep the baseline. For later experiments, keep the commit only if precision and recall meet their passed thresholds and cost is lower than the incumbent. At equal cost and quality, keep the change only if the implementation is simpler.
-9. If either quality threshold fails, or cost is equal or worse without a simplification win, git reset back to the incumbent.
-10. Stop after 10 experiments and summarize the results for the user.
+4. Estimate the total and normalized cost. Aim below $1.50 per million source tokens and do not run the experiment if its expected total cost exceeds the absolute safety limit.
+5. Run the experiment on `dev-5k` with `uv run python -m src.evaluation.cli --dataset dev-5k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `debug` to test a solution without wasting money on the experiment. Use `dev-50k` only for a specific question that `dev-5k` cannot answer, after recording the reason and estimating its cost.
+6. Read out the results: `grep -E '^(f_score|precision|recall|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
+7. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
+8. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
+9. Keep the baseline. Prefer higher F-score, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the target, do not accept a meaningful F-score regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
+10. If neither the score nor cost improvement justifies the regression in the other objective, git reset back to the incumbent.
+11. Stop after 10 experiments and summarize the results for the user.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 

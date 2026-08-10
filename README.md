@@ -39,20 +39,24 @@ uv run python -m src.evaluation.cli --dataset dev-5k
 uv run python -m src.evaluation.cli --dataset dev-50k
 ```
 
-Use `debug` to check that an experiment works, `dev-5k` for routine quality comparisons, and
-`dev-50k` for broader validation.
+Use `debug` to test a solution without wasting money on the experiment. Run experiments on `dev-5k`
+by default, and reserve `dev-50k` for exceptional questions that `dev-5k` cannot answer.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
 
 ## Evaluation and cost
 
-The evaluation CLI runs a baseline or editable candidate solution and reports quality plus immediate
-API cost:
+The evaluation CLI runs the current editable solution and reports immediate API cost plus one quality
+metric: F-score with recall weighted five times as heavily as precision (`beta² = 5`):
 
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-5k
 ```
+
+Runs should target no more than $1.50 per million source tokens, but only the 8-cent total-cost guard
+is enforced (overridable with `--cents-limit`), allowing modest overruns to return useful results. Once
+the guard is exceeded, new requests are rejected, though in-flight requests may add some overshoot.
 
 The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
 short-lived token and redirects the OpenAI SDK through an evaluator-owned localhost meter. The meter
@@ -64,7 +68,8 @@ fail the evaluation instead of reporting an incomplete cost.
 Cost is reported as total USD and USD per million original source-document tokens. The denominator
 uses `o200k_base` and counts each source document once, independent of solution chunking or repeated
 context. The price table is evaluator-owned and currently uses standard API pricing for the supported
-models.
+models. The CLI prints `f_score` as the optimization metric and precision and recall as diagnostics
+for experiment logs.
 
 ## Data
 
