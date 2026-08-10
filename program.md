@@ -43,7 +43,7 @@ Target no more than $1.50 per million source tokens—about 2.9 cents on `dev-19
 - You can NOT execute `solution.py`, call `extract_pii` directly, run live tests, or make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You may modify and commit only `solution.py` as the experiment implementation.
-- You may create or update `results.tsv`, `REQUESTS.md`, and `run.log` only for experiment logging and communication. Do not commit these files. Do not intentionally modify any other repository files.
+- You may create or update `results.tsv`, `REQUESTS.md`, `run.log`, and `diagnostics.json` only for experiment logging and communication. Do not commit these files. `diagnostics.json` contains labeled PII and source context: keep it local, overwrite it on each run, and do not copy its contents into committed files. Do not intentionally modify any other repository files.
 
 
 ## Logging results
@@ -90,13 +90,14 @@ Stop after 20 evaluation CLI runs or $0.50 in cumulative `budget_cost_usd`, whic
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
-5. Run `uv run python -m src.evaluation.cli --dataset dev-19k > run.log 2>&1`, substituting another allowed dataset when appropriate.
+5. Run `uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json > run.log 2>&1`, substituting another allowed dataset when appropriate.
 6. Read out the results: `grep -E '^(f_score|precision|recall|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 7. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
-8. Record the result in `results.tsv` and recompute cumulative spend. Do not commit the file.
-9. Keep the baseline. Prefer higher F-score, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the target, do not accept a meaningful F-score regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
-10. If neither the score nor cost improvement justifies the regression in the other objective, git reset back to the incumbent.
-11. When a limit is reached, summarize the results and report the best `dev-87k` score separately.
+8. Before another paid run, inspect `diagnostics.json`. Inventory false negatives and false positives by field and document, inspect the highest-impact documents, and name at least one observed error class in the next experiment's hypothesis and `results.tsv` description. Never optimize aggregate metrics without this error inventory.
+9. Record the result in `results.tsv` and recompute cumulative spend. Do not commit the file.
+10. Keep the baseline. Prefer higher F-score, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the target, do not accept a meaningful F-score regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
+11. If neither the score nor cost improvement justifies the regression in the other objective, git reset back to the incumbent.
+12. When a limit is reached, summarize the results and report the best `dev-87k` score separately.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 

@@ -32,6 +32,12 @@ def test_cli_accepts_intentional_cent_limit_override():
     assert parsed.cents_limit == Decimal("20")
 
 
+def test_cli_accepts_diagnostics_path():
+    parsed = _parse_arguments(("--dataset", "debug", "--diagnostics", "diagnostics.json"))
+
+    assert parsed.diagnostics == Path("diagnostics.json")
+
+
 def test_source_tokens_count_each_original_document_once():
     texts = {"first": "John Smith", "second": "Jane Doe"}
 
@@ -145,7 +151,15 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
 
     # operate
     completed = subprocess.run(
-        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug"],
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--diagnostics",
+            "diagnostics.json",
+        ],
         cwd=tmp_path,
         env=environment,
         text=True,
@@ -177,6 +191,9 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     )
     assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
+    assert "diagnostics written: diagnostics.json (1 documents, schema v1)" in completed.stderr
+    diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
+    assert diagnostics["documents"][0]["person_matches"] == [{"prediction_index": 0, "ground_truth_index": 0}]
     duration_seconds = next(
         line.removeprefix("duration_seconds=")
         for line in completed.stdout.splitlines()

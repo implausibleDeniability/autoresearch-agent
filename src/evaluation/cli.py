@@ -15,7 +15,8 @@ import tiktoken
 
 from src.cost_metering.accounting import CostReport, PRICE_TABLE_VERSION
 from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
-from src.evaluation.metrics import EntityMetrics, evaluate
+from src.evaluation.diagnostics import SCHEMA_VERSION, preflight_diagnostics_path, write_diagnostics
+from src.evaluation.metrics import EntityMetrics, evaluate_trace
 from src.evaluation.models import PIIItem
 
 DATA_DIRECTORY = Path("data")
@@ -57,6 +58,8 @@ def main(arguments: Sequence[str] = ()) -> int:
 
 def _run_evaluation(arguments: argparse.Namespace) -> int:
     started_at = time.monotonic()
+    if arguments.diagnostics:
+        preflight_diagnostics_path(arguments.diagnostics)
     texts = _load_texts(arguments.dataset)
     source_tokens = _count_source_tokens(texts)
     api_key = _required_environment("OPENAI_API_KEY")
@@ -69,12 +72,24 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
         spending_limit_usd=spending_limit_usd,
         timeout=arguments.timeout,
     )
-    metrics = evaluate(
+    trace = evaluate_trace(
         predictions,
         ground_truth_path=DATA_DIRECTORY / arguments.dataset / "ground_truth.json",
     )
     duration_seconds = time.monotonic() - started_at
-    _print_result(metrics, cost=cost, source_tokens=source_tokens, duration_seconds=duration_seconds)
+    _print_result(trace.metrics, cost=cost, source_tokens=source_tokens, duration_seconds=duration_seconds)
+    if arguments.diagnostics:
+        write_diagnostics(
+            arguments.diagnostics,
+            trace=trace,
+            texts=texts,
+            dataset=arguments.dataset,
+        )
+        print(
+            f"diagnostics written: {arguments.diagnostics} "
+            f"({len(trace.documents)} documents, schema v{SCHEMA_VERSION})",
+            file=sys.stderr,
+        )
     return 0
 
 
@@ -187,6 +202,7 @@ def _print_result(
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
     parser.add_argument("--dataset", choices=Dataset.all())
+    parser.add_argument("--diagnostics", type=Path, help="write detailed evaluation diagnostics as JSON")
     parser.add_argument("--timeout", type=_timeout_seconds, default=MAX_TIMEOUT_SECONDS)
     parser.add_argument(
         "--cents-limit",

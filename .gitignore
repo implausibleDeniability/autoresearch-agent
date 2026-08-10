@@ -34,3 +34,4 @@ dist/
 results.tsv
 REQUESTS.md
 *.log
+diagnostics.json
