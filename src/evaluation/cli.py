@@ -5,6 +5,7 @@ import math
 import os
 import subprocess
 import sys
+import time
 from dataclasses import asdict
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -55,6 +56,7 @@ def main(arguments: Sequence[str] = ()) -> int:
 
 
 def _run_evaluation(arguments: argparse.Namespace) -> int:
+    started_at = time.monotonic()
     texts = _load_texts(arguments.dataset)
     source_tokens = _count_source_tokens(texts)
     api_key = _required_environment("OPENAI_API_KEY")
@@ -71,7 +73,8 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
         predictions,
         ground_truth_path=DATA_DIRECTORY / arguments.dataset / "ground_truth.json",
     )
-    _print_result(metrics, cost=cost, source_tokens=source_tokens)
+    duration_seconds = time.monotonic() - started_at
+    _print_result(metrics, cost=cost, source_tokens=source_tokens, duration_seconds=duration_seconds)
     return 0
 
 
@@ -164,7 +167,13 @@ def _run_worker(module_name: str) -> int:
     return 0
 
 
-def _print_result(metrics: EntityMetrics, *, cost: CostReport, source_tokens: int) -> None:
+def _print_result(
+    metrics: EntityMetrics,
+    *,
+    cost: CostReport,
+    source_tokens: int,
+    duration_seconds: float,
+) -> None:
     print(f"f_score={metrics.f_score:.6f}")
     print(f"precision={metrics.precision:.6f}")
     print(f"recall={metrics.recall:.6f}")
@@ -172,6 +181,7 @@ def _print_result(metrics: EntityMetrics, *, cost: CostReport, source_tokens: in
     print(f"pricing_version={PRICE_TABLE_VERSION}")
     print(f"api_cost_usd={cost.total_usd:.8f}")
     print(f"cost_usd_per_million_source_tokens={cost.cost_per_million_source_tokens(source_tokens):.6f}")
+    print(f"duration_seconds={duration_seconds:.6f}")
 
 
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:

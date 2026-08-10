@@ -47,8 +47,9 @@ development-data checks.
 
 ## Evaluation and cost
 
-The evaluation CLI runs the current editable solution and reports immediate API cost plus one quality
-metric: F-score with recall weighted five times as heavily as precision (`beta² = 5`):
+The evaluation CLI runs the current editable solution and reports wall-clock duration, immediate API
+cost, and one quality metric: F-score with recall weighted five times as heavily as precision
+(`beta² = 5`):
 
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-19k
