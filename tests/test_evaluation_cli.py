@@ -225,6 +225,9 @@ from src.evaluation.models import PIIItem
 
 
 def extract_pii(text):
-    OpenAI().chat.completions.create(model="gpt-4o-mini-2024-07-18", messages=[{"role": "user", "content": text}])
+    OpenAI().chat.completions.create(
+        model="gpt-4o-mini-2024-07-18",
+        messages=[{"role": "user", "content": text}],
+    )
     return [PIIItem(first_name=(text,))]
 """)
