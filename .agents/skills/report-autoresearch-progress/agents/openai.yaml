@@ -1,4 +1,4 @@
 interface:
   display_name: "Autoresearch Progress"
-  short_description: "Report experiment progress and best result"
-  default_prompt: "Use $report-autoresearch-progress to report the current autoresearch progress."
+  short_description: "Report metrics, findings, and next steps"
+  default_prompt: "Use $report-autoresearch-progress to report current autoresearch metrics, findings, and the next hypothesis."
