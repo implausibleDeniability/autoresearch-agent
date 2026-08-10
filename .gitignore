@@ -31,4 +31,6 @@ dist/
 *.swp
 *.swo
 
+results.tsv
+REQUESTS.md
 *.log
