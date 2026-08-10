@@ -40,6 +40,7 @@ Target no more than $1.50 per million source tokens—about 1.5 cents on `dev-5k
 
 ## Restrictions
 - You can NOT use models from the gpt-5 and later family, and other LLM providers, such as Google or Anthropic. Only use gpt-4o and gpt-4o-mini from OpenAI.
+- You can NOT execute `solution.py`, call `extract_pii` directly, run live tests, or make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You may modify and commit only `solution.py` as the experiment implementation.
 - You may create or update `results.tsv`, `REQUESTS.md`, and `run.log` only for experiment logging and communication. Do not commit these files. Do not intentionally modify any other repository files.
