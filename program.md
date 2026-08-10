@@ -29,7 +29,7 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation worker has a **fixed wall-clock budget of 3 minutes**, including subprocess startup, imports, and all document extraction. Run experiments on `dev-19k` by default with `uv run python -m src.evaluation.cli --dataset dev-19k`. Use `debug` to test a solution without wasting money on the experiment. Use `dev-87k` only in an exceptional case where you have a specific reason that `dev-19k` cannot answer the question; explain that reason and estimate the larger run before starting it.
+The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. `dev-87k` costs several times more, so use it occasionally and for final validation, where performance is measured.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
@@ -50,10 +50,10 @@ Target no more than $1.50 per million source tokens—about 2.9 cents on `dev-19
 
 When an experiment is done, log it to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions).
 
-The TSV has a header row and 7 columns:
+Use this 9-column header:
 
 ```
-commit	score	precision	recall	cost	status	description
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
 ```
 
 1. git commit hash (short, 7 chars)
@@ -63,15 +63,15 @@ commit	score	precision	recall	cost	status	description
 5. USD per million source-document tokens achieved — use 0.000000 for crashes
 6. status: `keep`, `discard`, or `crash`
 7. short text description of what this experiment tried
+8. dataset: `debug`, `dev-19k`, or `dev-87k`
+9. API cost charged to the budget; use the pre-run estimate if a crash hides the observed cost
 
 Example:
 
 ```tsv
-commit	score	precision	recall	cost	status	description
-a1b2c3d	0.940000	0.960000	0.936000	1.420000	keep	baseline
-b2c3d4e	0.945000	0.950000	0.944000	1.480000	keep	shorten extraction prompt
-c3d4e5f	0.930000	0.970000	0.923000	1.200000	discard	add deterministic filtering
-d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
+a1b2c3d	0.940000	0.960000	0.936000	1.420000	keep	baseline	dev-19k	0.027467
+d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema	debug	0.000500
 ```
 
 ## Extra communication bugs and required packages:
@@ -84,19 +84,19 @@ In the file REQUESTS.md write things that the human supervisor should know about
 
 The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 
-Run at most 10 experiments, counting the baseline, crashes, and reruns.
+Stop after 20 evaluation CLI runs or $0.50 in cumulative `budget_cost_usd`, whichever comes first. Baselines, debug checks, crashes, and reruns count. Before each run, sum the cost column and do not start if the estimate exceeds the remaining budget.
 
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
-4. Estimate the total and normalized cost. Aim below $1.50 per million source tokens and do not run the experiment if its expected total cost exceeds the absolute safety limit.
-5. Run the experiment on `dev-19k` with `uv run python -m src.evaluation.cli --dataset dev-19k > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context). Use `debug` to test a solution without wasting money on the experiment. Use `dev-87k` only for a specific question that `dev-19k` cannot answer, after recording the reason and estimating its cost.
+4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
+5. Run `uv run python -m src.evaluation.cli --dataset dev-19k > run.log 2>&1`, substituting another allowed dataset when appropriate.
 6. Read out the results: `grep -E '^(f_score|precision|recall|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
 7. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
-8. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
+8. Record the result in `results.tsv` and recompute cumulative spend. Do not commit the file.
 9. Keep the baseline. Prefer higher F-score, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the target, do not accept a meaningful F-score regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 10. If neither the score nor cost improvement justifies the regression in the other objective, git reset back to the incumbent.
-11. Stop after 10 experiments and summarize the results for the user.
+11. When a limit is reached, summarize the results and report the best `dev-87k` score separately.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
 
@@ -104,4 +104,4 @@ The idea is that you are a completely autonomous researcher trying things out. I
 
 **Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
 
-**DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 10 experiments have been attempted, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, and try more radical architectural changes.
+**DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 20 experiments have been attempted, cumulative `budget_cost_usd` reaches or exceeds $0.50, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, and try more radical architectural changes.

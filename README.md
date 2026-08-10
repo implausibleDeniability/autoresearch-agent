@@ -39,8 +39,8 @@ uv run python -m src.evaluation.cli --dataset dev-19k
 uv run python -m src.evaluation.cli --dataset dev-87k
 ```
 
-Use `debug` to test a solution without wasting money on the experiment. Run experiments on `dev-19k`
-by default, and reserve `dev-87k` for exceptional questions that `dev-19k` cannot answer.
+Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. Because `dev-87k`
+costs several times more, use it for occasional checks and final measurement.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
@@ -70,6 +70,9 @@ uses `o200k_base` and counts each source document once, independent of solution 
 context. The price table is evaluator-owned and currently uses standard API pricing for the supported
 models. The CLI prints `f_score` as the optimization metric and precision and recall as diagnostics
 for experiment logs.
+
+Autonomous research stops after 20 evaluations or $0.50 in cumulative API cost. Each run logs its
+dataset and observed cost; a crash that hides its cost is charged the pre-run estimate.
 
 ## Data
 
