@@ -25,7 +25,7 @@ Return the four metric bullets first with no heading or dataset name. Bold each 
 ```markdown
 - **Completed runs:** X out of Y
 - **Budget:** $X.XX out of $Y.YY (P%)
-- **Best result:** **X.XXXXXX F-score** (+D.XXXXXX), Y.YYYYYY precision (+D.YYYYYY), Z.ZZZZZZ recall (+D.ZZZZZZ)
+- **Best result:** **X.XXXXXX F-score** (+D.XXXXXX), Y.YYY precision (+D.YYY), Z.ZZZ recall (+D.ZZZ)
 - **Best result cost:** **$X.XX** (+$D.XX)
 
 **Research summary**
@@ -37,4 +37,4 @@ Return the four metric bullets first with no heading or dataset name. Bold each 
 - **Next — Hypothesis:** Why this documented, untested idea is the best next experiment.
 ```
 
-Use only the applicable summary bullet patterns; do not emit placeholders or empty categories. Preserve six decimal places for metrics and metric deltas. Preserve two decimal places for dollar values and cost deltas. Always show an explicit `+` for nonnegative deltas and `-` for negative deltas; place the sign before `$` for negative cost deltas.
+Use only the applicable summary bullet patterns; do not emit placeholders or empty categories. Preserve six decimal places for F-score values and deltas, three decimal places for precision and recall values and deltas, and two decimal places for dollar values and cost deltas. Always show an explicit `+` for nonnegative deltas and `-` for negative deltas; place the sign before `$` for negative cost deltas.
