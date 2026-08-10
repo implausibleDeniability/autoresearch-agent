@@ -6,7 +6,7 @@ from typing import Dict, List, Mapping, Sequence, Set
 from src.evaluation.matching import MatchIndexes, match_people, match_values
 from src.evaluation.models import PIIItem
 
-DEFAULT_GROUND_TRUTH_PATH = Path("data/dev-5k/ground_truth.json")
+DEFAULT_GROUND_TRUTH_PATH = Path("data/dev-19k/ground_truth.json")
 RECALL_WEIGHT = 5
 DocumentPII = Dict[str, List[PIIItem]]
 

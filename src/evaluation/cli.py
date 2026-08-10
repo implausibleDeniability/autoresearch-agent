@@ -39,12 +39,12 @@ SENSITIVE_CHILD_ENVIRONMENT = {
 
 class Dataset:
     DEBUG = "debug"
-    DEV_5K = "dev-5k"
-    DEV_50K = "dev-50k"
+    DEV_19K = "dev-19k"
+    DEV_87K = "dev-87k"
 
     @classmethod
     def all(cls) -> Tuple[str, ...]:
-        return cls.DEBUG, cls.DEV_5K, cls.DEV_50K
+        return cls.DEBUG, cls.DEV_19K, cls.DEV_87K
 
 
 def main(arguments: Sequence[str] = ()) -> int:

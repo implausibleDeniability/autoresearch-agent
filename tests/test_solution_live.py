@@ -8,8 +8,8 @@ from solution import extract_pii
 from src.evaluation.metrics import EntityMetrics, evaluate
 from src.evaluation.models import PIIItem
 
-DEV_TEXTS = Path("data/dev-50k/texts")
-DEV_GROUND_TRUTH = Path("data/dev-50k/ground_truth.json")
+DEV_TEXTS = Path("data/dev-87k/texts")
+DEV_GROUND_TRUTH = Path("data/dev-87k/ground_truth.json")
 SMALL_DOCUMENTS = ("fjwg0257", "pzvv0257", "nrbn0226")
 LARGE_DOCUMENT = "rtbn0226"
 
