@@ -42,6 +42,34 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. Because `dev-87k`
 costs several times more, use it for occasional checks and final measurement.
 
+Write a detailed error inventory during the same evaluation with:
+
+```bash
+uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
+```
+
+The ignored `diagnostics.json` file contains schema-v1 aggregate and per-field metrics, raw
+predictions, raw ground truth, person and field-value matches, false positives, false negatives, and
+literal source occurrences. Occurrence offsets are zero-based Python character indexes with an
+end-exclusive `end`; an empty `occurrences` list means the raw value was not found literally in the
+source. This is expected for some normalized or fuzzy matches. The file contains labeled PII and
+source context, is overwritten on each run, has owner-only permissions, and must not be committed.
+Other output paths are supported but are not ignored automatically.
+Each value stores at most 20 source snippets; `occurrence_count` preserves the total and
+`occurrences_truncated` reports whether additional occurrences were omitted.
+
+The top-level shape is:
+
+```json
+{
+  "schema_version": 1,
+  "dataset": "dev-19k",
+  "metrics": {"true_positive": 0, "false_positive": 0, "false_negative": 0},
+  "field_metrics": {"email": {"true_positive": 0, "false_positive": 0, "false_negative": 0}},
+  "documents": []
+}
+```
+
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
 

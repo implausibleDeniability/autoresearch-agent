@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0.0] - 2026-08-11
+
+### Added
+
+- Write an optional schema-versioned error inventory with raw predictions, ground truth, evaluator match decisions, per-field errors, and bounded source evidence from the same evaluation run.
+
+### Changed
+
+- Require autoresearch to inspect false positives and false negatives before spending another capped evaluation run.
+- Validate diagnostic output before metered work and write the ignored local artifact atomically with owner-only permissions.
+
 ## [0.1.1.0] - 2026-08-10
 
 ### Added
