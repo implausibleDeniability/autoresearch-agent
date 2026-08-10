@@ -162,6 +162,9 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     assert "f_score=1.000000" in completed.stdout
     assert "precision=1.000000" in completed.stdout
     assert "recall=1.000000" in completed.stdout
+    assert "true_positive=1" in completed.stdout
+    assert "false_positive=0" in completed.stdout
+    assert "false_negative=0" in completed.stdout
     assert not any(
         name in completed.stdout
         for name in (

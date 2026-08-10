@@ -8,12 +8,13 @@ description: Report the current PII autoresearch experiment progress, spending, 
 Read existing experiment artifacts only. Do not run evaluations or make paid model calls.
 
 1. Locate the active `autoresearch/*` Git worktree and read its `results.tsv`. If several exist, use the one whose `results.tsv` was modified most recently unless the user names a run.
-2. Read that worktree's `program.md` for the run and cumulative budget limits.
+2. Read that worktree's `program.md` for the run and cumulative budget limits. Read `baseline-results.tsv` from the repository when it contains data rows.
 3. Count every data row in `results.tsv` as a completed run, including crashes, debug checks, and reruns.
 4. Sum `budget_cost_usd` for budget usage. Calculate the percentage from unrounded values, then round it to the nearest whole percent.
 5. Use `dev-19k` as the comparison dataset when present. Otherwise, use the most frequently evaluated non-debug dataset.
-6. Select the highest-F-score `keep` row on that dataset as the best result. Use the first non-crash row on the same dataset as the baseline.
-7. Calculate metric and cost deltas as best minus baseline. Use the `cost` column, which is USD per million source tokens, for the best-result cost.
+6. Group `keep` rows on that dataset by commit. Average each group's score, precision, recall, and cost, then select the group with the highest average F-score.
+7. Average the saved baseline rows for the same dataset. If none exist, use the first non-crash row in the current run.
+8. Calculate metric and cost deltas as best minus baseline. Use the average `cost` column, which is USD per million source tokens, for the best-result cost.
 
 Return exactly these four lines with no heading, bullets, explanation, dataset name, or trailing note:
 
