@@ -16,13 +16,19 @@ def test_cli_requires_dataset():
         _parse_arguments(())
 
 
-@pytest.mark.parametrize("dataset", [Dataset.DEV_5K, Dataset.DEV_50K])
+@pytest.mark.parametrize("dataset", [Dataset.DEV_19K, Dataset.DEV_87K])
 def test_cli_accepts_dev_dataset(dataset: str):
     assert _parse_arguments(("--dataset", dataset)).dataset == dataset
 
 
 def test_cli_accepts_debug_dataset():
     assert _parse_arguments(("--dataset", Dataset.DEBUG)).dataset == Dataset.DEBUG
+
+
+@pytest.mark.parametrize("dataset", ["dev-5k", "dev-10k", "dev-50k"])
+def test_cli_rejects_legacy_dev_dataset(dataset: str):
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", dataset))
 
 
 def test_candidate_detection_skips_punctuation_only_chunks():

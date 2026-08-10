@@ -35,12 +35,12 @@ Evaluate the solution on one complete dataset split:
 
 ```bash
 uv run python -m src.evaluation.cli --dataset debug
-uv run python -m src.evaluation.cli --dataset dev-5k
-uv run python -m src.evaluation.cli --dataset dev-50k
+uv run python -m src.evaluation.cli --dataset dev-19k
+uv run python -m src.evaluation.cli --dataset dev-87k
 ```
 
-Use `debug` to test a solution without wasting money on the experiment. Run experiments on `dev-5k`
-by default, and reserve `dev-50k` for exceptional questions that `dev-5k` cannot answer.
+Use `debug` to test a solution without wasting money on the experiment. Run experiments on `dev-19k`
+by default, and reserve `dev-87k` for exceptional questions that `dev-19k` cannot answer.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
@@ -51,7 +51,7 @@ The evaluation CLI runs the current editable solution and reports immediate API 
 metric: F-score with recall weighted five times as heavily as precision (`beta² = 5`):
 
 ```bash
-uv run python -m src.evaluation.cli --dataset dev-5k
+uv run python -m src.evaluation.cli --dataset dev-19k
 ```
 
 Runs should target no more than $1.50 per million source tokens, but only the 8-cent total-cost guard
@@ -75,7 +75,9 @@ for experiment logs.
 
 - `data/raw/industry-document-baseline`: the complete, unchanged source dataset.
 - `data/debug`: one PII-positive and one PII-negative document totaling less than 1,000 tokens.
-- `data/dev-5k`: 16 complete documents, 4,361 words, 74 labeled people, and 198 labeled PII values.
-- `data/dev-50k`: 20 complete documents, 49,953 words, 93 labeled people, and 230 labeled PII values.
+- `data/dev-19k`: 17 complete documents, 19,346 tokens, 11,162 words, 74 labeled people, and 198
+  labeled PII values.
+- `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 93 labeled people, and 230
+  labeled PII values.
 
 `data/raw` is archival source data and should not be exposed to the research agent.
