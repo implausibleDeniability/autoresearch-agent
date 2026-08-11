@@ -1,0 +1,174 @@
+IR opioid TRx are expected to stay relatively flat through 2020, with AD formulations capturing ~XX% of market share
+SOURCE: IMS, Evaluate, team analysis
+CURRENT SCENARIO
+40
+20
+0
+60
+160
+100
+200
+140
+80
+120
+180
+220
+15
+14
+2013
+2020
+17
+16
+18
+19
+APAP/hydrocodone
+Oxycodone HCL
+APAP/codeine
+APAP/oxycodone
+Hydromorphone HCL
+Ibuprofen/hydrocodone
+Oxymorphone HCL
+Other
+‹#›
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+|
+Notes
+-----
+0
+
+IR opioid gross sales are similarly flat with no expected change in product pricing
+SOURCE: IMS, Evaluate, team analysis
+CURRENT SCENARIO
+2020
+19
+18
+17
+16
+15
+14
+2013
+Tapentadol HCL
+Hydromorphone HCL
+Oxycodone HCL
+APAP/oxycodone
+APAP/hydrocodone
+Oxymorphone HCL
+Fentanyl CIT
+APAP/codeine
+Other
+Morphine Injection
+‹#›
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+|
+Notes
+-----
+1
+
+If the FDA flips the market, gross IR sales increase significantly driven by APAP/hydrocodone until Gx reenter the market
+SOURCE: IMS, Evaluate, team analysis
+FDA FLIPS THE MARKET
+16
+17
+14
+15
+2013
+2020
+19
+18
+oxymorphone HCL
+APAP/oxycodone
+oxycodone HCL
+hydromorphone HCL
+APAP/codeine
+morphine Injection
+fentanyl CIT
+Other
+APAP/hydrocodone
+Tapentadol HCL
+‹#›
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+|
+Notes
+-----
+2
+
+IR opioid gross and net sales are similarly flat with no expected change in product pricing
+SOURCE: Source
+CURRENT SCENARIO
+Series
+2013
+12
+2011
+Series
+‹#›
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+|
+Notes
+-----
+3
+
+If the FDA were to require AD labeling  of IR opioids, TRx would remain similar…
+SOURCE: Source
+Series
+Series
+2013
+12
+2011
+FDA FLIPS THE MARKET
+‹#›
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+|
+Notes
+-----
+4
+
+…but gross and net revenue would expand significantly
+SOURCE: Source
+Series
+2013
+12
+2011
+Series
+FDA FLIPS THE MARKET
+‹#›
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+|
+Notes
+-----
+5

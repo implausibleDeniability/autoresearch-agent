@@ -1,0 +1,934 @@
+CONFIDENTIAL
+
+Memorandum to
+John Stewart
+Russ Gasdia
+From
+McKinsey & Company
+
+July 18, 2013
+
+
+
+
+Identifying granular growth opportunities for
+OxyContin: First Board update
+
+In June, Purdue engaged McKinsey to conduct a rapid assessment of the underlying drivers of
+current OxyContin performance, identify key opportunities to increase near-term OxyContin
+revenue and develop plans to capture priority opportunities.
+While our work is only partially complete, we believe there is significant opportunity to improve
+OxyContin performance despite strong opioid marketplace trends that may be shaping a ‘new
+normal’. We are pursuing 20+ distinct opportunities. All require further analysis, some will
+require testing, but several can be implemented quickly.
+This memo provides an interim update that is not comprehensive of all the work done. The
+memo is divided into four sections:
+1. Overall analytical approach
+2. Early findings from diagnostic
+3. Emerging opportunities
+4. Next steps
+
+
+
+1. Overall analytical approach
+We set out to objectively examine OxyContin performance in seven areas – market landscape,
+commercial resourcing levels, messaging, targeting, field execution, market access, and
+medical/scientific support. In each area, we are taking an independent, fact-based, and granular
+approach. For the analyses, we are leveraging existing data, and where needed, we have
+requested that Purdue purchase new data (e.g., IMS prescriber level milligram dosing data). In
+                                                                                               1
+
+
+
+some cases we are generating entirely new data (e.g., having Purdue’s sales force match specific
+prescribers to local ‘corporatized providers’ that make economically based usage decisions, such
+as Accountable Care Organizations.)
+Our perspectives are shaped by 30+ interviews with external stakeholders including physicians,
+nurse practitioners, and pharmacists, as well as daily discussions with leaders in Stamford and
+initial ride-alongs with reps. There are strong marketplace headwinds from newer stakeholders
+(e.g., PROP, Corporatized Providers) that we are continuing to assess and quantify. In
+recognition of the complexity of the landscape and to better uncover root drivers, we have
+purposely and consistently focused on analyses at the local market level (e.g., zip code level
+analysis of growth). We have also leveraged McKinsey experts (e.g., field force execution,
+medical affairs) as well as proprietary tools (e.g., corporatized provider network connector) and
+McKinsey benchmarks (e.g., commercial spend, field productivity). Lastly our work builds
+upon our prior experiences serving Purdue that go back 10 years.
+One important note: We have gathered and analyzed large amounts of data in a short period of
+time. Some initial findings will require refinement as we fill gaps in our fact base. We have
+been encouraged to provide an unvarnished, independent perspective on opportunities for
+improvement. As a result, our diagnostic focuses more on what’s not working than what is. We
+see opportunity for Purdue to improve performance and hope these perspectives are received in
+that spirit.
+
+
+2. Findings from diagnostic
+So far, we see four broad areas for improvement: market insights, local market fact-based
+decision-making, optimization of current resources, and tailored go-to-market approaches.
+Below we detail what we have found to date. These do not represent recommendations at this
+stage, although these findings inform the emerging opportunities we describe in section 3.
+A) Growth by Geography
+We believe that despite a national decline, micro market analysis suggests important pockets of
+growth that Purdue should focus on. It is encouraging that at a zip code level; roughly 40% of
+zips are actually growing their OxyContin prescription volume (Exhibit 1). The diffuse pattern
+in the geographic mapping also illustrates the extent of local dynamics– allowing Purdue to
+significantly improve its local market approach to capture these opportunities.
+
+
+
+
+                                                                                                    2
+
+
+
+ Exhibit 1: OxyContin growth by geography
+
+ TRx growth by zip code, Apr 2011-Mar 2012 v. Apr 2012-Mar 2013
+
+   Percent                                                                                                    Number of growing and declining zip
+                                                                      % Growth % Decline                      codes1
+                                                                           0-25            0-25               Number of zipcodes
+                                                                           25-50           25-50                             40%           60%
+                                                                           50+             50+
+              WA
+                                                                           N/A                                                             5,481
+                                 MT        ND                                                        ME
+             OR                                                                                   VT
+                                                                                                                             3,566
+                                                     MN
+                       ID                                                                           NH
+                                           SD                   WI                              NY MA
+                                  WY                                                               CT
+                                                                           MI
+                                                      IA                                   PA       RI
+                                           NE                                                       NJ
+                  NV                                                            OH
+                            UT                                   IL   IN                            DE
+                                      CO                                             WV
+                                                                                                    DC                     Growing        Declining
+        CA
+                                            KS            MO                               VA       MD                     zipcodes       zipcodes
+                                                                           KY
+                                                                                          NC
+                                                                       TN                                     Avg
+                       AZ                       OK                                                                          669            538
+                                 NM                        AR                         SC                      TRx/zip
+                                                                 MS    AL        GA
+                                                                                                              Example     Fort Wayne,     Knoxville,
+                                           TX
+                                                           LA                                                 zip codes   IN (+5.1K)      TN (-1.9K)
+                       AK                                                                                                 Pinehurst,      Tampa, FL
+                                                                                      FL                                  NC (+3.2 K)     (-1.9K)
+                                                                                                                          Fayetteville,   Renton,
+                                                                                                                          NC (+2.6K)      WA (-1.5K)
+        HI                                                                                               PR
+
+
+
+ 1 Zip codes with fewer than 60 Oxycontin TRx in both 2011 and 2012 were not considered, accounting for approximately 100,000 TRx in 2011 and 2012
+
+ SOURCE: IMS; Purdue Sales and Marketing; Team analysis                                                                        McKinsey & Company | 1
+
+
+
+B) Growth by Prescriber
+Going one step further to a physician level, 47% of all OxyContin writers (between March 2012
+and March 2013) increased their prescribing of OxyContin and 60,000 new prescribers began
+writing OxyContin. To better understand where this growth is coming from, we examined
+growth by specialty.
+Nurse practitioners and physician assistants (NP/PAs) stand out as the only group growing in
+double digits (11%, Exhibit 2). They have the greatest sales rep access and are increasingly
+important in large group practices. NPs are currently able to prescribe OxyContin in 41 states.
+In addition, NP/PAs as a group are expected to grow at ~3.5% over the next 5 years. Today
+Purdue calls on NP/PAs when they appear on a target list, however there is not a tailored
+approach or strategy for NPs. Purdue also does not systematically capture data affiliating
+NP/PA OxyContin writers with the practice in which they work (e.g., in primary care or as part
+of a pain practice).
+
+
+
+
+                                                                                                                                                        3
+
+
+--- OCR From Images ---
+.. r ? ti ? ?!l i i                 . t      Ml
+
+
+
+  Exhibit 2: OxyContin growth by prescriber
+
+     OxyContin % TRx by prescriber specialty
+                                                                                                 Number of
+                        100%=     1.4M TRx         1.3M TRx         1.2M TRx       2011-13 TRx   prescribers 2012 TRx/prescriber
+                                                                                   CAGR (%)      (% Purdue Reach) (2012)
+                                        100               100            100
+
+     Other specialty                    21                20             19            -11         68,400 (12%)          15
+
+
+
+
+                                                          41             39            -10         92,724 (31%)          24
+     PCP                                43
+     Anesthesiology
+     Nurse practitioner/
+                                                                         14            -2           4,842 (66%)         153
+     physican assistant                 13                14
+     Physical Med & rehab                                                16
+                                        12                14                           11          30,206 (25%)          26
+     Pain Medicine
+     (narrowly defined)2                     10                10             10       -4           4,976 (57%)         111
+                                    1                1               2
+                                                                                       5            373 (73%)           207
+                                  Q1 2011           Q1 2012         Q1 2013
+
+
+                    ?   Nurse practitioner/assistant TRx growing at double-digit rates1
+                    ?   PCPs are one of the fastest declining segments of the market
+                    ?   Narrowly defined pain specialists account for <2% of TRx
+
+ 1 NPs can prescribe controlled substances in 41 states
+ 2 Does not include pain medicine as a subspeciality
+
+ SOURCE: IMS; NP Central; Team analysis                                                                      McKinsey & Company | 2
+
+
+
+C) OxyContin Reach and Targeting
+The diffuse geographic pattern of OxyContin growth combined with the above prescriber
+analysis prompted an exploration of Purdue’s current reach and targeting.
+In Q1 2013, Purdue reached 21% of all OxyContin prescribers, covering 54% of total
+OxyContin prescriptions (TRx). (Exhibit 3)
+In Q1 2013, Purdue reached 22% of all OxyContin prescribers, covering 39% of total
+OxyContin prescriptions (NBRx).
+Based on OxyContin’s brand size, its relatively new reformulation and newer label change,
+improving Purdue’s reach may be a profitable opportunity. Determining the optimal reach for
+OxyContin requires significant further analysis as it is both brand and situation specific.
+However for other brands of this size in similar situations, we regularly see reach near 80% of
+TRx when the brand is call sensitive.
+Thus at an overall level, there is likely an opportunity to profitably expand reach.
+
+
+
+
+                                                                                                                                      4
+
+
+--- OCR From Images ---
+?Q 7- < =_>
+
+
+
+The sales force today is designed and incented entirely on TRx, not incorporating NBRx. This
+is evident in the reach analysis of prescribers deciled by TRx vs by NBRx.(Exhibit 4) TRx
+reach is consistently higher than NBRx, e.g., in decile 10, Purdue covers 85% of TRx vs 61% of
+NBRx.
+
+ Exhibit 3: Reach by OxyContin TRx and NBRx
+
+        OxyContin sales force reach in Q1 2013 (including P1 or P2 calls)
+                           Oxy TRx                                          Oxy NBRx
+                           Total =         Total =                          Total =          Total =
+                           155K            1.3MM                            116K             177K
+                                100             100                             100             100
+
+        Called on                21                                              22
+                                                                                                 39
+                                                54
+
+
+
+
+        Not called on            79                                              78
+                                                                                                 61
+                                                46
+
+
+
+                            # Prescri-        TRx                             # Prescri-         NBRx
+                            bers                                              bers
+
+
+ 1 For 3-month period ending in March 2013; Reach defined as any physician who received at least one call (P1 or P2) in the time period specified
+
+ SOURCE: IMS; Purdue Sales and Marketing; team analysis                                                                     McKinsey & Company | 3
+
+
+
+
+                                                                                                                                                     5
+
+
+
+ Exhibit 4: Prescriber Deciling by TRx and NBRx
+   Sales force reach by Oxy Prescriber Decile for TRx and NBRx in Q1 2013
+   % Reach
+
+                                                                                           80     81        85
+                                                                                   72
+                                                                            62
+                                                                     51
+                                                             43
+                                                     33
+       TRx                            24
+                         10
+
+                          1           2              3       4      5       6        7      8     9         10
+                                                          OxyContin prescriber decile by TRx
+
+
+
+                                                                                           56     59        61
+                                                                                   49
+                                                                            42
+                                                             31      36
+                                                     26
+       NBRx                           20
+                         13
+
+                          1           2              3       4       5       6        7     8     9         10
+                                                          OxyContin prescriber decile by NBRx
+ 1 Reach defined as at least 1 P1 or P2 in Q1 2013
+
+ SOURCE: IMS; Purdue Sales and Marketing; Team analysis                                         McKinsey & Company | 4
+
+
+
+(Note: each decile contains 10% of the volume of TRx or NBRx. Each decile has different
+numbers of physicians. Decile 10 contains the smallest number of physicians but also those of
+highest value)
+Targeting that only incorporates TRx can create sub-optimal field deployment as reps could
+spend too much time with historically high writers. These prescribers may largely be
+maintaining patients, with minimal risk of switching stable patients. As a result, these
+prescribers may not justify as high a call frequency.
+Incorporating NBRx would encourage the field to seek out prescribers who are putting new
+patients on OxyContin, both opioid naives and switchers. It is critical for the field to message
+physicians experiencing a high rate of brand decision moments, e.g., someone expanding their
+practice. Identifying and supporting high NBRx prescribers is critical to growing your patient
+base. We have seen many companies with chronic products initiate sales acceleration strategies
+focused on NBRx to boost new starts.
+Thus there is a tangible opportunity for Purdue to adjust its targeting to incorporate NBRx.
+
+
+
+                                                                                                                         6
+
+
+
+Industry best practice targets physicians based on a composite value incorporating TRx and
+NBRx, as well as access and other behavioral indicators.
+
+
+D) OxyContin Call Responsiveness
+Given the size of the “unreached population” and unique characteristics of OxyContin (e.g., a
+well-known brand with new characteristics), we examined the impact of prescribers not being
+called upon using vacancies as a proxy.
+Despite its age, OxyContin is surprisingly responsive to both a lack of calls and re-introduction
+of calls. Calling on a ‘vacant’ prescriber appears to increase sales in that prescriber on average
+by 15%. (Exhibit 5) This is consistent with internal Purdue analysis on call sensitivity.
+OxyContin’s call responsiveness suggests there is tangible opportunity to benefit from increased
+reach.
+Please note this analysis does not imply that more reps are needed; later on we will explore
+whether additional reach capacity could be found in the current force.
+
+
+
+
+                                                                                                     7
+
+
+
+ Exhibit 5: OxyContin call responsiveness
+                                                                                                                                                      Overall avg. monthly Oxy TRx trend
+                                                                                                                                                      Avg. change in sample
+ %
+  Cumulative change in OxyContin                                                            Cumulative change in OxyContin
+  TRx following vacancy                                                                     TRx after vacancy is filled
+
+                                 4                                                                                         4
+   Cumulative % Change in TRx
+
+
+
+
+                                                                                             Cumulative % Change in TRx
+                                 2                                                                                         2
+
+                                 0                                                                                         0                                                         +8
+
+                                 -2 1    2     3     4    5     6     7    8     9    10                                   -2 1   2    3    4     5    6      7     8     9     10
+
+                                 -4                                                                                        -4
+                                 -6                                                                                        -6
+                                                                                       -8
+                                 -8                                                                                        -8
+                                -10     Months of Continuous Vacancy                                                      -10         Months of being filled post-vacancy
+
+
+
+
+                                         ?   After 10 months of vacancy, Oxy TRx falls an average of 8% v. the overall trend; the effect is similar
+                                             when zips are filled post- vacancy
+                                         ?   Given that the sales force calls on ~54% of OxyContin volume, this is consistent with a ~15%
+                                             impact on prescribers actually called
+
+
+
+ 1 % changes calculated using a weighted average of month TRx change for 8373 zip codes with >100 total TRx in a 28 month period (Jan 2011 to April 2013)
+
+ SOURCE: IMS; Purdue Sales Operations; team analysis                                                                                                        McKinsey & Company | 6
+
+
+
+E) OxyContin Sales Force Efficiency and Effectiveness
+The level of reach and responsiveness invite examination of the efficiency and effectiveness of
+the field force.
+At the highest level, Purdue’s annual goal of 1400 calls per rep is below our observed industry
+best practices of 1700 calls per rep for primary care. If the entire Purdue sales force was treated
+as effectively primary care, this benchmark would suggest 21% greater productivity is possible.
+Specialty call rates can be lower but a major driver is geographic workload given specialty
+forces are typically half of Purdue’s current size.
+Being more conservative and treating Purdue’s field force as a composite of primary care and
+specialty suggests 15% greater number of calls could be possible. (Exhibit 6)
+An additional factor is that Purdue reps make calls to pharmacists outside the 1400 calls per rep
+aspiration and these are not on the official call list. As part of the opportunity to increase
+productivity, the value of these ‘extra’ calls should be re-evaluated.
+
+
+                                                                                                                                                                                           8
+
+
+--- OCR From Images ---
+??
+
+
+
+Best practice field force productivity optimization requires a significant holistic approach
+(beyond the scope of this project) with robust analysis of many factors; therefore please view
+this observation as directional and preliminary.
+
+
+
+ Exhibit 6: OxyContin call productivity
+
+               Sales force calls
+               Annualized
+                                                                  1,700
+                                                                                                               1,557
+                                            1,354                                               +15%
+                     1,168
+                                                                                         1,080
+
+
+
+
+                 Purdue Q1              Purdue Q2             Primary                Specialist            Purdue weighted
+                 2013                   2013                                                               benchmark
+                 (annualized)           (annualized)                                                       assuming 77/23
+                                                                                                           primary/specialty
+                                                                                                           call mix1
+                                                                                       Benchmark
+ 1 77% of Purdue OxyContin details are for GPs; GPs include GPs, NRP, Phys Med & Rehab;
+ 2 Assuming 12 calls/ year/ prescriber, 39 incremental scripts per prescriber that is newly called upon (assuming Decile 5-7 sales responsiveness
+   calculated by ZS Associates), 71 pills/ script, $6.2 average price per pill, with 25% rebate and other fees.
+
+ SOURCE: GP/Specialist mix from ZS report “M6 Alignment and Preliminary Placement Review v2.0”, slide 74; McKinsey
+                                                                                                                             McKinsey & Company | 6
+         benchmarks; Purdue sales reports; Team analysis
+
+
+
+
+In terms of call attainment for OxyContin, in the first half of 2013 the field delivered 79% of
+target PDEs – 67% of the intended first position details (P1s) and 99% of second position details
+(P2s).(Exhibit 7) The rebalancing of territories in January is a factor but does not explain the
+entire difference, as Q2 P1% had risen to 80%.
+
+
+
+
+                                                                                                                                                      9
+
+
+
+  Exhibit 7: OxyContin call attainment
+
+                  Average monthly OxyContin calls
+                  Jan – June 2013
+                                                                                                           Primary
+                                                                                                           detail
+                                                                                                           equivalents
+                                                              P1                          P2               (PDEs)1
+                  Per Rep
+                  ? Target2                                   55                          59               84
+
+                  ? Actual3                                   37                          58               66
+
+                  Field force total
+                  ? Target                                    28,875                      30,713           44,231
+
+                  ? Actual                                    19,600                      30,400           34,800
+
+                  ? % actual v. target                        67%                         99%              79%
+
+  1 P1s plus 50% of P2s
+  2 Target based on published call plan (e.g. 2 calls/month on Oxy Supercores and 1 call/month on Cores)
+  3 Assuming 525 active sales reps
+
+  SOURCE: Purdue sales reports; Purdue internal interviews; team analysis                                       McKinsey & Company | 7
+
+
+
+
+Looking more closely at P1s, we examined call adherence to the headquarters list. The year to
+date level of adherence to the HQ list is 56%, meaning that 44% of the calls were made to
+prescribers not on the HQ target list. This is well below what we have seen at other companies
+which typically reach 85-95%.
+
+
+
+
+                                                                                                                                         10
+
+
+
+ Exhibit 8: HQ call list adherence
+
+      Number of prescribers reached for OxyContin in Q1 2013
+
+                               A
+                                                                 B              C
+                        Head-                                                                      D
+                        quarter                                            Actual P1         On-list P1
+                                                            Call plan
+                        suggested                                          calls             calls made
+                                                            # targets
+                        list                                               made
+
+
+
+      # of                     42,000                            26,000         18,000           10,000
+      Prescribers
+      Per rep                        80                              50                34              19
+
+                                                                          68%                38%
+
+
+                                                                                    8,000 out of the 18,000
+                                                                                    calls actually made were
+                                                                                    off-list (44%)
+
+ SOURCE: ZS Associates report; Purdue call data; Team analysis                                 McKinsey & Company | 9
+
+
+
+
+Understandably given the particular characteristics of OxyContin, there may be a high
+percentage of no-see doctors. However these should be accounted for both when the HQ list is
+constructed and when the field is reducing it to their target list. This may explain the high degree
+of room for selection of only 50 out of 80 targets per rep.
+In the above example from Q1, of the 50 target calls per rep – only 34 P1s were made, and of
+those only 19 were from the HQ list. Thus 56% (19/34) of the calls made were on the target list.
+Extracting further, 38% (19/50) of the original HQ target P1s on the list were made.
+This degree of freedom can work if Purdue’s reps are making consistently better real time
+decisions. However examination of off list P1s shows that 91% were to lower value decile 0-5
+prescribers, with 47% coming from decile 0 and 1. Thus it appears that the degree of flexibility
+may be allowing the field to trade off higher value prescribers for lower ones. Purdue should
+
+
+                                                                                                                   11
+
+
+--- OCR From Images ---
+.?
+
+
+
+re-evaluate the optimal degree of freedom, which in turn could enable greater capture of benefits
+from adjustments to reach and targeting.
+
+
+F) OxyContin information
+Moving to what the field actually says once in the physician’s office, it is clear from our early
+physician interviews that there is an opportunity to increase awareness and understanding of
+both the new formulation and the AD label change.
+We detected a consistent difference between pain specialists and PCPs in their understanding of
+the new formulation and AD label change. Many pain specialists saw significant value in the
+AD properties while PCPs generally had a lower level of understanding and a correspondingly
+lower level of perceived value. Pain specialists suggested PCP perception of AD value was
+largely driven by their incorrect assessment of the lack of abuse risk in their patients.
+In our initial rep rides, we have seen missed opportunities for medical follow up to improve
+physician understanding. Yet we also heard from reps and management that medical has not
+optimally met physician needs due to a combination of: (a) MSL team being directed to focused
+on other stakeholders (but not necessarily prescribers); (b) no explicit channel for real-time
+engagement, and; (c) lack of belief that education will be beneficial for physicians, even when
+prescribers ask. In best practice medical organizations, each of these three observations is
+reversed: MSLs prioritize building strong relationships with physicians, Medical leverages real
+time technology – phone, video and even Google like proprietary tools, and the sales force
+routinely coordinates with their Medical colleagues to address physician needs.
+The Medical Services information line is underutilized by physicians and the field appears
+under-trained on how to appropriately discuss it.
+Given the unmet physician need to increase their understanding of the new formulation and AD
+label change, MSL resourcing and their ability to strategically engage physicians should be
+reconsidered.
+G) Broader Marketplace Strategy
+Moving beyond physicians, Purdue’s marketplace is facing forceful headwinds but strategies for
+evolving stakeholders such as corporatized providers, Managed Care and Pharmacies have not
+kept pace with competitors and require attention.
+Corporatized providers
+Corporatized providers, ranging from large group practices to Acountable Care Organizations
+(ACOs) to large integrated delivery networks (IDNs) who are making use decisions using
+economic criteria, likely represent 25-35% of your potential business today and more going
+forward. Yet Purdue today does not purchase data on OxyContin performance in these groups.
+
+                                                                                                    12
+
+
+
+This is in contrast to competitors (e.g., Pfizer, BI) that buy the data and have already redesigned
+their sales forces to respond to these new stakeholders (e.g., creating dedicated key account
+teams that have different capabilities and regulatory guidelines from traditional reps). For this
+diagnostic, we are bringing a proprietary field affiliation tool that will shortly give Purdue its
+first view on performance in this corporatized provider segment. Given the lack of focus on
+these stakeholders, we expect the performance of OxyContin to be well below its national share.
+Based on this new data, a decision needs to be made whether it is better to bolster relationships
+to regain share or reduce sales effort in these accounts.
+Health Economics
+HECON is becoming increasingly important – from payors to corporatized providers to
+physicians. Given its increasing relevance, Purdue’s policies and strategic focus should be
+reconsidered.
+For example, we understand that today Purdue does not proactively engage payors on HECON
+issues as a matter of policy and only responds to unsolicited requests. Therefore Purdue is not
+proactively sharing its new label or any of the supporting data to help inform formulary
+decisions. We are not aware of another pharmaco in the US that takes this approach. Rather we
+see increasing resources, in HECON and payor groups, and even growing numbers of
+institutional reps and key account managers empowered to shape these types of economic
+discussions.
+Purdue’s policy and strategy have led to an undersized and underutilized HECON team of two.
+We recognize that HECON to support OxyContin and other pain products is more challenging
+than in other therapeutic areas. However your portfolio and the evolving landscape stress the
+importance of real effort in this area.
+We believe there is an opportunity to build out the HECON story about AD in a way that payors
+and corporatized providers will take notice. We believe AD should be the disproportionate
+focus of your HECON efforts. Currently Purdue is also exploring a Budget Impact Model
+(BIM) to show payors that formulary restriction is a poor financial decision. While we
+appreciate this may be valuable in a few targeted situations, there is also certainly risk of this
+approach being counterproductive and potentially driving more severe restrictions including
+being taken off formulary.
+Thus we see value in re-considering Purdue’s HECON policies and increasing focus on
+developing the AD value proposition.
+Managed Care
+While this is an unlikely source of near term opportunity, we did uncover two findings that
+suggest there are some actions that can be taken quickly. First, when we explored changes in
+OxyContin formulary status in multiple Part D plans, we detected a clear drop off in the
+
+                                                                                                 13
+
+
+
+commercial book of business for the same plan. This is inconsistent with industry best practice.
+(Exhibit 9) Additionally in areas where Part D coverage was lost, we found there was no
+concerted physician or patient advocacy effort to champion ongoing patient access to OxyContin
+and put complementary pressure on the payor. This is an opportunity to improve commercial
+access awareness today and going forward as Part D will continue to present formulary
+challenges.
+
+ Exhibit 9: Part D formulary loss spillover into Commercial plan
+                                                                                                               Year prior to
+ Summary of OxyContin performance in Aetna plans post loss of Medicare Part D                                  OxyContin loss of
+                                                                                                               Part D formulary
+ formulary status                                                                                              status in Jan 2011
+
+    OxyContin ERO share
+    %
+
+                     Aetna Part D                              Aetna Commercial
+
+                                   Incremental $17M                                    Incremental $2M
+                                   revenue had Purdue                                  if Purdue had
+                                   retained share                                      retained share
+                                                                  37
+                                                                           35
+                        32                                                       33            -14%
+                                 31                                                     32
+
+
+
+                                                        -59%
+                                          18
+
+                                                   13
+
+
+
+
+                      2009     2010     2011     2012           2009     2010   2011   2012
+      Oxy TRx          42       67        27       29            159      145   112      96
+
+
+ SOURCE: IMS PlanTrak; Purdue iGallery data; Purdue interviews; Team analysis                            McKinsey & Company | 10
+
+
+
+The second potential opportunity we identified was addressing instances of differential field
+force pull-through in equal access situations within the same state. This will require further
+local inquiry to validate individual opportunities. (Exhibit 10)
+
+
+
+
+                                                                                                                                    14
+
+
+
+ Exhibit 10: Differential pull through in equal access situations
+
+
+                                   % of EROs where OxyContin
+  Territory pair         State     on formulary                OxyContin share of ERO
+
+                                                                                               49
+  Cherry Hill, Long      NJ        ~60%                                                  38
+  Branch
+
+
+                                                                               22
+  Goldsboro,             NC        ~55%                                                  33
+  Burlington
+
+
+                                                                               22
+  Houston Central,  TX             ~45%                                 14
+  San Antonio North
+
+
+                                                                          16
+  North Atlanta,         GA        ~45%                                             24
+  Savannah
+
+
+                                                                                    28
+  West Chester,          PA        ~45%                                                   39
+  Scranton
+
+
+
+
+ SOURCE: IMS, Igallery, team analysis                                                               McKinsey & Company | 10
+
+
+
+More generally, payor pressures like those Purdue has experienced in Part D and MA-PD plans
+are likely to intensify. To date, Purdue has not actively prioritized deeply understanding payor
+customers and developing value propositions that go beyond rebates. Thus we believe these are
+both near-term and mid-term opportunities for Purdue to strengthen its managed care efforts.
+Retail pharmacy
+The retail channel, both pharmacies and distributors, is under intense scrutiny and direct risk.
+We see clear disruption impacting patients and it is spreading. The range of obstacles include
+entire pharmacies being shut off by distributors, pharmacies themselves imposing tablet limits,
+decreases in channel inventory leading to greater stockouts, and pharmacies choosing to not
+stock OxyContin. Yet against this clear and direct threat to patient access, we have not found a
+Purdue strategy for response or any significant mitigation steps taken. This requires an urgent
+response. Later on, we will describe one early idea to potentially address this issue.
+
+
+The broader external environment around opioids is being shaped by others and Purdue is being
+impacted. In some cases such as state legislation, Purdue has taken action. Yet for other
+
+
+                                                                                                                              15
+
+
+
+significant influencers like PROP (Physicians for Responsible Opioid Prescribing), Purdue does
+not appear to have a clear strategy nor has it taken significant action.
+The theme for these emerging stakeholders is that Purdue needs quicker, deeper insights and
+pro-active mitigation strategies.
+
+
+3. Emerging opportunities
+Our initial focus has been on the diagnostic. Our work will shift to opportunities over the
+coming weeks. To date we have identified and are pursuing 20+ tangible and near term
+opportunities to improve Purdue’s performance. All require further analysis; several will
+require real world testing. We are launching a ‘test and learn’ approach in close coordination
+with the sales force.
+Initial opportunities fall into three areas: (I) Immediate tactical opportunities for impact within
+6 months (II) Near term opportunities requiring testing for impact in 6-12 months, and (III)
+Strategic policy decisions to be debated and resolved. (Exhibit 11)
+
+ Exhibit 11: Examples of opportunities to pursue                                                         WORK-IN-PROGRESS
+
+
+
+                   ?   Make adjustments to select sales force efficiency and effectiveness levers (e.g., call productivity,
+   I.                  reach, targeting, attainment, adherence)
+   Immediate
+   tactical        ?   Increase involvement of MSLs in prescriber interactions to ensure effective communication of
+   opportunities       scientific results
+                       Increase messaging in low-share, high payer access territories on quality of OxyContin coverage
+                   ?   Promote patient savings cards in areas with high Walgreen’s concentration
+                   ?   Expand ‘starter kit’ distribution
+
+                   ?   Move to 100% OxyContin P1s and Butrans P2s in select territories, adjusting incentives accordingly
+   II.
+   Opportunities   ?   Selectively reduce peak frequency of OxyContin and use incremental capacity to increase reach,
+   requiring           targeting high ERO and high NBRx prescribers being missed today
+   testing
+                   ?   Increase reach and frequency of calls to NPs and develop tailored messaging
+
+
+
+   III.            ?   Create an alternative distribution channel to respond to retail patient access challenges
+   Strategic
+   policy
+                   ?   Increase overall sales force productivity through fundamental re-examination of all the sales and
+                       marketing components, ranging from co-positioning to compensation to territory re-definition
+   decisions
+                   ?   Develop new strategy to approach or deprioritize corporatized providers
+                   ?   Reconsider policy around HECON engagement with payors
+
+
+
+                                                                                                        McKinsey & Company | 11
+
+
+
+
+                                                                                                                                  16
+
+
+
+Below we provide examples of each of these types of opportunities:
+I. Immediate tactical opportunities require further validation and adoption by OxyContin brand
+leadership. These ideas are primarily about implementing industry best practices in execution.
+These best practices can be adapted for Purdue and rolled out quickly. These include: higher
+call productivity, full delivery of OxyContin P1s, higher reach of decile 6-10 prescribers, greater
+adherence to call lists, and field training on how to appropriately engage medical.
+II. Near term opportunities requiring testing represent a higher degree of change. We suggest
+evidence from pilots is needed prior to scale up.
+An example would be a transformative shift in OxyContin and Butrans call objectives to 100%
+OxyContin in P1s and Butrans in P2s. This could be part of a temporary build up or more
+permanent in many markets. This could come with corresponding targeting and compensation
+changes. We’d suggest this be a ‘test and learn’ given the value of insight from real world
+implementation (e.g., sizing both the potential OxyContin upside and Butrans downside.)
+III. Strategic policy decisions are less about on the ground operations and more about
+fundamental change Purdue’s go to market model. Many of these decisions could deliver short
+performance impact.
+One example is reconsidering Purdue’s policy regarding proactively engaging in HECON
+discussions with payors and corporatized providers.
+Another example is an early idea to create an alternative model for how patients receive
+OxyContin. This model would bypass retail , likely through a third party vendor who would
+provide adjudication and direct distribution to patients.(Exhibit 12) Physician offices or
+patients would send in prescriptions and this alternative channel could replace pharmacy call
+backs with patient care value added services. Recordkeeping could be much easier if done
+centrally by experts. Pfizer, J&J and AZ have all developed versions of this direct to patient
+distribution model to improve patient access.
+
+
+
+
+                                                                                                 17
+
+
+
+Implementation of ideas in all three areas requires a cultural and mindset change for Purdue.
+Successful adoption of new approaches will be challenging for the organization. We are
+encouraged by many leaders who are ready and highly supportive of driving the types of
+changes described here.
+
+
+4. Next steps
+We are only partially through our work and many analyses are in progress. For example, we
+know that over 40% of OxyContin decline (in milligrams sold) is due to a reduction in tabs/Rx
+and mgs/Rx. We are developing a perspective based on channel inventory data, external
+discussions with pharmacists and new IMS data. Other in progress analyses include: deeper
+evaluation of the micro-markets, consideration of sales curves by market characteristics and
+assessment of pricing by dosage.
+Given the focus on near term performance, we will continue to focus disproportionately on
+those opportunities that can have the biggest impact.
+We recognize the urgency, complexity and scale of the issues we have found to date. We will
+proceed with our absolute best efforts. We are confident that significant progress will be made
+and at a substantially accelerated pace; but the scale and degree of change being considered is
+substantial. Capturing these opportunities will be a journey, not an event for Purdue.
+
+                                                                                                18
+
+
+--- OCR From Images ---
+Exhibit 12: An early idea for disruption of OxyContin fulfillment. PmtlYct no.
+
+
+
+
+
+
+                           34 Party 3 3' polll aa'?dfM rag oan)en afbud?tale:
+
+                           adjudicator Claim gaM pay&(checksbenefx n41's
+                                        alsuralte)Wfre0mds"*rlod)6tdb W
+
+                    r
+
+                    I
+
+
+                  i                               Zw
+       Aeacribal _? ?
+
+
+
+                           Olstrliwloq           3^ party             patient
+         t 2 PMpCAee(%tAaM mail order            logistics            home
+         1 Rr Cads3"Parly
+
+         1 edKiduunsrrrom         q' MftdxlK WAY2   6 331 P"1e9(epcs
+
+         I oairo ns innate          order., pm doy    pmAasr(s.g.
+
+         I creams process           product lo 3-pany UPS FedEk)
+
+                                    tppisa'ts po*Je,  ZrAps to PelWA:
+
+         1                          Also possdws      tegobes podenr
+
+         1                          rrmpanxunds lCes to &"
+
+                                    (080mooucation.
+         1
+                                    QaA hodMe.
+
+
+       N..ate
+                                    adlieolnevil
+
+
+
+       PUn:Iwl                            Two options fe, potential partners
+
+  I Pdnale educates                       • PShlwahspaHAIIy,' neadar d' nnel
+
+    Pme otem m                              (ESI. 1AedCo. Csrmaki
+
+    evaQabw ofmay                         • OitbRutorte.%C&dind.ABC.
+
+    orderCl>amell                           McKessm) sdal a }+patty atlutllcrtur
+
+
+
+
+
+                                                                Nrl(Insry 6 Compop 1 la
+
+
+
+In our final report, you can expect a comprehensive assessment of our findings, quantified
+recommendations on the biggest opportunities and specific guidance on implementation –
+recognizing culture and mindset change requirements. It will include a roadmap for further
+work Purdue will need to do to make rapid progress on capturing these opportunities.
+Purdue has had a remarkable history of success. So far, we have seen significant opportunity
+to drive performance improvements and openness to the scale of change that is needed.
+
+
+
+
+                                                                                               19
