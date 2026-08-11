@@ -294,7 +294,13 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     )
     assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
-    assert "diagnostics written: diagnostics.json (1 documents, schema v1)" in completed.stderr
+    assert "diagnostics written: diagnostics.json (1 documents, schema v2)" in completed.stderr
+    diagnostics_duration = next(
+        line.removeprefix("diagnostics_duration_seconds=")
+        for line in completed.stderr.splitlines()
+        if line.startswith("diagnostics_duration_seconds=")
+    )
+    assert float(diagnostics_duration) >= 0
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
     assert diagnostics["documents"][0]["person_matches"] == [{"prediction_index": 0, "ground_truth_index": 0}]
     duration_seconds = next(

@@ -1,10 +1,13 @@
 import itertools
+import math
+from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Callable, Dict, Sequence, Tuple, TypeVar
 
 from src.evaluation.models import PIIItem
 
 SIMILARITY_THRESHOLD = 0.65
+MINIMUM_FUZZY_LENGTH = 3
 MATCH = 1
 NO_RESULT = 0
 MISMATCH = -1
@@ -12,6 +15,36 @@ MISMATCH = -1
 MatchIndexes = Dict[int, int]
 T = TypeVar("T")
 MatchingFunction = Callable[[T, T], bool]
+
+
+@dataclass(frozen=True)
+class ValueComparison:
+    normalized_exact: bool
+    similarity: float
+    result: int
+
+
+def compare_values(prediction: str, *, ground_truth: str) -> ValueComparison:
+    predicted = normalize_value(prediction)
+    expected = normalize_value(ground_truth)
+    if predicted == expected:
+        return ValueComparison(normalized_exact=True, similarity=1.0, result=MATCH)
+    similarity = SequenceMatcher(None, predicted, expected, autojunk=False).ratio()
+    if len(predicted) < MINIMUM_FUZZY_LENGTH or len(expected) < MINIMUM_FUZZY_LENGTH:
+        return ValueComparison(normalized_exact=False, similarity=similarity, result=NO_RESULT)
+    result = MATCH if similarity >= SIMILARITY_THRESHOLD else MISMATCH
+    return ValueComparison(normalized_exact=False, similarity=similarity, result=result)
+
+
+def normalize_value(value: str) -> str:
+    return value.lower().strip().rstrip(".")
+
+
+def similarity_length_bounds(value: str) -> Tuple[int, int]:
+    target_length = len(normalize_value(value))
+    minimum = math.ceil(SIMILARITY_THRESHOLD * target_length / (2 - SIMILARITY_THRESHOLD))
+    maximum = math.floor(target_length * (2 - SIMILARITY_THRESHOLD) / SIMILARITY_THRESHOLD)
+    return minimum, maximum
 
 
 def match_people(predictions: Sequence[PIIItem], *, ground_truth: Sequence[PIIItem]) -> MatchIndexes:
@@ -97,17 +130,17 @@ def _core_values(person: PIIItem) -> Tuple[Sequence[str], Sequence[str], Sequenc
 def _value_sets_match_exactly(predictions: Sequence[str], ground_truth: Sequence[str]) -> bool:
     if not predictions and not ground_truth:
         return True
-    predicted = {_normalize(value) for value in predictions}
-    expected = {_normalize(value) for value in ground_truth}
+    predicted = {normalize_value(value) for value in predictions}
+    expected = {normalize_value(value) for value in ground_truth}
     return bool(predicted & expected)
 
 
 def _values_match_exactly(prediction: str, ground_truth: str) -> bool:
-    return _normalize(prediction) == _normalize(ground_truth)
+    return compare_values(prediction, ground_truth=ground_truth).normalized_exact
 
 
 def _values_match_approximately(prediction: str, ground_truth: str) -> bool:
-    return _compare_values_approximately(prediction, ground_truth) == MATCH
+    return compare_values(prediction, ground_truth=ground_truth).result == MATCH
 
 
 def _compare_value_sets_approximately(predictions: Sequence[str], ground_truth: Sequence[str]) -> int:
@@ -121,15 +154,4 @@ def _compare_value_sets_approximately(predictions: Sequence[str], ground_truth: 
 
 
 def _compare_values_approximately(prediction: str, ground_truth: str) -> int:
-    predicted = _normalize(prediction)
-    expected = _normalize(ground_truth)
-    if predicted == expected:
-        return MATCH
-    if len(predicted) <= 2 or len(expected) <= 2:
-        return NO_RESULT
-    similarity = SequenceMatcher(None, predicted, expected, autojunk=False).ratio()
-    return MATCH if similarity >= SIMILARITY_THRESHOLD else MISMATCH
-
-
-def _normalize(value: str) -> str:
-    return value.lower().strip().rstrip(".")
+    return compare_values(prediction, ground_truth=ground_truth).result

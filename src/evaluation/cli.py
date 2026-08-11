@@ -151,17 +151,20 @@ def _write_development_diagnostics(
     *,
     arguments: argparse.Namespace,
 ) -> None:
+    started_at = time.monotonic()
     write_diagnostics(
         arguments.diagnostics,
         trace=run.trace,
         texts=run.texts,
         dataset=arguments.dataset,
     )
+    duration_seconds = time.monotonic() - started_at
     print(
         f"diagnostics written: {arguments.diagnostics} "
         f"({len(run.trace.documents)} documents, schema v{SCHEMA_VERSION})",
         file=sys.stderr,
     )
+    print(f"diagnostics_duration_seconds={duration_seconds:.3f}", file=sys.stderr)
 
 
 def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:

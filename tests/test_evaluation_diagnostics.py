@@ -33,7 +33,10 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
 
     # check
     result = json.loads(path.read_text())
-    assert result["schema_version"] == 1
+    assert result["schema_version"] == 2
+    assert result["source_matching_policy"]["similarity_threshold"] == 0.65
+    assert result["source_matching_policy"]["fuzzy_work_budget"] == 50_000_000
+    assert result["source_matching_policy"]["candidate_enumeration_budget"] == 200_000
     assert result["metrics"]["true_positive"] == 3
     assert result["metrics"]["false_positive"] == 3
     assert result["metrics"]["false_negative"] == 2
@@ -44,13 +47,29 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
     assert document["unmatched_prediction_indexes"] == [1]
     assert document["unmatched_ground_truth_indexes"] == [1]
     first_name = next(field for field in document["field_results"] if field["field"] == "first_name")
-    assert first_name["matches"][0]["prediction"]["occurrences"] == [
-        {"start": 0, "end": 9, "context_start": 0, "context_end": 42, "context": text},
-        {"start": 22, "end": 31, "context_start": 0, "context_end": 42, "context": text},
+    assert first_name["matches"][0]["prediction"]["source_evidence"] == [
+        {
+            "start": 0,
+            "end": 9,
+            "match_kind": "raw_exact",
+            "similarity": 1.0,
+            "context_start": 0,
+            "context_end": 42,
+            "context": text,
+        },
+        {
+            "start": 22,
+            "end": 31,
+            "match_kind": "raw_exact",
+            "similarity": 1.0,
+            "context_start": 0,
+            "context_end": 42,
+            "context": text,
+        },
     ]
     location = next(field for field in document["field_results"] if field["field"] == "location")
-    assert location["matches"][0]["prediction"]["occurrences"][0]["start"] == 36
-    assert location["false_positives"][0]["occurrences"] == []
+    assert location["matches"][0]["prediction"]["source_evidence"][0]["start"] == 36
+    assert location["false_positives"][0]["source_evidence"] == []
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert path.read_bytes() == first_serialization
 
@@ -82,6 +101,52 @@ def test_diagnostics_cap_common_value_occurrences_without_losing_count(tmp_path)
     document = json.loads(path.read_text())["documents"][0]
     location = next(field for field in document["field_results"] if field["field"] == "location")
     value = location["false_positives"][0]
-    assert value["occurrence_count"] == 25
-    assert value["occurrences_truncated"] is True
-    assert len(value["occurrences"]) == 20
+    assert value["source_evidence_count"] == 25
+    assert value["raw_occurrence_count"] == 25
+    assert value["source_evidence_truncated"] is True
+    assert len(value["source_evidence"]) == 20
+
+
+def test_diagnostics_report_case_normalized_and_fuzzy_source_evidence(tmp_path):
+    predictions = {"doc": [PIIItem(email=("rvinas@gmaonline.org",), phone=("513-558-7949",))]}
+    trace = build_evaluation_trace(predictions, ground_truth={"doc": []})
+    path = tmp_path / "diagnostics.json"
+
+    write_diagnostics(
+        path,
+        trace=trace,
+        texts={"doc": "RVINAS@GMAONLINE.ORG called 513 558 7949"},
+        dataset="debug",
+    )
+
+    fields = json.loads(path.read_text())["documents"][0]["field_results"]
+    email = next(field for field in fields if field["field"] == "email")["false_positives"][0]
+    phone = next(field for field in fields if field["field"] == "phone")["false_positives"][0]
+    assert email["normalized_occurrence_count"] == 1
+    assert email["fuzzy_search_complete"] is True
+    assert email["source_evidence"][0]["match_kind"] == "normalized_exact"
+    assert phone["fuzzy_occurrence_count"] == 1
+    assert phone["source_evidence"][0]["match_kind"] == "fuzzy"
+
+
+def test_diagnostics_preserve_prediction_and_ground_truth_comparison_direction(tmp_path):
+    predictions = {"prediction": [PIIItem(first_name=("aba",))]}
+    ground_truth = {
+        "prediction": [],
+        "ground_truth": [PIIItem(first_name=("aba",))],
+    }
+    trace = build_evaluation_trace(predictions, ground_truth=ground_truth)
+    path = tmp_path / "diagnostics.json"
+
+    write_diagnostics(
+        path,
+        trace=trace,
+        texts={"prediction": "bca", "ground_truth": "bca"},
+        dataset="debug",
+    )
+
+    documents = {item["document_id"]: item for item in json.loads(path.read_text())["documents"]}
+    prediction_field = documents["prediction"]["field_results"][0]
+    ground_truth_field = documents["ground_truth"]["field_results"][0]
+    assert prediction_field["false_positives"][0]["source_evidence_count"] == 0
+    assert ground_truth_field["false_negatives"][0]["fuzzy_occurrence_count"] == 1
