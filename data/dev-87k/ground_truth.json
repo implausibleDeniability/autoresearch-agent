@@ -1242,7 +1242,8 @@
       "birthdate": [],
       "phone": [],
       "email": [
-        "schwabjustin@epa.gov"
+        "schwabjustin@epa.gov",
+        "schwab.justin@epa.gov"
       ],
       "social_network_identifier": [],
       "location": [],
@@ -1315,24 +1316,6 @@
       "phone": [],
       "email": [
         "shapiro.mike@epa.gov"
-      ],
-      "social_network_identifier": [],
-      "location": [],
-      "ssn": []
-    },
-    {
-      "first_name": [
-        "Justin"
-      ],
-      "middle_name": [],
-      "last_name": [
-        "Schwab"
-      ],
-      "age": [],
-      "birthdate": [],
-      "phone": [],
-      "email": [
-        "schwab.justin@epa.gov"
       ],
       "social_network_identifier": [],
       "location": [],
