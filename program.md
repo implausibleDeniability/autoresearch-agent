@@ -151,7 +151,9 @@ d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output sche
 
 ## Extra communication bugs and required packages:
 In the file REQUESTS.md write things that the human supervisor should know about the research.
-- If you found the bug or inaccuracy in the evaluation code — write it there.
+- If ground truth, annotation policy, evaluation code, matching, or metrics appear unfair or
+  incorrect, record the evidence there before working around the issue. Do not silently optimize
+  against a suspected evaluation defect.
 - If you figure out that there's some external package that can improve the quality significantly — write there the request to add this package. I will read it, and maybe approve and add it to the dependencies so that you could use.
 - If you otherwise see a way to reduce the cost but you'll need to change the restrictions and do something that's currently not allowed — write in the document, too. I will read it, and maybe approve and change the restrictions.
 
