@@ -31,7 +31,7 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. `dev-87k` costs several times more, so use it occasionally and for final validation, where performance is measured.
+The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. `dev-87k` costs several times more, so use it occasionally and for final development validation. These three datasets are development datasets: you may inspect their diagnostics and tune against them.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
 
@@ -95,18 +95,27 @@ Record repeated evaluations as separate results. After deciding, give all succes
 
 Use the saved baseline results and other non-paid evidence when they can resolve uncertainty without another evaluation.
 
+### Blind final evaluation
+
+Every `test-*` dataset is blind. Its complete name is supplied for the final evaluation rather than hard-coded.
+
+Do not access `data/test-*` files or detailed test results, including through code or side effects. Never pass `--diagnostics` with a blind dataset.
+
+After development, commit the final `solution.py` and pass that commit with `--frozen-commit`. The evaluator verifies it before and after the run. The final evaluation is outside the 20-run allowance, but its spend counts toward the $0.50 budget. It returns only aggregate score, precision, recall, API cost, and duration. Success ends the run; never tune against the result, and any solution change invalidates it.
+
 
 ## Restrictions
 - You can NOT use models from the gpt-5 and later family, and other LLM providers, such as Google or Anthropic. Only use gpt-4o and gpt-4o-mini from OpenAI.
 - You can NOT execute `solution.py`, call `extract_pii` directly, run live tests, or make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
+- You can NOT access `data/test-*` except through the final evaluator invocation. Do not use commands, code, or side effects to inspect it.
 - You may modify and commit only `solution.py` as the experiment implementation.
-- You may create or update `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and `diagnostics.json` only for experiment logging and communication. Do not commit these files. `diagnostics.json` contains labeled PII and source context: keep it local, overwrite it on each run, and do not copy its contents into committed files. Do not intentionally modify any other repository files.
+- You may create or update `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and `diagnostics.json` only for experiment logging and communication. Do not commit these files. `diagnostics.json` contains labeled PII and source context: keep it local, overwrite it on each development run, and do not copy its contents into committed files. Never create blind-test diagnostics. Do not intentionally modify any other repository files.
 
 
 ## Logging results
 
-When an experiment is done, log it to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions).
+Log development experiments to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions). Report the restricted blind result separately.
 
 Use this 9-column header:
 
@@ -142,7 +151,7 @@ In the file REQUESTS.md write things that the human supervisor should know about
 
 The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 
-Stop after 20 evaluation CLI runs or $0.50 in cumulative `budget_cost_usd`, whichever comes first. Baselines, debug checks, crashes, and reruns count. Before each run, sum the cost column and do not start if the estimate exceeds the remaining budget.
+Stop development after 20 evaluations or when only the budget reserved for the final test remains. Baselines, debug checks, crashes, and reruns count toward 20. The final test does not, but its spend counts toward $0.50.
 
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
@@ -156,7 +165,10 @@ Stop after 20 evaluation CLI runs or $0.50 in cumulative `budget_cost_usd`, whic
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 11. If a candidate is competitive and uncertainty could change the decision, repeat it within the remaining limits and evaluate the combined evidence.
 12. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the evidence justifies it; otherwise return to the incumbent without losing the recorded result.
-13. When a limit is reached, summarize the results and report the best `dev-87k` score separately.
+13. When development ends, summarize its results and select the final solution without blind-test evidence. Report the best `dev-87k` score separately.
+14. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
+15. If its estimated spend fits the remaining budget, run one evaluation with the supplied blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<provided-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
+16. Report only `f_score`, `precision`, `recall`, `api_cost_usd`, and `duration_seconds`; charge the cost and stop. Any later solution change invalidates the result.
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.
 
@@ -164,4 +176,4 @@ The idea is that you are a completely autonomous researcher trying things out. A
 
 **Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
 
-**DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 20 experiments have been attempted, cumulative `budget_cost_usd` reaches or exceeds $0.50, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, and try more radical architectural changes.
+**DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 20 development experiments have been attempted, only the final-test budget remains, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas during development, think harder — read papers referenced in the code, re-read the in-scope development files for new angles, try combining previous near-misses, and try more radical architectural changes.

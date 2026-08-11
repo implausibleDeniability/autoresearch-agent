@@ -12,12 +12,20 @@ import pytest
 from src.cost_metering.accounting import CostReport, ModelUsage
 from src.cost_metering.proxy import MeteringProxy
 from src.evaluation.cli import (
+    Dataset,
     _count_source_tokens,
     _parse_arguments,
     _parse_worker_result,
     _run_solution,
     _solution_environment,
 )
+
+
+@pytest.mark.parametrize("dataset", Dataset.all())
+def test_cli_accepts_each_development_dataset(dataset):
+    parsed = _parse_arguments(("--dataset", dataset))
+
+    assert parsed.dataset == dataset
 
 
 def test_cli_uses_eight_cent_default_limit():
@@ -36,6 +44,34 @@ def test_cli_accepts_diagnostics_path():
     parsed = _parse_arguments(("--dataset", "debug", "--diagnostics", "diagnostics.json"))
 
     assert parsed.diagnostics == Path("diagnostics.json")
+
+
+def test_cli_accepts_dynamic_blind_test_name_with_frozen_commit():
+    parsed = _parse_arguments(("--dataset", "test-private-v2", "--frozen-commit", "abc1234"))
+
+    assert parsed.dataset == "test-private-v2"
+    assert parsed.frozen_commit == "abc1234"
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ("--dataset", "test-private-v2"),
+        (
+            "--dataset",
+            "test-private-v2",
+            "--frozen-commit",
+            "abc1234",
+            "--diagnostics",
+            "diagnostics.json",
+        ),
+        ("--dataset", "dev-19k", "--frozen-commit", "abc1234"),
+        ("--dataset", "test-private/ground_truth.json", "--frozen-commit", "abc1234"),
+    ],
+)
+def test_cli_rejects_invalid_blind_test_options(arguments):
+    with pytest.raises(SystemExit):
+        _parse_arguments(arguments)
 
 
 def test_source_tokens_count_each_original_document_once():
@@ -205,6 +241,168 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     assert float(duration_seconds) > 0
 
 
+def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path, dataset="test-private-v2")
+    frozen_commit = _initialize_fixture_repository(tmp_path)
+    upstream = ThreadingHTTPServer(("127.0.0.1", 0), _CliUpstreamHandler)
+    thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+    thread.start()
+    host, port = upstream.server_address
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["OPENAI_UPSTREAM_BASE_URL"] = f"http://{host}:{port}"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "test-private-v2",
+            "--frozen-commit",
+            frozen_commit,
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+    upstream.shutdown()
+    upstream.server_close()
+    thread.join()
+
+    # check
+    assert completed.returncode == 0, completed.stderr
+    fields = [line.partition("=")[0] for line in completed.stdout.splitlines()]
+    assert fields == ["f_score", "precision", "recall", "api_cost_usd", "duration_seconds"]
+    assert completed.stderr == ""
+
+
+def test_blind_test_rejects_solution_changed_after_frozen_commit(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path, dataset="test-private-v2")
+    frozen_commit = _initialize_fixture_repository(tmp_path)
+    (tmp_path / "solution.py").write_text("def extract_pii(text):\n    return []\n")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "test-private-v2",
+            "--frozen-commit",
+            frozen_commit,
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode != 0
+    assert "solution.py differs from frozen commit" in completed.stderr
+    assert "OPENAI_API_KEY" not in completed.stderr
+
+
+def test_blind_test_withholds_solution_failure_details(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path, dataset="test-private-v2")
+    (tmp_path / "solution.py").write_text("""import sys
+
+
+def extract_pii(text):
+    print("private document and prediction", file=sys.stderr)
+    raise RuntimeError("private label and error")
+""")
+    frozen_commit = _initialize_fixture_repository(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "test-private-v2",
+            "--frozen-commit",
+            frozen_commit,
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode != 0
+    assert "blind test evaluation failed; details are withheld" in completed.stderr
+    assert "private document" not in completed.stderr
+    assert "private label" not in completed.stderr
+
+
+def test_blind_test_rejects_solution_modified_during_evaluation(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path, dataset="test-private-v2")
+    (tmp_path / "solution.py").write_text("""from pathlib import Path
+
+from src.evaluation.models import PIIItem
+
+
+def extract_pii(text):
+    Path("solution.py").write_text("def extract_pii(text): return []")
+    return [PIIItem(first_name=(text,))]
+""")
+    frozen_commit = _initialize_fixture_repository(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "test-private-v2",
+            "--frozen-commit",
+            frozen_commit,
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode != 0
+    assert "solution.py differs from frozen commit" in completed.stderr
+    assert "f_score=" not in completed.stdout
+
+
 class _CliUpstreamHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         content_length = int(self.headers["Content-Length"])
@@ -240,12 +438,12 @@ class _CliUpstreamHandler(BaseHTTPRequestHandler):
         pass
 
 
-def _write_cli_fixture(directory: Path) -> None:
-    text_directory = directory / "data" / "debug" / "texts"
+def _write_cli_fixture(directory: Path, *, dataset: str = "debug") -> None:
+    text_directory = directory / "data" / dataset / "texts"
     text_directory.mkdir(parents=True)
     (text_directory / "doc.txt").write_text("John")
     ground_truth = {"doc": [{"first_name": ["John"]}]}
-    (directory / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (directory / "data" / dataset / "ground_truth.json").write_text(json.dumps(ground_truth))
     (directory / "solution.py").write_text("""from openai import OpenAI
 from src.evaluation.models import PIIItem
 
@@ -257,3 +455,19 @@ def extract_pii(text):
     )
     return [PIIItem(first_name=(text,))]
 """)
+
+
+def _initialize_fixture_repository(directory: Path) -> str:
+    subprocess.run(["git", "init", "--quiet"], cwd=directory, check=True)
+    subprocess.run(["git", "config", "user.name", "Evaluator Test"], cwd=directory, check=True)
+    subprocess.run(["git", "config", "user.email", "evaluator@example.test"], cwd=directory, check=True)
+    subprocess.run(["git", "add", "solution.py"], cwd=directory, check=True)
+    subprocess.run(["git", "commit", "--quiet", "-m", "Freeze solution"], cwd=directory, check=True)
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=directory,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return completed.stdout.strip()

@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Dict, List, Mapping, Sequence, Tuple
@@ -18,6 +18,7 @@ from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
 from src.evaluation.diagnostics import SCHEMA_VERSION, preflight_diagnostics_path, write_diagnostics
 from src.evaluation.metrics import EntityMetrics, evaluate_trace
 from src.evaluation.models import PIIItem
+from src.evaluation.results import EvaluationTrace
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -48,6 +49,18 @@ class Dataset:
     def all(cls) -> Tuple[str, ...]:
         return cls.DEBUG, cls.DEV_19K, cls.DEV_87K
 
+    @classmethod
+    def is_blind_test(cls, name: str) -> bool:
+        return name.startswith("test-") and Path(name).name == name
+
+
+@dataclass(frozen=True)
+class EvaluationRun:
+    texts: Mapping[str, str]
+    source_tokens: int
+    cost: CostReport
+    trace: EvaluationTrace
+
 
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
@@ -58,39 +71,94 @@ def main(arguments: Sequence[str] = ()) -> int:
 
 def _run_evaluation(arguments: argparse.Namespace) -> int:
     started_at = time.monotonic()
+    blind_test = Dataset.is_blind_test(arguments.dataset)
+    _preflight_evaluation(arguments, blind_test=blind_test)
+    run = _evaluate_with_blind_boundary(arguments, blind_test=blind_test)
+    _report_evaluation(
+        run,
+        arguments=arguments,
+        blind_test=blind_test,
+        duration_seconds=time.monotonic() - started_at,
+    )
+    return 0
+
+
+def _preflight_evaluation(arguments: argparse.Namespace, *, blind_test: bool) -> None:
+    if blind_test:
+        _validate_frozen_solution(arguments.frozen_commit)
     if arguments.diagnostics:
         preflight_diagnostics_path(arguments.diagnostics)
+
+
+def _evaluate_with_blind_boundary(
+    arguments: argparse.Namespace,
+    *,
+    blind_test: bool,
+) -> EvaluationRun:
+    try:
+        return _evaluate_dataset(arguments)
+    except Exception:
+        if blind_test:
+            raise RuntimeError("blind test evaluation failed; details are withheld") from None
+        raise
+
+
+def _report_evaluation(
+    run: EvaluationRun,
+    *,
+    arguments: argparse.Namespace,
+    blind_test: bool,
+    duration_seconds: float,
+) -> None:
+    if blind_test:
+        _validate_frozen_solution(arguments.frozen_commit)
+        _print_blind_test_result(run.trace.metrics, cost=run.cost, duration_seconds=duration_seconds)
+    else:
+        _print_development_result(
+            run.trace.metrics,
+            cost=run.cost,
+            source_tokens=run.source_tokens,
+            duration_seconds=duration_seconds,
+        )
+    if arguments.diagnostics:
+        _write_development_diagnostics(run, arguments=arguments)
+
+
+def _write_development_diagnostics(
+    run: EvaluationRun,
+    *,
+    arguments: argparse.Namespace,
+) -> None:
+    write_diagnostics(
+        arguments.diagnostics,
+        trace=run.trace,
+        texts=run.texts,
+        dataset=arguments.dataset,
+    )
+    print(
+        f"diagnostics written: {arguments.diagnostics} "
+        f"({len(run.trace.documents)} documents, schema v{SCHEMA_VERSION})",
+        file=sys.stderr,
+    )
+
+
+def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     texts = _load_texts(arguments.dataset)
     source_tokens = _count_source_tokens(texts)
     api_key = _required_environment("OPENAI_API_KEY")
     upstream_base_url = os.environ.get(UPSTREAM_BASE_URL_ENVIRONMENT, DEFAULT_UPSTREAM_BASE_URL)
-    spending_limit_usd = arguments.cents_limit * USD_PER_CENT
     predictions, cost = _run_metered_solution(
         texts,
         api_key=api_key,
         upstream_base_url=upstream_base_url,
-        spending_limit_usd=spending_limit_usd,
+        spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
         timeout=arguments.timeout,
     )
     trace = evaluate_trace(
         predictions,
         ground_truth_path=DATA_DIRECTORY / arguments.dataset / "ground_truth.json",
     )
-    duration_seconds = time.monotonic() - started_at
-    _print_result(trace.metrics, cost=cost, source_tokens=source_tokens, duration_seconds=duration_seconds)
-    if arguments.diagnostics:
-        write_diagnostics(
-            arguments.diagnostics,
-            trace=trace,
-            texts=texts,
-            dataset=arguments.dataset,
-        )
-        print(
-            f"diagnostics written: {arguments.diagnostics} "
-            f"({len(trace.documents)} documents, schema v{SCHEMA_VERSION})",
-            file=sys.stderr,
-        )
-    return 0
+    return EvaluationRun(texts=texts, source_tokens=source_tokens, cost=cost, trace=trace)
 
 
 def _run_metered_solution(
@@ -182,7 +250,7 @@ def _run_worker(module_name: str) -> int:
     return 0
 
 
-def _print_result(
+def _print_development_result(
     metrics: EntityMetrics,
     *,
     cost: CostReport,
@@ -202,10 +270,27 @@ def _print_result(
     print(f"duration_seconds={duration_seconds:.6f}")
 
 
+def _print_blind_test_result(
+    metrics: EntityMetrics,
+    *,
+    cost: CostReport,
+    duration_seconds: float,
+) -> None:
+    print(f"f_score={metrics.f_score:.6f}")
+    print(f"precision={metrics.precision:.6f}")
+    print(f"recall={metrics.recall:.6f}")
+    print(f"api_cost_usd={cost.total_usd:.8f}")
+    print(f"duration_seconds={duration_seconds:.6f}")
+
+
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
-    parser.add_argument("--dataset", choices=Dataset.all())
+    parser.add_argument("--dataset", type=_dataset_name)
     parser.add_argument("--diagnostics", type=Path, help="write detailed evaluation diagnostics as JSON")
+    parser.add_argument(
+        "--frozen-commit",
+        help="current solution commit required for a final blind test",
+    )
     parser.add_argument("--timeout", type=_timeout_seconds, default=MAX_TIMEOUT_SECONDS)
     parser.add_argument(
         "--cents-limit",
@@ -216,11 +301,65 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)
     parsed = parser.parse_args(arguments)
+    _validate_arguments(parsed, parser=parser)
+    return parsed
+
+
+def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.ArgumentParser) -> None:
     if parsed.worker and not parsed.module:
         parser.error("--worker requires --module")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
-    return parsed
+    if parsed.dataset and Dataset.is_blind_test(parsed.dataset):
+        if parsed.diagnostics:
+            parser.error("--diagnostics is not allowed with blind test datasets")
+        if not parsed.frozen_commit:
+            parser.error("test-* datasets require --frozen-commit")
+    elif parsed.frozen_commit:
+        parser.error("--frozen-commit is only allowed with test-* datasets")
+
+
+def _dataset_name(value: str) -> str:
+    if value in Dataset.all() or Dataset.is_blind_test(value):
+        return value
+    raise argparse.ArgumentTypeError(
+        f"dataset must be one of {Dataset.all()!r} or have a name starting with 'test-', got {value!r}"
+    )
+
+
+def _validate_frozen_solution(commit: str) -> None:
+    resolved_commit = _git_output("rev-parse", "--verify", f"{commit}^{{commit}}")
+    head_commit = _git_output("rev-parse", "HEAD")
+    if resolved_commit != head_commit:
+        raise RuntimeError(
+            f"frozen commit {resolved_commit!r} is not the current HEAD commit {head_commit!r}"
+        )
+    completed = subprocess.run(
+        ["git", "diff", "--quiet", head_commit, "--", "solution.py"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode == 1:
+        raise RuntimeError(f"solution.py differs from frozen commit {head_commit!r}")
+    if completed.returncode:
+        raise RuntimeError(
+            f"git diff failed with exit code {completed.returncode}: {completed.stderr.strip()}"
+        )
+
+
+def _git_output(*arguments: str) -> str:
+    completed = subprocess.run(
+        ["git", *arguments],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode:
+        raise RuntimeError(
+            f"git {' '.join(arguments)} failed with exit code {completed.returncode}: {completed.stderr.strip()}"
+        )
+    return completed.stdout.strip()
 
 
 def _timeout_seconds(value: str) -> float:
