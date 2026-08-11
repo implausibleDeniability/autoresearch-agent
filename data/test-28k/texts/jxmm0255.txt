@@ -1,0 +1,81 @@
+From    : Shah, Tejash [Tejash.Shah@pharma.com]
+Sent    : 1/19/2018 5:36:13 PM
+To      : amir_golan@mckinsey.com ["amir_golan@mckinsey.com"]
+CC      : Albert_G_Lee@mckinsey.com ["Albert_G_Lee@mckinsey.com"]; matteo.foderaro@mckinsey.com ["matteo.foderaro@mckinsey.com"]; Yang_Wang-NJE@mckinsey.com ["Yang_Wang-NJE@mckinsey.com"]; Weingarten, Brianne [Brianne.Weingarten@pharma.com]
+Subject : Re: Updated BOD backup.pptx
+
+Thanks Amir and team. I don't have the slide in front of me, so how much incremental savings does this represent?
+
+Tej
+
+Tejash Shah, M.D.
+Chief of Staff to CEO
+201 Tresser Boulevard
+Stamford, CT  06901
+203.588.7009 (o)
+475.232.6049 (c)
+
+On Jan 19, 2018, at 12:06 PM, "amir_golan@mckinsey.com" <amir_golan@mckinsey.com> wrote:
+
+Hi Tej and Brianne,
+
+We costed the option you shared - the  total (2019) OpEx is ~$180M. I attached the detailed XLS calc, but wanted to highlight:
+
+For BD-
+We assumed average $400K cost per FTE. This includes overhead, T&E, etc.
+We also added $6.5M non-headcount cost for projects, DD, etc.
+For R&D-
+We used $300K per FTE because overhead is already allocated. That's consistent with the actual average cost per FTE
+We added total non-headcount opex of $46M
+The ADF, reformulation, and Foquest are from the current budget, but are NOT PTRS adjusted
+Includes $15M for EDO oncology direct costs - based on phase II benchmarks
+For Commercial
+Symproic marketing according to current plan
+
+Amir
+
+
+
+
+From: Shah, Tejash [mailto:Tejash.Shah@pharma.com]
+Sent: Friday, January 19, 2018 10:03
+To: amir_golan@mckinsey.com;  Albert_G_Lee@mckinsey.com; matteo.foderaro@mckinsey.com; Yang_Wang-NJE@mckinsey.com
+Cc: Weingarten, Brianne <Brianne.Weingarten@pharma.com>
+Subject: Updated BOD backup.pptx
+
+
+
+Guys,
+
+
+
+Could I ask your help to come up with the 2019 spend if we were to get to the NewCo structure outlined in the attached page?
+
+
+
+On field, we assumed a 1:10 ratio between reps and DMs and reduced to 4 RDs. On R&D, we assume that we will have 2-3 phase 1 and 2 assets (reformulations and IR ADF)
+
+
+
+The rest of this should be relatively self-explanatory, but happy to get on a call if you want to talk through it
+
+
+
+Please send output to Brianne and me only since we haven't yet had a chance to connect with Paul re: the attached
+
+
+
+Thank you! Really appreciate your help
+
+
+
+Best,
+
+
+Tej
++========================================================================+
+This email is confidential and may be privileged. If you have received it
+in error, please notify us immediately and then delete it. Please do not
+copy it, disclose its contents or use it for any purpose.
++========================================================================+
+<2018019 NewCo_Revised_v4.xlsx>
