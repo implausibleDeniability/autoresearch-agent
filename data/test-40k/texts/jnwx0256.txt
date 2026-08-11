@@ -1,0 +1,331 @@
+Message
+
+From: Courtney Shin [/O=EXCHANGELABS/OU=EXCHANGE ADMINISTRATIVE GROUP
+      (FYDIBOHF23SPDLT)/CN=RECIPIENTS/CN=DCE2990E625040B789CF82FE81615B4D-COURTNEY SH]
+Sent: 12/6/2018 3:24:08 AM
+To: Alizeh Hasham Gangji [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=822f1b30ad8645b5a72423d9eaf708d4-Alizeh Hash]; Anna Draganova
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=5af5aa9cb15b47138add6a8cbb319281-Anna Dragan]; Arnaub Chatterjee
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=16d2e0eb7c784c44bd2e0a9f15e8b805-Arnaub Chat]; Biwen Tao
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=4b6d11c414854102868dda023b6386c1-Biwen Tao]; Bradley Tevelow
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOHF23SPDLT)/cn=Recipients/cn=1d2f7f18465a401fafe1614ad 1c03b24-Bradley Tev]; Burcu Kazazoglu Taylor
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=7343fb70215a45ccbaa9f4d6cf482693-Burcu Kazaz]; Casey Dougan
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=bf454d6d6c714fc1898d7943b21146ef-Casey Douga]; Christen Tingley
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=4bb5885f6e8f42a7b576af732d67a3c2-Christen Ti]; Corbin Reno
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=2349123f52374bfca8c4446fa029eaa6-Corbin Reno]; Courtney Shin
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=dce2990e625040b789cf82fe81615b4d-Courtney Sh]; Craig MacKenzie
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOHF23SPDLT)/cn=Recipients/cn=75a05214785240dfa 1d7d6680fa975b6-Craig MacKe]; Divya Srinivasan
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=6476e9252b0f4868a6aa9945ae182d48-Divya Srini]; Dmitriy Kolodin
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOHF23SPDLT)/cn=Recipients/cn=a62cc03a 16cf4e128cb1400deed5c945-Dmitriy Kol]; Emma Kemble
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=238b1ef984d143bab208ad3e7eaa1e3e-Emma Kemble]; lulia Iliut
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=42955754be424c0e8b406865826a7f3b-lulia Iliut]; Jerri Wang
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=b0b7798e6c584bab979141c4496c8970-Jerri Wang]; Jin Kim
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=5a8196220f1c43abb2a664a3a09be177-Jin Kim]; Josh Sternberg
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOH F23SPDLT)/cn=Recipients/cn=f4dfd5a4a55e43adafb3816ac6211c22-Josh Sternb]; Julie Bruno
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOHF23SPDLT)/cn=Recipients/cn=d9af3f7e1fad49f09c21f03b26c3c38a-Jul ie Bruno]; Lindsay McKenna
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=52e5983e9dd748428d5e84a71lab5f12-Lindsay McK]; Lindsay Thomson Brill
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=d7735d5532f84ed99033ee6223d34595-Lindsay Tho]; Lisa Chen
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOHF23SPDLT)/cn=Recipients/cn=d64066f9 145c47cf8f63e2607eadf277-Lisa Chen]; Lydia The
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=4449b649c59e4c3e81fac6c71a8de266-Lydia The]; Maria Strom
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=e2a2e59ce04d4446b2a22c69fb2b3796-Maria Strom]; Michael Loebl
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDI BOHF23SPDLT)/cn=Recipients/cn=5c69ca49ce884a239a 1893b3106c0524-M ichael Loe]; Pete Mulligan
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+      (FYDIBOHF23SPDLT)/cn=Recipients/cn=5d 1ae446017940d786debad2efb58a4e-Pete Mullig]; Sarah Lorenzana
+      [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+                                            MCK-MAAG-4821585
+        (FYDI BOHF23SPDLT)/cn=Recipients/cn=a 11c448a 1b69415d96794d47f1454a39-Sarah Loren]; Saralin Davis
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=2f3b4741361e415286609878f742cb93-Saralin Dav]; Stephanie Montini
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=437b92b8d38b4549ae1e62690e999db0-Stephanie M]; Xiaodong Zhang
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=3632575d946e47eaad6c670b463750d1-Xiaodong Zh]; Yang Wang-NJE
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=6e84645b2e374020ae691c61378c179c-Yang Wang-N]; Julia Iliut
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=42955754be424cOe8b406865826a7f3b-Julia Iliut]; Saralin Davis
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=2f3b4741361e415286609878f742cb93-Saralin Dav]; Alexander Whitehead
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDI BOHF23SPDLT)/cn=Recipients/cn=6127a 140ee14433d8f41d1882db9cf87-Alexander W]; Bruce Jia
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=906678afcc6547549c693e2b87184776-Bruce Jia]
+
+
+
+CC: Pete Groves [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=4e85224681104dcbba7c0a3c001f69d7-Pete Groves]; Lindsay Thomson Brill
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=d7735d5532f84ed99033ee6223d34595-Lindsay Tho]; Michael Loebl
+
+
+
+        [/o=ExchangeLabs/ou=Exchange Administrative Group
+
+
+
+        (FYDIBOHF23SPDLT)/cn=Recipients/cn=5c69ca49ce884a239a1893b3106c0524-Michael Loe]
+
+
+
+Subject: M3 updates this week
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hi M3 community,
+
+
+
+
+
+
+
+
+Please see below for exciting M3 updates this week:
+
+
+
+
+
+
+
+
+
+A. Client engagement & development
+
+
+
+
+1. M3 team has current client work C -Redact_e 1 Purdue Redacted
+    ._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._ _._._._._.~._._._._._._._._0 I_._._._._._._._._._._._._._._._._._._.
+
+
+                       Redacted
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              Redacted
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Cheers!
+
+
+
+
+Courtney
+
+
+
+
+
+
+
+
+
+Courtney Shin
+
+
+
+
+Pharmaceutical & Medical Products Practice
+
+
+
+
+McKinsey & Company
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+•      •' "'s
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                    MCK-MAAG-4821585.000001

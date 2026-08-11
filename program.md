@@ -95,6 +95,14 @@ Record repeated evaluations as separate results. After deciding, give all succes
 
 Use the saved baseline results and other non-paid evidence when they can resolve uncertainty without another evaluation.
 
+### OCR ambiguity
+
+Source documents may contain conflicting OCR variants of the same PII, with no reliably correct
+canonical transcription. Extracting any defensible form supported by the document can be correct;
+the evaluator intentionally uses fuzzy matching to tolerate minor OCR differences. The solution does
+not need to repair OCR, and researchers should treat a non-exact match as an error only when it is
+unsupported by the source or changes the person-value association.
+
 ### Blind final evaluation
 
 Every `test-*` dataset is blind. Its complete name is supplied for the final evaluation rather than hard-coded.
@@ -143,7 +151,9 @@ d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output sche
 
 ## Extra communication bugs and required packages:
 In the file REQUESTS.md write things that the human supervisor should know about the research.
-- If you found the bug or inaccuracy in the evaluation code — write it there.
+- If ground truth, annotation policy, evaluation code, matching, or metrics appear unfair or
+  incorrect, record the evidence there before working around the issue. Do not silently optimize
+  against a suspected evaluation defect.
 - If you figure out that there's some external package that can improve the quality significantly — write there the request to add this package. I will read it, and maybe approve and add it to the dependencies so that you could use.
 - If you otherwise see a way to reduce the cost but you'll need to change the restrictions and do something that's currently not allowed — write in the document, too. I will read it, and maybe approve and change the restrictions.
 
