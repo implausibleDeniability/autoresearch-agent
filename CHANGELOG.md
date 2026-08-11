@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0.0] - 2026-08-12
+
+### Added
+
+- Support dynamically named `test-*` datasets for one blind final evaluation against an explicitly frozen solution commit.
+
+### Changed
+
+- Limit successful blind-test output to aggregate score, precision, recall, API cost, and duration.
+- Reserve the blind final evaluation outside the 20 development-run allowance while charging its spend to the monetary budget.
+
+### Security
+
+- Reject blind-test diagnostics and reject test evaluation unless `solution.py` matches the current supplied commit before and after the run.
+
 ## [0.2.0.0] - 2026-08-11
 
 ### Added

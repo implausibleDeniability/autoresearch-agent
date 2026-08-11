@@ -8,8 +8,9 @@ Inspired by [Karpathy's Autoresearch](https://github.com/karpathy/autoresearch),
 
 ## Method
 
-Development uses a small visible development set. A two-document debug set supports inexpensive
-pipeline checks. A separate test split can be added later.
+Development uses the visible `dev-19k` and `dev-87k` datasets. A two-document `debug` dataset
+supports inexpensive pipeline checks. Dataset names beginning with `test-` are reserved for a blind
+final evaluation after development has ended.
 
 ## Solution
 
@@ -58,6 +59,9 @@ Other output paths are supported but are not ignored automatically.
 Each value stores at most 20 source snippets; `occurrence_count` preserves the total and
 `occurrences_truncated` reports whether additional occurrences were omitted.
 
+Diagnostics are development-only. The evaluator rejects `--diagnostics` for every dataset whose
+name starts with `test-`.
+
 The top-level shape is:
 
 ```json
@@ -100,8 +104,27 @@ context. The price table is evaluator-owned and currently uses standard API pric
 models. The CLI prints `f_score` as the optimization metric and precision and recall as diagnostics
 for experiment logs.
 
-Autonomous research stops after 20 evaluations or $0.50 in cumulative API cost. Each run logs its
-dataset and observed cost; a crash that hides its cost is charged the pre-run estimate.
+Development allows 20 evaluations. Reserve enough of the $0.50 cumulative API budget for the final
+test. Charge a crash without an observed cost at its pre-run estimate.
+
+### Blind final evaluation
+
+Researchers must not access `data/test-*` files or detailed test results. The complete dataset name
+is supplied for the final evaluation rather than hard-coded.
+
+After development is complete, commit the chosen `solution.py` and leave it unchanged. Run the one
+final blind evaluation by passing that current commit explicitly:
+
+```bash
+uv run python -m src.evaluation.cli \
+  --dataset test-<provided-name> \
+  --frozen-commit "$(git rev-parse HEAD)"
+```
+
+The evaluator checks the commit and `solution.py` before and after the run. It prints only aggregate
+`f_score`, precision, recall, API cost, and duration. This final evaluation is outside the 20-run
+allowance, but its spend counts toward the $0.50 budget. Success ends the research run. Never tune
+against the result; changing the solution invalidates it.
 
 ## Data
 
@@ -111,5 +134,6 @@ dataset and observed cost; a crash that hides its cost is charged the pre-run es
   labeled PII values.
 - `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 93 labeled people, and 230
   labeled PII values.
+- `data/test-*`: blind final-evaluation data.
 
-`data/raw` is archival source data and should not be exposed to the research agent.
+`data/raw` and `data/test-*` must not be exposed to the research agent.
