@@ -17,6 +17,11 @@
 - If an execution could cost $0.10 or more, first try to reduce its cost.
 - If an execution could cost $1.00 or more, obtain explicit human approval before running it.
 
+# CPU Discipline
+
+- Never run more than two CPU-heavy processes concurrently on this machine, including processes started by subagents.
+- Before starting CPU-heavy work, count active local and subagent processes. Queue or stop work to keep the total at two or fewer.
+
 # Worktree Workflow
 
 - When the user requests a separate worktree, do not make implementation changes in the main workspace.
