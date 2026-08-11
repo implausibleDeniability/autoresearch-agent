@@ -95,6 +95,14 @@ Record repeated evaluations as separate results. After deciding, give all succes
 
 Use the saved baseline results and other non-paid evidence when they can resolve uncertainty without another evaluation.
 
+### OCR ambiguity
+
+Source documents may contain conflicting OCR variants of the same PII, with no reliably correct
+canonical transcription. Extracting any defensible form supported by the document can be correct;
+the evaluator intentionally uses fuzzy matching to tolerate minor OCR differences. The solution does
+not need to repair OCR, and researchers should treat a non-exact match as an error only when it is
+unsupported by the source or changes the person-value association.
+
 ### Blind final evaluation
 
 Every `test-*` dataset is blind. Its complete name is supplied for the final evaluation rather than hard-coded.
