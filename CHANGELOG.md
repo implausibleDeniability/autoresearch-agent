@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1.0] - 2026-08-12
+
+### Fixed
+
+- Score a person with multiple email addresses as one person by consolidating the duplicate Justin Schwab development labels.
+- Keep the documented development-set person and PII-value totals aligned with the corrected labels.
+
 ## [0.3.0.0] - 2026-08-12
 
 ### Added

@@ -130,9 +130,9 @@ against the result; changing the solution invalidates it.
 
 - `data/raw/industry-document-baseline`: the complete, unchanged source dataset.
 - `data/debug`: one PII-positive and one PII-negative document totaling less than 1,000 tokens.
-- `data/dev-19k`: 17 complete documents, 19,346 tokens, 11,162 words, 74 labeled people, and 198
+- `data/dev-19k`: 17 complete documents, 19,346 tokens, 11,162 words, 73 labeled people, and 196
   labeled PII values.
-- `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 93 labeled people, and 230
+- `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 92 labeled people, and 228
   labeled PII values.
 - `data/test-*`: blind final-evaluation data.
 
