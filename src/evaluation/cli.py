@@ -9,6 +9,7 @@ import time
 from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from statistics import median
 from typing import Dict, List, Mapping, Sequence, Tuple
 
 import tiktoken
@@ -62,11 +63,32 @@ class EvaluationRun:
     trace: EvaluationTrace
 
 
+@dataclass(frozen=True)
+class DatasetDescription:
+    source_encoding: str
+    documents: int
+    source_tokens: int
+    min_document_tokens: int
+    median_document_tokens: float
+    p95_document_tokens: int
+    max_document_tokens: int
+
+
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
     if parsed.worker:
         return _run_worker(parsed.module)
+    if parsed.describe_dataset:
+        return _describe_dataset(parsed.dataset)
     return _run_evaluation(parsed)
+
+
+def _describe_dataset(dataset: str) -> int:
+    description = _dataset_description(_load_texts(dataset))
+    print(f"dataset={dataset}")
+    for field, value in asdict(description).items():
+        print(f"{field}={value:g}" if isinstance(value, float) else f"{field}={value}")
+    return 0
 
 
 def _run_evaluation(arguments: argparse.Namespace) -> int:
@@ -191,8 +213,26 @@ def _load_texts(dataset: str) -> Dict[str, str]:
 
 
 def _count_source_tokens(texts: Mapping[str, str]) -> int:
+    return sum(_document_token_counts(texts))
+
+
+def _dataset_description(texts: Mapping[str, str]) -> DatasetDescription:
+    token_counts = sorted(_document_token_counts(texts))
+    p95_index = math.ceil(0.95 * len(token_counts)) - 1
+    return DatasetDescription(
+        source_encoding=SOURCE_ENCODING,
+        documents=len(token_counts),
+        source_tokens=sum(token_counts),
+        min_document_tokens=token_counts[0],
+        median_document_tokens=median(token_counts),
+        p95_document_tokens=token_counts[p95_index],
+        max_document_tokens=token_counts[-1],
+    )
+
+
+def _document_token_counts(texts: Mapping[str, str]) -> List[int]:
     encoding = tiktoken.get_encoding(SOURCE_ENCODING)
-    return sum(len(encoding.encode(text)) for text in texts.values())
+    return [len(encoding.encode(text)) for text in texts.values()]
 
 
 def _run_solution(
@@ -286,6 +326,11 @@ def _print_blind_test_result(
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
     parser.add_argument("--dataset", type=_dataset_name)
+    parser.add_argument(
+        "--describe-dataset",
+        action="store_true",
+        help="print aggregate development-dataset size statistics without running the solution",
+    )
     parser.add_argument("--diagnostics", type=Path, help="write detailed evaluation diagnostics as JSON")
     parser.add_argument(
         "--frozen-commit",
@@ -310,7 +355,11 @@ def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.Argument
         parser.error("--worker requires --module")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
+    if parsed.describe_dataset and parsed.diagnostics:
+        parser.error("--describe-dataset cannot be combined with --diagnostics")
     if parsed.dataset and Dataset.is_blind_test(parsed.dataset):
+        if parsed.describe_dataset:
+            parser.error("--describe-dataset is not allowed with blind test datasets")
         if parsed.diagnostics:
             parser.error("--diagnostics is not allowed with blind test datasets")
         if not parsed.frozen_commit:

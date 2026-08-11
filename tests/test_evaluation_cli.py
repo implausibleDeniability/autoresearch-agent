@@ -14,6 +14,7 @@ from src.cost_metering.proxy import MeteringProxy
 from src.evaluation.cli import (
     Dataset,
     _count_source_tokens,
+    _dataset_description,
     _parse_arguments,
     _parse_worker_result,
     _run_solution,
@@ -46,6 +47,12 @@ def test_cli_accepts_diagnostics_path():
     assert parsed.diagnostics == Path("diagnostics.json")
 
 
+def test_cli_accepts_dataset_description_mode():
+    parsed = _parse_arguments(("--dataset", "dev-87k", "--describe-dataset"))
+
+    assert parsed.describe_dataset
+
+
 def test_cli_accepts_dynamic_blind_test_name_with_frozen_commit():
     parsed = _parse_arguments(("--dataset", "test-private-v2", "--frozen-commit", "abc1234"))
 
@@ -66,6 +73,8 @@ def test_cli_accepts_dynamic_blind_test_name_with_frozen_commit():
             "diagnostics.json",
         ),
         ("--dataset", "dev-19k", "--frozen-commit", "abc1234"),
+        ("--dataset", "dev-19k", "--describe-dataset", "--diagnostics", "diagnostics.json"),
+        ("--dataset", "test-private-v2", "--describe-dataset", "--frozen-commit", "abc1234"),
         ("--dataset", "test-private/ground_truth.json", "--frozen-commit", "abc1234"),
     ],
 )
@@ -80,6 +89,25 @@ def test_source_tokens_count_each_original_document_once():
     result = _count_source_tokens(texts)
 
     assert result == 4
+
+
+def test_dataset_description_reports_document_token_distribution():
+    texts = {
+        "one": "John",
+        "two": "John Smith",
+        "three": "John Michael Smith",
+        "four": "John Michael Adam Smith",
+    }
+
+    result = _dataset_description(texts)
+
+    assert result.source_encoding == "o200k_base"
+    assert result.documents == 4
+    assert result.source_tokens == 10
+    assert result.min_document_tokens == 1
+    assert result.median_document_tokens == 2.5
+    assert result.p95_document_tokens == 4
+    assert result.max_document_tokens == 4
 
 
 def test_solution_environment_replaces_openai_credentials():
@@ -239,6 +267,82 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
         if line.startswith("duration_seconds=")
     )
     assert float(duration_seconds) > 0
+
+
+def test_dataset_description_requires_no_credentials_or_api_call(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment.pop("OPENAI_API_KEY", None)
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--describe-dataset",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.splitlines() == [
+        "dataset=debug",
+        "source_encoding=o200k_base",
+        "documents=1",
+        "source_tokens=1",
+        "min_document_tokens=1",
+        "median_document_tokens=1",
+        "p95_document_tokens=1",
+        "max_document_tokens=1",
+    ]
+    assert completed.stderr == ""
+
+
+def test_dataset_description_rejects_blind_dataset_without_emitting_metadata(tmp_path: Path):
+    # setup
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "test-private-v2",
+            "--describe-dataset",
+            "--frozen-commit",
+            "abc1234",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode != 0
+    assert "--describe-dataset is not allowed with blind test datasets" in completed.stderr
+    assert not any(
+        field in completed.stdout
+        for field in ("source_tokens=", "documents=", "min_document_tokens=", "max_document_tokens=")
+    )
 
 
 def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_path: Path):

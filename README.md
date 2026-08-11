@@ -43,6 +43,16 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. Because `dev-87k`
 costs several times more, use it for occasional checks and final measurement.
 
+Inspect a development dataset's scale before planning paid runs:
+
+```bash
+uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset
+```
+
+This free, read-only mode reports the document count and aggregate `o200k_base` source-token
+distribution. It does not require API credentials, inspect labels, run the solution, or count as an
+evaluation. The evaluator rejects it for every `test-*` dataset.
+
 Write a detailed error inventory during the same evaluation with:
 
 ```bash

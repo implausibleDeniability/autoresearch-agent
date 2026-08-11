@@ -10,8 +10,9 @@ To set up a new experiment, work with the user to:
 2. **Create the branch**: git checkout -b autoresearch/<tag> from current main.
 3. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
 4. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
-5. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every invocation counts as a run even when it exits before an API request.
-6. **Confirm and go**: Confirm setup looks good.
+5. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
+6. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every evaluation invocation counts as a run even when it exits before an API request.
+7. **Confirm and go**: Confirm setup looks good.
 
 Once you get confirmation, kick off the experimentation.
 
