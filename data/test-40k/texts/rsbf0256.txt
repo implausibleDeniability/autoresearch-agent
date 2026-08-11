@@ -1,0 +1,10 @@
+From        : Piper Sherman [CN=Piper Sherman/OU=TSC/OU=NorthAmerica/O=MCKINSEY]
+Sent        : 11/8/2017 4:47:47 PM
+To          : Arnab Ghatak [CN=Arnab Ghatak/OU=NJE/OU=NorthAmerica/O=MCKINSEY@MCKINSEY]; John [Goldie/NYO/NorthAmerica/MCKINSEY@MCKINSEY]; Laura [Moran/NJE/NorthAmerica/MCKINSEY@MCKINSEY]; Martin [Elling/BAN/Asia/MCKINSEY@MCKINSEY]; Reinout [Goedvolk/AMS/Europe/MCKINSEY@MCKINSEY]; Steve Van [Kuiken/NJE/NorthAmerica/MCKINSEY@MCKINSEY]; Tatiana [Sivaeva/NJE/NorthAmerica/MCKINSEY@MCKINSEY]; Ted [Fuhr/NJE/NorthAmerica/MCKINSEY@MCKINSEY]; Vikas [Bhadoria/DEL/Asia/MCKINSEY@MCKINSEY]
+Subject     : Tentative: Purdue global CST call
+Location    : IN +1-212-798-0808,,55500513# || NL +31-20-551-3668,,55500513# || US +1-212-798-0808,,55500513# || VoIP: 400-0808 PC: 55500513
+
+Start        : 6/6/2018 11:00:00 AM
+End          : 6/6/2018 12:00:00 PM
+
+Recurrence   : (none)

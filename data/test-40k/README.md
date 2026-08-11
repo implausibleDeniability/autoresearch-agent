@@ -1,9 +1,9 @@
-# 28k-token manually labeled Industry Documents data
+# 40k-token manually labeled Industry Documents data
 
-This directory contains thirty-six complete, previously unused documents from the UCSF Industry
-Documents Library's McKinsey Documents collection. Together they contain 27,650 `o200k_base`
-tokens and 9,992 words across 68 pages, including 336 labeled people and 906 labeled PII values.
-Two slide decks are intentional no-person examples. Short iMessage exports and emails with large
+This directory contains forty-six complete, previously unused documents from the UCSF Industry
+Documents Library's McKinsey Documents collection. Together they contain 40,045 `o200k_base`
+tokens and 16,742 words across 120 pages, including 376 labeled people and 1,003 labeled PII
+values. No-person documents, short iMessage exports, dense material, and emails with large
 recipient lists are included intentionally rather than filtered out for labeling difficulty.
 
 `ground_truth.json` maps each document ID to its document-scoped list of canonical `PIIItem`
@@ -51,6 +51,25 @@ The source PDFs are not included.
 | `rsnp0256` | iMessage export | 1 | 3 | [record](https://www.industrydocuments.ucsf.edu/docs/rsnp0256) |
 | `trnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/trnp0256) |
 | `yrnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/yrnp0256) |
+| `rsbf0256` | Appointment | 1 | 10 | [record](https://www.industrydocuments.ucsf.edu/docs/rsbf0256) |
+| `nrjl0255` | Appointment | 4 | 8 | [record](https://www.industrydocuments.ucsf.edu/docs/nrjl0255) |
+| `hhxg0257` | Presentation | 10 | 0 | [record](https://www.industrydocuments.ucsf.edu/docs/hhxg0257) |
+| `nkxp0256` | Withheld document notice | 1 | 0 | [record](https://www.industrydocuments.ucsf.edu/docs/nkxp0256) |
+| `zxxw0256` | Email | 1 | 4 | [record](https://www.industrydocuments.ucsf.edu/docs/zxxw0256) |
+| `zlyd0257` | Appointment | 1 | 0 | [record](https://www.industrydocuments.ucsf.edu/docs/zlyd0257) |
+| `txvd0256` | Email | 2 | 5 | [record](https://www.industrydocuments.ucsf.edu/docs/txvd0256) |
+| `zqpd0256` | Email | 1 | 11 | [record](https://www.industrydocuments.ucsf.edu/docs/zqpd0256) |
+| `qtmx0256` | Presentation | 12 | 0 | [record](https://www.industrydocuments.ucsf.edu/docs/qtmx0256) |
+| `gfyl0256` | Memorandum | 19 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/gfyl0256) |
+
+## Follow-up sampling
+
+The ten follow-up documents were selected from the public McKinsey collection in the
+reproducible Solr order `random_20260812 asc`, skipping document IDs already present anywhere
+in this repository. The first ten unused records all had accessible OCR and PDFs, were below
+30,000 `o200k_base` tokens individually, and had no outstanding reason for exclusion. Therefore
+no sampled document was excluded. Dense or sparse content, no PII, OCR errors, and grid-based
+layouts were not exclusion criteria.
 
 ## Labeling protocol
 
