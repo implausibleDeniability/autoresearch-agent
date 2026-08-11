@@ -33,7 +33,7 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
 
     # check
     result = json.loads(path.read_text())
-    assert result["schema_version"] == 1
+    assert result["schema_version"] == 2
     assert result["metrics"]["true_positive"] == 3
     assert result["metrics"]["false_positive"] == 3
     assert result["metrics"]["false_negative"] == 2

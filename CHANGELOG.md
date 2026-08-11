@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0.0] - 2026-08-12
+
+### Added
+
+- Checkpoint development evaluations after every document with per-document status, token usage, observed cost, and latency.
+- Report usable partial metrics over completed documents when later documents fail.
+
+### Changed
+
+- Preserve observed metered spend and explicitly distinguish complete from incomplete cost accounting.
+- Give partial development runs distinct metric keys and exit status so automation cannot mistake diagnostics for a final score.
+- Upgrade diagnostics to schema v2 with running and terminal lifecycle checkpoints.
+
 ## [0.3.0.0] - 2026-08-12
 
 ### Added

@@ -131,7 +131,7 @@ commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
 6. status: `keep`, `discard`, `inconclusive`, or `crash`
 7. short text description of what this experiment tried
 8. dataset: `debug`, `dev-19k`, or `dev-87k`
-9. API cost charged to the budget; use the pre-run estimate if a crash hides the observed cost
+9. API cost charged to the budget; when metering is incomplete, use the larger of the observed subtotal and the pre-run estimate
 
 Example:
 
@@ -158,8 +158,11 @@ Stop development after 20 evaluations or when only the budget reserved for the f
 3. If `solution.py` changed, git commit.
 4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
 5. Load `.env` and run the evaluator in the same shell invocation: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json > run.log 2>&1`, substituting another allowed dataset when appropriate.
-6. Read out the results: `grep -E '^(f_score|precision|recall|true_positive|false_positive|false_negative|api_cost_usd|cost_usd_per_million_source_tokens)=' run.log`
-7. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
+6. Read the run status before interpreting metrics: `grep -E '^(result_status|score_is_final|termination_category|documents_completed|documents_failed|documents_not_attempted|cost_status|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens)=' run.log`.
+7. Handle the reported status:
+   - `result_status=complete` and `score_is_final=true`: use the normal score and cost fields for the candidate decision.
+   - `result_status=partial` and `score_is_final=false`: count the attempt, inspect the completed-document metrics and diagnostics for hypotheses, but never rank, keep, discard, or promote the candidate from this run. Record it as `crash` with zero score fields, include coverage and the safe failure category in the description, and charge the larger of `observed_api_cost_usd` and the pre-run estimate when `cost_status=incomplete`.
+   - Missing `result_status`: treat this as an evaluator or protocol crash, inspect the final 50 log lines, and charge the pre-run estimate unless a trustworthy observed subtotal is available.
 8. Before another paid run, inspect `diagnostics.json`. Inventory false negatives and false positives by field and document, inspect the highest-impact documents, and name at least one observed error class in the next experiment's hypothesis and `results.tsv` description. Never optimize aggregate metrics without this error inventory.
 9. Record the result in `results.tsv` and recompute cumulative spend. Do not commit the file.
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
@@ -172,8 +175,8 @@ Stop development after 20 evaluations or when only the budget reserved for the f
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.
 
-**Timeout**: Each experiment has a 3-minute wall-clock limit from worker launch, including startup and evaluation. The evaluator terminates the worker at the limit; treat the timeout as a failure, discard the experiment, and revert it.
+**Timeout**: Each experiment has a 3-minute wall-clock limit from worker launch, including startup, evaluation, cleanup, and cost finalization. The evaluator terminates the worker process group at the limit. Treat any partial result as diagnostic evidence only: log a crash, charge its conservative budget cost, and never promote or reject a candidate from its partial score alone.
 
-**Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
+**Crashes**: If a run crashes (OOM, protocol failure, solution bug, or similar), preserve and inspect any partial diagnostics. They may identify a repair or next hypothesis, but they are not a final score. If the failure is easy to fix, fix it and re-run. If the idea itself is fundamentally broken, log `crash` and move on. Never assume a zero-dollar crash: charge the observed cost when complete, or the larger of observed cost and the pre-run estimate when incomplete.
 
 **DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 20 development experiments have been attempted, only the final-test budget remains, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas during development, think harder — read papers referenced in the code, re-read the in-scope development files for new angles, try combining previous near-misses, and try more radical architectural changes.

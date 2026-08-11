@@ -1,24 +1,35 @@
 import argparse
-import importlib
 import json
 import math
 import os
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+import uuid
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Dict, List, Mapping, Sequence, Tuple
 
 import tiktoken
 
-from src.cost_metering.accounting import CostReport, PRICE_TABLE_VERSION
+from src.cost_metering.accounting import CostReport, CostStatus, MeteringOutcome, PRICE_TABLE_VERSION
 from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
-from src.evaluation.diagnostics import SCHEMA_VERSION, preflight_diagnostics_path, write_diagnostics
-from src.evaluation.metrics import EntityMetrics, evaluate_trace
+from src.evaluation.diagnostics import (
+    SCHEMA_VERSION,
+    preflight_diagnostics_path,
+    serialize_document_execution,
+    write_diagnostics,
+)
+from src.evaluation.metrics import EntityMetrics, evaluate_completed_trace
 from src.evaluation.models import PIIItem
-from src.evaluation.results import EvaluationTrace
+from src.evaluation.run_results import (
+    DocumentExecution,
+    DocumentStatus,
+    EvaluationRun,
+    LifecycleStatus,
+    ResultStatus,
+)
+from src.evaluation.worker import run_solution_documents, run_worker
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -54,14 +65,6 @@ class Dataset:
         return name.startswith("test-") and Path(name).name == name
 
 
-@dataclass(frozen=True)
-class EvaluationRun:
-    texts: Mapping[str, str]
-    source_tokens: int
-    cost: CostReport
-    trace: EvaluationTrace
-
-
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
     if parsed.worker:
@@ -80,7 +83,7 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
         blind_test=blind_test,
         duration_seconds=time.monotonic() - started_at,
     )
-    return 0
+    return 0 if run.result_status == ResultStatus.COMPLETE else 2
 
 
 def _preflight_evaluation(arguments: argparse.Namespace, *, blind_test: bool) -> None:
@@ -96,7 +99,10 @@ def _evaluate_with_blind_boundary(
     blind_test: bool,
 ) -> EvaluationRun:
     try:
-        return _evaluate_dataset(arguments)
+        run = _evaluate_dataset(arguments)
+        if blind_test and run.result_status != ResultStatus.COMPLETE:
+            raise RuntimeError("blind evaluation did not complete")
+        return run
     except Exception:
         if blind_test:
             raise RuntimeError("blind test evaluation failed; details are withheld") from None
@@ -112,14 +118,9 @@ def _report_evaluation(
 ) -> None:
     if blind_test:
         _validate_frozen_solution(arguments.frozen_commit)
-        _print_blind_test_result(run.trace.metrics, cost=run.cost, duration_seconds=duration_seconds)
+        _print_blind_test_result(run.trace.metrics, cost=run.cost.report, duration_seconds=duration_seconds)
     else:
-        _print_development_result(
-            run.trace.metrics,
-            cost=run.cost,
-            source_tokens=run.source_tokens,
-            duration_seconds=duration_seconds,
-        )
+        _print_development_result(run, duration_seconds=duration_seconds)
     if arguments.diagnostics:
         _write_development_diagnostics(run, arguments=arguments)
 
@@ -134,6 +135,7 @@ def _write_development_diagnostics(
         trace=run.trace,
         texts=run.texts,
         dataset=arguments.dataset,
+        run=run,
     )
     print(
         f"diagnostics written: {arguments.diagnostics} "
@@ -144,21 +146,142 @@ def _write_development_diagnostics(
 
 def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     texts = _load_texts(arguments.dataset)
-    source_tokens = _count_source_tokens(texts)
+    document_tokens = _count_document_tokens(texts)
+    source_tokens = sum(document_tokens.values())
     api_key = _required_environment("OPENAI_API_KEY")
     upstream_base_url = os.environ.get(UPSTREAM_BASE_URL_ENVIRONMENT, DEFAULT_UPSTREAM_BASE_URL)
-    predictions, cost = _run_metered_solution(
-        texts,
+    run_id = uuid.uuid4().hex
+    started_at = EvaluationRun.timestamp()
+    documents = _not_attempted_documents(texts, document_tokens=document_tokens)
+    initial = _make_run(
+        run_id=run_id,
+        dataset=arguments.dataset,
+        texts=texts,
+        source_tokens=source_tokens,
+        documents=documents,
+        cost=MeteringOutcome(CostReport(()), CostStatus.PENDING),
+        lifecycle_status=LifecycleStatus.RUNNING,
+        termination_category="none",
+        started_at=started_at,
+    )
+    _checkpoint_diagnostics(initial, arguments=arguments)
+    deadline = time.monotonic() + arguments.timeout
+    with MeteringProxy(
         api_key=api_key,
         upstream_base_url=upstream_base_url,
         spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
-        timeout=arguments.timeout,
+    ) as meter:
+
+        def checkpoint(completed, outcome):
+            ledger = _merge_document_ledger(completed, initial=initial.documents)
+            running = _make_run(
+                run_id=run_id,
+                dataset=arguments.dataset,
+                texts=texts,
+                source_tokens=source_tokens,
+                documents=ledger,
+                cost=outcome,
+                lifecycle_status=LifecycleStatus.RUNNING,
+                termination_category="none",
+                started_at=started_at,
+            )
+            _checkpoint_diagnostics(running, arguments=arguments)
+
+        documents, termination_category = run_solution_documents(
+            texts,
+            module=SOLUTION_MODULE,
+            meter=meter,
+            deadline=deadline,
+            environment=_solution_environment(meter),
+            source_tokens=document_tokens,
+            on_checkpoint=checkpoint,
+        )
+        cost = meter.finalize(timeout=max(deadline - time.monotonic(), 0.0))
+    if termination_category == "none" and cost.status == CostStatus.INCOMPLETE:
+        termination_category = "metering_incomplete"
+    if termination_category == "none" and any(
+        document.status == DocumentStatus.FAILED for document in documents
+    ):
+        termination_category = "document_failures"
+    run = _make_run(
+        run_id=run_id,
+        dataset=arguments.dataset,
+        texts=texts,
+        source_tokens=source_tokens,
+        documents=documents,
+        cost=cost,
+        lifecycle_status=LifecycleStatus.TERMINAL,
+        termination_category=termination_category,
+        started_at=started_at,
     )
-    trace = evaluate_trace(
+    _checkpoint_diagnostics(run, arguments=arguments)
+    return run
+
+
+def _make_run(
+    *,
+    run_id: str,
+    dataset: str,
+    texts: Mapping[str, str],
+    source_tokens: int,
+    documents: Tuple[DocumentExecution, ...],
+    cost: MeteringOutcome,
+    lifecycle_status: str,
+    termination_category: str,
+    started_at: str,
+) -> EvaluationRun:
+    completed = tuple(document for document in documents if document.status == DocumentStatus.COMPLETED)
+    predictions = {document.document_id: document.predictions for document in completed}
+    trace = evaluate_completed_trace(
         predictions,
-        ground_truth_path=DATA_DIRECTORY / arguments.dataset / "ground_truth.json",
+        document_ids=tuple(predictions),
+        ground_truth_path=DATA_DIRECTORY / dataset / "ground_truth.json",
     )
-    return EvaluationRun(texts=texts, source_tokens=source_tokens, cost=cost, trace=trace)
+    return EvaluationRun(
+        run_id=run_id,
+        dataset=dataset,
+        texts=texts,
+        source_tokens=source_tokens,
+        documents=documents,
+        trace=trace,
+        cost=cost,
+        lifecycle_status=lifecycle_status,
+        termination_category=termination_category,
+        started_at=started_at,
+        updated_at=EvaluationRun.timestamp(),
+    )
+
+
+def _checkpoint_diagnostics(run: EvaluationRun, *, arguments: argparse.Namespace) -> None:
+    if not arguments.diagnostics:
+        return
+    write_diagnostics(
+        arguments.diagnostics,
+        trace=run.trace,
+        texts=run.texts,
+        dataset=run.dataset,
+        run=run,
+    )
+
+
+def _not_attempted_documents(
+    texts: Mapping[str, str], *, document_tokens: Mapping[str, int]
+) -> Tuple[DocumentExecution, ...]:
+    return tuple(
+        DocumentExecution(
+            ordinal=ordinal,
+            document_id=document_id,
+            status=DocumentStatus.NOT_ATTEMPTED,
+            source_tokens=document_tokens[document_id],
+        )
+        for ordinal, document_id in enumerate(texts)
+    )
+
+
+def _merge_document_ledger(
+    completed: Sequence[DocumentExecution], *, initial: Sequence[DocumentExecution]
+) -> Tuple[DocumentExecution, ...]:
+    return tuple(completed) + tuple(initial[len(completed) :])
 
 
 def _run_metered_solution(
@@ -191,8 +314,12 @@ def _load_texts(dataset: str) -> Dict[str, str]:
 
 
 def _count_source_tokens(texts: Mapping[str, str]) -> int:
+    return sum(_count_document_tokens(texts).values())
+
+
+def _count_document_tokens(texts: Mapping[str, str]) -> Dict[str, int]:
     encoding = tiktoken.get_encoding(SOURCE_ENCODING)
-    return sum(len(encoding.encode(text)) for text in texts.values())
+    return {document_id: len(encoding.encode(text)) for document_id, text in texts.items()}
 
 
 def _run_solution(
@@ -202,21 +329,20 @@ def _run_solution(
     meter: MeteringProxy,
     timeout: float,
 ) -> Dict[str, List[PIIItem]]:
-    command = [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module]
-    completed = subprocess.run(
-        command,
-        input=json.dumps(texts),
-        text=True,
-        capture_output=True,
-        timeout=timeout,
-        env=_solution_environment(meter),
-        check=False,
+    tokens = _count_document_tokens(texts)
+    documents, termination = run_solution_documents(
+        texts,
+        module=module,
+        meter=meter,
+        deadline=time.monotonic() + timeout,
+        environment=_solution_environment(meter),
+        source_tokens=tokens,
+        on_checkpoint=lambda documents, outcome: None,
     )
-    if completed.returncode:
-        raise RuntimeError(
-            f"solution failed with exit code {completed.returncode}:\n{completed.stderr[-4000:]}"
-        )
-    return _parse_worker_result(completed.stdout)
+    failed = [document.document_id for document in documents if document.status != DocumentStatus.COMPLETED]
+    if failed:
+        raise RuntimeError(f"solution failed for documents {failed}; termination={termination}")
+    return {document.document_id: list(document.predictions) for document in documents}
 
 
 def _solution_environment(meter: MeteringProxy, *, source: Mapping[str, str] = os.environ) -> Dict[str, str]:
@@ -240,34 +366,43 @@ def _parse_worker_result(output: str) -> Dict[str, List[PIIItem]]:
 
 
 def _run_worker(module_name: str) -> int:
-    texts = json.load(sys.stdin)
-    extract_pii = importlib.import_module(module_name).extract_pii
-    predictions = {document_id: extract_pii(text) for document_id, text in texts.items()}
-    serialized = {
-        document_id: [asdict(person) for person in people] for document_id, people in predictions.items()
-    }
-    print(f"{WORKER_RESULT_PREFIX}{json.dumps(serialized)}")
-    return 0
+    return run_worker(module_name)
 
 
-def _print_development_result(
-    metrics: EntityMetrics,
-    *,
-    cost: CostReport,
-    source_tokens: int,
-    duration_seconds: float,
-) -> None:
-    print(f"f_score={metrics.f_score:.6f}")
-    print(f"precision={metrics.precision:.6f}")
-    print(f"recall={metrics.recall:.6f}")
-    print(f"true_positive={metrics.true_positive}")
-    print(f"false_positive={metrics.false_positive}")
-    print(f"false_negative={metrics.false_negative}")
-    print(f"source_tokens={source_tokens}")
+def _print_development_result(run: EvaluationRun, *, duration_seconds: float) -> None:
+    status = run.result_status
+    metrics = run.trace.metrics
+    print(f"result_schema_version={SCHEMA_VERSION}")
+    print(f"result_status={status}")
+    print(f"score_is_final={'true' if status == ResultStatus.COMPLETE else 'false'}")
+    print(f"termination_category={run.termination_category}")
+    prefix = "" if status == ResultStatus.COMPLETE else "partial_"
+    print(f"{prefix}f_score={metrics.f_score:.6f}")
+    print(f"{prefix}precision={metrics.precision:.6f}")
+    print(f"{prefix}recall={metrics.recall:.6f}")
+    print(f"{prefix}true_positive={metrics.true_positive}")
+    print(f"{prefix}false_positive={metrics.false_positive}")
+    print(f"{prefix}false_negative={metrics.false_negative}")
+    statuses = [document.status for document in run.documents]
+    print(f"documents_total={len(run.documents)}")
+    print(f"documents_completed={statuses.count(DocumentStatus.COMPLETED)}")
+    print(f"documents_failed={statuses.count(DocumentStatus.FAILED)}")
+    print(f"documents_not_attempted={statuses.count(DocumentStatus.NOT_ATTEMPTED)}")
+    print(f"source_tokens={run.source_tokens}")
+    print(f"completed_source_tokens={run.completed_source_tokens}")
     print(f"pricing_version={PRICE_TABLE_VERSION}")
-    print(f"api_cost_usd={cost.total_usd:.8f}")
-    print(f"cost_usd_per_million_source_tokens={cost.cost_per_million_source_tokens(source_tokens):.6f}")
+    cost_key = "api_cost_usd" if status == ResultStatus.COMPLETE else "observed_api_cost_usd"
+    print(f"{cost_key}={run.cost.report.total_usd:.8f}")
+    print(f"cost_status={run.cost.status}")
+    if status == ResultStatus.COMPLETE:
+        normalized = run.cost.report.cost_per_million_source_tokens(run.source_tokens)
+        print(f"cost_usd_per_million_source_tokens={normalized:.6f}")
+    elif run.completed_source_tokens:
+        normalized = run.cost.report.cost_per_million_source_tokens(run.completed_source_tokens)
+        print(f"partial_cost_usd_per_million_completed_source_tokens={normalized:.6f}")
     print(f"duration_seconds={duration_seconds:.6f}")
+    documents = [serialize_document_execution(document) for document in run.documents]
+    print(f"document_results_json={json.dumps(documents, separators=(',', ':'))}")
 
 
 def _print_blind_test_result(

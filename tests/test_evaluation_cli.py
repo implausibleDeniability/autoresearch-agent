@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -156,7 +157,7 @@ def test_solution_subprocess_failure_is_reported_without_api_spend():
     with MeteringProxy(api_key="real-key", upstream_base_url="http://127.0.0.1:1") as meter:
 
         # operate
-        with pytest.raises(RuntimeError, match="solution failed with exit code"):
+        with pytest.raises(RuntimeError, match="solution failed for documents"):
             _run_solution({"doc": "text"}, module="missing_solution_module", meter=meter, timeout=10.0)
         report = meter.seal_and_report()
 
@@ -209,6 +210,8 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
 
     # check
     assert completed.returncode == 0, completed.stderr
+    assert "result_status=complete" in completed.stdout
+    assert "score_is_final=true" in completed.stdout
     assert "f_score=1.000000" in completed.stdout
     assert "precision=1.000000" in completed.stdout
     assert "recall=1.000000" in completed.stdout
@@ -230,15 +233,154 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     )
     assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
-    assert "diagnostics written: diagnostics.json (1 documents, schema v1)" in completed.stderr
+    assert "diagnostics written: diagnostics.json (1 documents, schema v2)" in completed.stderr
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
     assert diagnostics["documents"][0]["person_matches"] == [{"prediction_index": 0, "ground_truth_index": 0}]
+    document_results = json.loads(
+        next(
+            line.removeprefix("document_results_json=")
+            for line in completed.stdout.splitlines()
+            if line.startswith("document_results_json=")
+        )
+    )
+    assert document_results[0]["prompt_tokens"] == 1
+    assert document_results[0]["completion_tokens"] == 0
+    assert document_results[0]["latency_seconds"] > 0
     duration_seconds = next(
         line.removeprefix("duration_seconds=")
         for line in completed.stdout.splitlines()
         if line.startswith("duration_seconds=")
     )
     assert float(duration_seconds) > 0
+
+
+def test_evaluator_cli_reports_partial_results_and_continues_after_document_failure(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    (text_directory / "second.txt").write_text("FAIL")
+    (text_directory / "third.txt").write_text("Jane")
+    ground_truth = {
+        "doc": [{"first_name": ["John"]}],
+        "second": [{"first_name": ["FAIL"]}],
+        "third": [{"first_name": ["Jane"]}],
+    }
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""from src.evaluation.models import PIIItem
+
+
+def extract_pii(text):
+    if text == "FAIL":
+        raise RuntimeError("secret document content")
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--diagnostics",
+            "diagnostics.json",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode == 2, completed.stderr
+    assert "result_status=partial" in completed.stdout
+    assert "score_is_final=false" in completed.stdout
+    assert "documents_completed=2" in completed.stdout
+    assert "documents_failed=1" in completed.stdout
+    assert "partial_true_positive=2" in completed.stdout
+    assert "\nf_score=" not in completed.stdout
+    assert "observed_api_cost_usd=0.00000000" in completed.stdout
+    document_results = json.loads(
+        next(
+            line.removeprefix("document_results_json=")
+            for line in completed.stdout.splitlines()
+            if line.startswith("document_results_json=")
+        )
+    )
+    assert [document["status"] for document in document_results] == ["completed", "failed", "completed"]
+    assert document_results[1]["source_tokens"] > 0
+    assert document_results[1]["failure_category"] == "solution_error"
+    assert "secret document content" not in json.dumps(document_results)
+    diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
+    assert diagnostics["schema_version"] == 2
+    assert diagnostics["lifecycle_status"] == "terminal"
+    assert diagnostics["result_status"] == "partial"
+    assert diagnostics["completed_document_count"] == 2
+    assert len(diagnostics["documents"]) == 2
+
+
+def test_first_document_timeout_writes_terminal_ledger_and_kills_process_group(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path)
+    marker = tmp_path / "grandchild-survived"
+    child_script = f"import pathlib,time; time.sleep(0.6); pathlib.Path({str(marker)!r}).write_text('alive')"
+    (tmp_path / "solution.py").write_text(f"""import subprocess
+import sys
+import time
+
+
+def extract_pii(text):
+    subprocess.Popen([sys.executable, "-c", {child_script!r}])
+    time.sleep(10)
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--diagnostics",
+            "diagnostics.json",
+            "--timeout",
+            "0.2",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=5.0,
+        check=False,
+    )
+    time.sleep(0.7)
+
+    # check
+    assert completed.returncode == 2, completed.stderr
+    assert "result_status=partial" in completed.stdout
+    assert "termination_category=dataset_deadline" in completed.stdout
+    assert not marker.exists()
+    diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
+    assert diagnostics["lifecycle_status"] == "terminal"
+    assert diagnostics["coverage"] == {
+        "total": 1,
+        "completed": 0,
+        "failed": 1,
+        "not_attempted": 0,
+    }
+    assert diagnostics["document_results"][0]["failure_category"] == "dataset_deadline"
 
 
 def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_path: Path):

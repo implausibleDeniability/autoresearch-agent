@@ -3,7 +3,7 @@ import os
 import tempfile
 from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Mapping
+from typing import Dict, List, Mapping, Optional
 
 from src.evaluation.results import (
     DocumentEvaluation,
@@ -12,8 +12,9 @@ from src.evaluation.results import (
     FieldEvaluation,
     ValueReference,
 )
+from src.evaluation.run_results import DocumentExecution, EvaluationRun
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 CONTEXT_RADIUS = 60
 MAX_OCCURRENCES_PER_VALUE = 20
 
@@ -35,8 +36,9 @@ def write_diagnostics(
     trace: EvaluationTrace,
     texts: Mapping[str, str],
     dataset: str,
+    run: Optional[EvaluationRun] = None,
 ) -> None:
-    serialized = _serialize_trace(trace, texts=texts, dataset=dataset)
+    serialized = _serialize_trace(trace, texts=texts, dataset=dataset, run=run)
     temporary_path = _write_temporary_file(path, serialized=serialized)
     try:
         os.replace(temporary_path, path)
@@ -59,10 +61,17 @@ def _write_temporary_file(path: Path, *, serialized: Dict[str, object]) -> Path:
         raise
 
 
-def _serialize_trace(trace: EvaluationTrace, *, texts: Mapping[str, str], dataset: str) -> Dict[str, object]:
-    return {
+def _serialize_trace(
+    trace: EvaluationTrace,
+    *,
+    texts: Mapping[str, str],
+    dataset: str,
+    run: Optional[EvaluationRun],
+) -> Dict[str, object]:
+    serialized = {
         "schema_version": SCHEMA_VERSION,
         "dataset": dataset,
+        "dataset_document_count": len(texts),
         "document_count": len(trace.documents),
         "metrics": _serialize_metrics(trace.metrics),
         "field_metrics": {
@@ -71,6 +80,58 @@ def _serialize_trace(trace: EvaluationTrace, *, texts: Mapping[str, str], datase
         "documents": [
             _serialize_document(document, text=texts[document.document_id]) for document in trace.documents
         ],
+    }
+    if run is not None:
+        serialized.update(_serialize_run(run))
+    return serialized
+
+
+def _serialize_run(run: EvaluationRun) -> Dict[str, object]:
+    statuses = [document.status for document in run.documents]
+    return {
+        "run_id": run.run_id,
+        "started_at": run.started_at,
+        "updated_at": run.updated_at,
+        "lifecycle_status": run.lifecycle_status,
+        "result_status": run.result_status,
+        "score_is_final": run.result_status == "complete",
+        "termination_category": run.termination_category,
+        "coverage": {
+            "total": len(run.documents),
+            "completed": statuses.count("completed"),
+            "failed": statuses.count("failed"),
+            "not_attempted": statuses.count("not_attempted"),
+        },
+        "completed_document_count": statuses.count("completed"),
+        "failed_document_count": statuses.count("failed"),
+        "not_attempted_document_count": statuses.count("not_attempted"),
+        "source_tokens": run.source_tokens,
+        "completed_source_tokens": run.completed_source_tokens,
+        "cost_status": run.cost.status,
+        "observed_api_cost_usd": str(run.cost.report.total_usd),
+        "metering_error_count": len(run.cost.errors),
+        "document_results": [serialize_document_execution(document) for document in run.documents],
+    }
+
+
+def serialize_document_execution(document: DocumentExecution) -> Dict[str, object]:
+    usage = document.usage
+    return {
+        "ordinal": document.ordinal,
+        "document_id": document.document_id,
+        "status": document.status,
+        "source_tokens": document.source_tokens,
+        "request_count": len(usage.usages) if usage is not None else None,
+        "prompt_tokens": usage.input_tokens if usage is not None else None,
+        "cached_prompt_tokens": usage.cached_input_tokens if usage is not None else None,
+        "completion_tokens": usage.output_tokens if usage is not None else None,
+        "total_tokens": usage.input_tokens + usage.output_tokens if usage is not None else None,
+        "observed_api_cost_usd": str(usage.total_usd) if usage is not None else None,
+        "latency_seconds": document.latency_seconds,
+        "usage_status": document.usage_status,
+        "failure_category": document.failure_category or None,
+        "error_message": document.error_message or None,
+        "retryable": document.retryable,
     }
 
 

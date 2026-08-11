@@ -49,9 +49,10 @@ Write a detailed error inventory during the same evaluation with:
 uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v1 aggregate and per-field metrics, raw
-predictions, raw ground truth, person and field-value matches, false positives, false negatives, and
-literal source occurrences. Occurrence offsets are zero-based Python character indexes with an
+The ignored `diagnostics.json` file contains schema-v2 run state, document-level execution and cost
+statistics, aggregate and per-field metrics, raw predictions, raw ground truth, person and
+field-value matches, false positives, false negatives, and literal source occurrences. Occurrence
+offsets are zero-based Python character indexes with an
 end-exclusive `end`; an empty `occurrences` list means the raw value was not found literally in the
 source. This is expected for some normalized or fuzzy matches. The file contains labeled PII and
 source context, is overwritten on each run, has owner-only permissions, and must not be committed.
@@ -66,13 +67,23 @@ The top-level shape is:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "dataset": "dev-19k",
+  "lifecycle_status": "terminal",
+  "result_status": "complete",
+  "cost_status": "complete",
+  "coverage": {"total": 17, "completed": 17, "failed": 0, "not_attempted": 0},
   "metrics": {"true_positive": 0, "false_positive": 0, "false_negative": 0},
   "field_metrics": {"email": {"true_positive": 0, "false_positive": 0, "false_negative": 0}},
-  "documents": []
+  "documents": [],
+  "document_results": []
 }
 ```
+
+The evaluator writes an initial `running` checkpoint, atomically replaces it after each document,
+and writes the terminal state after cost finalization. Every dataset document ends as `completed`,
+`failed`, or `not_attempted`. Failed and unattempted documents never expose predictions or ground
+truth in their execution records.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
@@ -96,7 +107,7 @@ short-lived token and redirects the OpenAI SDK through an evaluator-owned localh
 supports Chat Completions and Responses requests using the pinned GPT-4o and GPT-4o mini models,
 including structured outputs, local function calling, prompt caching, retries, concurrency, and
 streaming. Missing usage, unknown pricing, unsupported models, and unsupported billable endpoints
-fail the evaluation instead of reporting an incomplete cost.
+make the cost status incomplete instead of discarding already observed spend.
 
 Cost is reported as total USD and USD per million original source-document tokens. The denominator
 uses `o200k_base` and counts each source document once, independent of solution chunking or repeated
@@ -106,6 +117,17 @@ for experiment logs.
 
 Development allows 20 evaluations. Reserve enough of the $0.50 cumulative API budget for the final
 test. Charge a crash without an observed cost at its pre-run estimate.
+
+Each development run reports `result_status=complete|partial`, `score_is_final=true|false`, document
+coverage, a termination reason, and `cost_status=complete|incomplete`. A complete run exits zero and
+retains the normal `f_score`, precision, recall, and cost keys. A usable partial run exits 2 and
+reports `partial_f_score`, `partial_precision`, and `partial_recall` over completed documents only;
+these diagnostics can guide the next hypothesis but are never a candidate's final score. The
+`document_results_json` value includes each document's status, source-token count, prompt, cached,
+completion, and total tokens, observed spend, wall latency, and a safe failure category.
+
+When cost metering is incomplete, budget accounting uses the larger of the observed subtotal and the
+pre-run estimate. This preserves real spend without treating an incomplete subtotal as a cap.
 
 ### Blind final evaluation
 

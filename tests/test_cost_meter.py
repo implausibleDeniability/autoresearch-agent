@@ -410,6 +410,47 @@ def test_in_flight_requests_are_counted_before_bounded_overshoot_failure():
     state.close()
 
 
+def test_structured_finalization_preserves_observed_usage_on_metering_error():
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    usage = ModelUsage(
+        model="gpt-4o-mini-2024-07-18",
+        input_tokens=100,
+        cached_input_tokens=0,
+        output_tokens=10,
+    )
+    assert state.begin_request("Bearer run-token") == 0
+    state.finish_request(usage=usage, error="provider response could not be validated")
+
+    outcome = state.finalize(timeout=1.0)
+    state.close()
+
+    assert outcome.status == "incomplete"
+    assert outcome.report.usages == (usage,)
+    assert outcome.report.total_usd > 0
+    assert outcome.errors == ("provider response could not be validated",)
+
+
+def test_finalization_outcome_is_immutable_when_active_request_finishes_late():
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    usage = ModelUsage(
+        model="gpt-4o-mini-2024-07-18",
+        input_tokens=100,
+        cached_input_tokens=0,
+        output_tokens=10,
+    )
+    assert state.begin_request("Bearer run-token") == 0
+
+    first = state.finalize(timeout=0.0)
+    state.finish_request(usage=usage)
+    second = state.finalize(timeout=1.0)
+    state.close()
+
+    assert first is second
+    assert first.status == "incomplete"
+    assert first.active_request_count == 1
+    assert first.report.usages == ()
+
+
 def _chat_response(*, usage="default"):
     payload = {
         "id": "chatcmpl-test",
