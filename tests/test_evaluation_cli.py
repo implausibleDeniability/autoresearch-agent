@@ -162,6 +162,42 @@ def test_whitespace_solution_runs_in_subprocess_without_api_calls():
     assert report.total_usd == Decimal("0")
 
 
+def test_worker_extracts_documents_concurrently(tmp_path: Path):
+    # setup
+    (tmp_path / "concurrent_solution.py").write_text("""import threading
+
+from src.evaluation.models import PIIItem
+
+barrier = threading.Barrier(2)
+
+
+def extract_pii(text):
+    barrier.wait(timeout=2.0)
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = os.pathsep.join((str(repository), str(tmp_path)))
+
+    # operate
+    completed = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", "concurrent_solution"],
+        cwd=tmp_path,
+        env=environment,
+        input=json.dumps({"first": "Alice", "second": "Bob"}),
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode == 0, completed.stderr
+    predictions = _parse_worker_result(completed.stdout)
+    assert predictions["first"][0].first_name == ("Alice",)
+    assert predictions["second"][0].first_name == ("Bob",)
+
+
 def test_worker_result_allows_logs_around_single_record():
     output = 'log before\nEVALUATION_RESULT={"doc": [{"first_name": ["John"]}]}\nlog after\n'
 
