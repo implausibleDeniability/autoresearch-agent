@@ -5,6 +5,11 @@
 - When working in a separate worktree, committing is optional unless the user explicitly requests it.
 - When the user asks for a correction to a previous related change, make the correction and squash it into the original commit. Do not create a series of follow-up commits for iterations on the same change.
 
+# Concise Writing
+
+- Apply [$write-concisely](/Users/maxon/.codex/skills/write-concisely/SKILL.md) when modifying `AGENTS.md`, `README.md`, `program.md`, skills, or other reader-facing ground-truth or critical files. This rule does not apply to code.
+- Apply the skill only to text you add or modify. Do not rewrite existing text solely to make it more concise.
+
 # Cost Discipline
 
 - Both code-development agents and autoresearch agents must be careful about spending money.
