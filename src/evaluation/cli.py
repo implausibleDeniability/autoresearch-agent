@@ -1,5 +1,4 @@
 import argparse
-import importlib
 import json
 import math
 import os
@@ -20,6 +19,7 @@ from src.evaluation.diagnostics import SCHEMA_VERSION, preflight_diagnostics_pat
 from src.evaluation.metrics import EntityMetrics, evaluate_trace
 from src.evaluation.models import PIIItem
 from src.evaluation.results import EvaluationTrace
+from src.evaluation.worker import extract_documents
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -281,8 +281,7 @@ def _parse_worker_result(output: str) -> Dict[str, List[PIIItem]]:
 
 def _run_worker(module_name: str) -> int:
     texts = json.load(sys.stdin)
-    extract_pii = importlib.import_module(module_name).extract_pii
-    predictions = {document_id: extract_pii(text) for document_id, text in texts.items()}
+    predictions = extract_documents(texts, module_name=module_name)
     serialized = {
         document_id: [asdict(person) for person in people] for document_id, people in predictions.items()
     }
