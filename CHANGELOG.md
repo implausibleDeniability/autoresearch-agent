@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.0.1] - 2026-08-13
+
+### Changed
+
+- Let autoresearch discover the blind `test-*` dataset name while keeping its contents inaccessible without explicit permission.
+
 ## [0.5.0.0] - 2026-08-13
 
 ### Added
