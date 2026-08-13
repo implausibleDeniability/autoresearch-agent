@@ -6,8 +6,10 @@ import subprocess
 import sys
 import time
 import uuid
+from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from statistics import median
 from typing import Dict, List, Mapping, Sequence, Tuple
 
 import tiktoken
@@ -29,7 +31,7 @@ from src.evaluation.run_results import (
     LifecycleStatus,
     ResultStatus,
 )
-from src.evaluation.worker import run_solution_documents, run_worker
+from src.evaluation.worker import extract_documents, run_solution_documents, run_worker
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -65,11 +67,32 @@ class Dataset:
         return name.startswith("test-") and Path(name).name == name
 
 
+@dataclass(frozen=True)
+class DatasetDescription:
+    source_encoding: str
+    documents: int
+    source_tokens: int
+    min_document_tokens: int
+    median_document_tokens: float
+    p95_document_tokens: int
+    max_document_tokens: int
+
+
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
     if parsed.worker:
         return _run_worker(parsed.module)
+    if parsed.describe_dataset:
+        return _describe_dataset(parsed.dataset)
     return _run_evaluation(parsed)
+
+
+def _describe_dataset(dataset: str) -> int:
+    description = _dataset_description(_load_texts(dataset))
+    print(f"dataset={dataset}")
+    for field, value in asdict(description).items():
+        print(f"{field}={value:g}" if isinstance(value, float) else f"{field}={value}")
+    return 0
 
 
 def _run_evaluation(arguments: argparse.Namespace) -> int:
@@ -130,6 +153,7 @@ def _write_development_diagnostics(
     *,
     arguments: argparse.Namespace,
 ) -> None:
+    started_at = time.monotonic()
     write_diagnostics(
         arguments.diagnostics,
         trace=run.trace,
@@ -137,11 +161,13 @@ def _write_development_diagnostics(
         dataset=arguments.dataset,
         run=run,
     )
+    duration_seconds = time.monotonic() - started_at
     print(
         f"diagnostics written: {arguments.diagnostics} "
         f"({len(run.trace.documents)} documents, schema v{SCHEMA_VERSION})",
         file=sys.stderr,
     )
+    print(f"diagnostics_duration_seconds={duration_seconds:.3f}", file=sys.stderr)
 
 
 def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
@@ -173,6 +199,8 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     ) as meter:
 
         def checkpoint(completed, outcome):
+            if not arguments.diagnostics:
+                return
             ledger = _merge_document_ledger(completed, initial=initial.documents)
             running = _make_run(
                 run_id=run_id,
@@ -322,6 +350,24 @@ def _count_document_tokens(texts: Mapping[str, str]) -> Dict[str, int]:
     return {document_id: len(encoding.encode(text)) for document_id, text in texts.items()}
 
 
+def _dataset_description(texts: Mapping[str, str]) -> DatasetDescription:
+    token_counts = sorted(_document_token_counts(texts))
+    p95_index = math.ceil(0.95 * len(token_counts)) - 1
+    return DatasetDescription(
+        source_encoding=SOURCE_ENCODING,
+        documents=len(token_counts),
+        source_tokens=sum(token_counts),
+        min_document_tokens=token_counts[0],
+        median_document_tokens=median(token_counts),
+        p95_document_tokens=token_counts[p95_index],
+        max_document_tokens=token_counts[-1],
+    )
+
+
+def _document_token_counts(texts: Mapping[str, str]) -> List[int]:
+    return list(_count_document_tokens(texts).values())
+
+
 def _run_solution(
     texts: Mapping[str, str],
     *,
@@ -366,7 +412,15 @@ def _parse_worker_result(output: str) -> Dict[str, List[PIIItem]]:
 
 
 def _run_worker(module_name: str) -> int:
-    return run_worker(module_name)
+    if "EVALUATION_RESULT_FD" in os.environ:
+        return run_worker(module_name)
+    texts = json.load(sys.stdin)
+    predictions = extract_documents(texts, module_name=module_name)
+    serialized = {
+        document_id: [asdict(person) for person in people] for document_id, people in predictions.items()
+    }
+    print(f"{WORKER_RESULT_PREFIX}{json.dumps(serialized)}")
+    return 0
 
 
 def _print_development_result(run: EvaluationRun, *, duration_seconds: float) -> None:
@@ -421,6 +475,11 @@ def _print_blind_test_result(
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a PII extraction solution")
     parser.add_argument("--dataset", type=_dataset_name)
+    parser.add_argument(
+        "--describe-dataset",
+        action="store_true",
+        help="print aggregate development-dataset size statistics without running the solution",
+    )
     parser.add_argument("--diagnostics", type=Path, help="write detailed evaluation diagnostics as JSON")
     parser.add_argument(
         "--frozen-commit",
@@ -445,7 +504,11 @@ def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.Argument
         parser.error("--worker requires --module")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
+    if parsed.describe_dataset and parsed.diagnostics:
+        parser.error("--describe-dataset cannot be combined with --diagnostics")
     if parsed.dataset and Dataset.is_blind_test(parsed.dataset):
+        if parsed.describe_dataset:
+            parser.error("--describe-dataset is not allowed with blind test datasets")
         if parsed.diagnostics:
             parser.error("--diagnostics is not allowed with blind test datasets")
         if not parsed.frozen_commit:

@@ -1,17 +1,26 @@
 # Changelog
 
-## [0.4.0.0] - 2026-08-12
-
-### Added
-
-- Checkpoint development evaluations after every document with per-document status, token usage, observed cost, and latency.
-- Report usable partial metrics over completed documents when later documents fail.
+## [0.5.0.1] - 2026-08-13
 
 ### Changed
 
-- Preserve observed metered spend and explicitly distinguish complete from incomplete cost accounting.
-- Give partial development runs distinct metric keys and exit status so automation cannot mistake diagnostics for a final score.
-- Upgrade diagnostics to schema v2 with running and terminal lifecycle checkpoints.
+- Let autoresearch discover the blind `test-*` dataset name while keeping its contents inaccessible without explicit permission.
+
+## [0.5.0.0] - 2026-08-13
+
+### Added
+
+- Report case-insensitive, normalized, and fuzzy source evidence for diagnostic values using the evaluator's matching rules.
+- Mark bounded fuzzy searches as incomplete when diagnostic safety limits stop candidate enumeration.
+
+### Changed
+
+- Upgrade diagnostic output to schema version 2 with evidence-kind counts, raw source spans, truncation flags, and matching-policy metadata.
+
+### Fixed
+
+- Keep prediction and ground-truth evidence comparisons aligned with the evaluator's direction-sensitive fuzzy matching.
+- Bound fuzzy evidence work and select non-overlapping occurrences without quadratic memory or overlap scans.
 
 ## [0.3.1.0] - 2026-08-12
 

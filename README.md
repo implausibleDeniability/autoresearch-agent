@@ -43,22 +43,43 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. Because `dev-87k`
 costs several times more, use it for occasional checks and final measurement.
 
+Inspect a development dataset's scale before planning paid runs:
+
+```bash
+uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset
+```
+
+This free, read-only mode reports the document count and aggregate `o200k_base` source-token
+distribution. It does not require API credentials, inspect labels, run the solution, or count as an
+evaluation. The evaluator rejects it for every `test-*` dataset.
+
 Write a detailed error inventory during the same evaluation with:
 
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v2 run state, document-level execution and cost
-statistics, aggregate and per-field metrics, raw predictions, raw ground truth, person and
-field-value matches, false positives, false negatives, and literal source occurrences. Occurrence
-offsets are zero-based Python character indexes with an
-end-exclusive `end`; an empty `occurrences` list means the raw value was not found literally in the
-source. This is expected for some normalized or fuzzy matches. The file contains labeled PII and
-source context, is overwritten on each run, has owner-only permissions, and must not be committed.
-Other output paths are supported but are not ignored automatically.
-Each value stores at most 20 source snippets; `occurrence_count` preserves the total and
-`occurrences_truncated` reports whether additional occurrences were omitted.
+The ignored `diagnostics.json` file contains schema-v2 run state, per-document execution and cost,
+metrics, raw predictions and ground truth, matching ledgers, errors, and evaluator-compatible source
+evidence. Source evidence uses the
+evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
+uniqueness, or one-to-one assignment. A zero evidence count means no accepted source span was found,
+not that the evaluator must reject the value.
+
+Raw evidence preserves case-sensitive substrings. Normalized evidence can come from same-width
+substrings or whitespace-delimited token windows. Fuzzy evidence also considers punctuation-delimited
+subspans such as `Name:Jonh,` → `Jonh`. Overlaps prefer raw, then normalized evidence; fuzzy selection
+maximizes the number of non-overlapping spans. Offsets index the original Python string and `end` is
+exclusive. Each value stores at most 20 spans while counts describe the full selected set.
+
+Fuzzy work is bounded so malformed or unusually long model output cannot stall diagnostics. When
+`fuzzy_search_complete` is false, literal counts remain complete but the fuzzy count is unavailable;
+do not interpret a zero fuzzy count as absence of evaluator-compatible evidence.
+
+Schema-v1 files use different occurrence semantics and must be regenerated. Consumers should reject
+unknown `schema_version` values. The file contains labeled PII and source context, is overwritten on
+each run, has owner-only permissions, and must not be committed. Other paths are not ignored
+automatically. The CLI reports serialization time as `diagnostics_duration_seconds`.
 
 Diagnostics are development-only. The evaluator rejects `--diagnostics` for every dataset whose
 name starts with `test-`.
@@ -68,6 +89,18 @@ The top-level shape is:
 ```json
 {
   "schema_version": 2,
+  "source_matching_policy": {
+    "version": 1,
+    "normalization": "lower_strip_trailing_period_v1",
+    "similarity_algorithm": "difflib_sequence_matcher_autojunk_false",
+    "similarity_threshold": 0.65,
+    "minimum_fuzzy_length": 3,
+    "fuzzy_work_budget": 50000000,
+    "candidate_enumeration_budget": 200000,
+    "comparison_orientation": "prediction_values_value_to_span_ground_truth_values_span_to_value",
+    "candidate_boundaries": "literal_substrings_and_punctuation_delimited_token_windows",
+    "overlap_policy": "raw_then_normalized_then_maximum_cardinality_v1"
+  },
   "dataset": "dev-19k",
   "lifecycle_status": "terminal",
   "result_status": "complete",
@@ -80,10 +113,43 @@ The top-level shape is:
 }
 ```
 
-The evaluator writes an initial `running` checkpoint, atomically replaces it after each document,
-and writes the terminal state after cost finalization. Every dataset document ends as `completed`,
-`failed`, or `not_attempted`. Failed and unattempted documents never expose predictions or ground
-truth in their execution records.
+The evaluator writes an initial `running` checkpoint, replaces it after each document, and writes the
+terminal state after cost finalization. Each document ends as `completed`, `failed`, or
+`not_attempted`. Failed and unattempted execution records contain no predictions or ground truth.
+
+Every prediction, ground-truth value, false positive, and false negative uses this shape:
+
+```json
+{
+  "person_index": 0,
+  "value_index": 0,
+  "value": "john@example.com",
+  "source_evidence_count": 1,
+  "raw_occurrence_count": 0,
+  "normalized_occurrence_count": 1,
+  "fuzzy_occurrence_count": 0,
+  "fuzzy_search_complete": true,
+  "source_evidence_truncated": false,
+  "source_evidence": [{
+    "start": 12,
+    "end": 28,
+    "match_kind": "normalized_exact",
+    "similarity": 1.0,
+    "context_start": 0,
+    "context_end": 50,
+    "context": "Contact JOHN@EXAMPLE.COM for details."
+  }]
+}
+```
+
+List false negatives with their evidence counts:
+
+```bash
+jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | .false_negatives[] | {document_id: $document_id, field: $field, value, source_evidence_count, raw_occurrence_count, normalized_occurrence_count, fuzzy_occurrence_count}' diagnostics.json
+```
+
+Add `select(.fuzzy_occurrence_count > 0)` or `select(.source_evidence_count == 0)` before the final
+object to isolate fuzzy-supported or absent values.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
@@ -107,7 +173,7 @@ short-lived token and redirects the OpenAI SDK through an evaluator-owned localh
 supports Chat Completions and Responses requests using the pinned GPT-4o and GPT-4o mini models,
 including structured outputs, local function calling, prompt caching, retries, concurrency, and
 streaming. Missing usage, unknown pricing, unsupported models, and unsupported billable endpoints
-make the cost status incomplete instead of discarding already observed spend.
+mark cost accounting incomplete without discarding observed spend.
 
 Cost is reported as total USD and USD per million original source-document tokens. The denominator
 uses `o200k_base` and counts each source document once, independent of solution chunking or repeated
@@ -118,28 +184,27 @@ for experiment logs.
 Development allows 20 evaluations. Reserve enough of the $0.50 cumulative API budget for the final
 test. Charge a crash without an observed cost at its pre-run estimate.
 
-Each development run reports `result_status=complete|partial`, `score_is_final=true|false`, document
-coverage, a termination reason, and `cost_status=complete|incomplete`. A complete run exits zero and
-retains the normal `f_score`, precision, recall, and cost keys. A usable partial run exits 2 and
-reports `partial_f_score`, `partial_precision`, and `partial_recall` over completed documents only;
-these diagnostics can guide the next hypothesis but are never a candidate's final score. The
-`document_results_json` value includes each document's status, source-token count, prompt, cached,
-completion, and total tokens, observed spend, wall latency, and a safe failure category.
+Development output includes `result_status=complete|partial`, `score_is_final=true|false`, coverage,
+a termination category, and `cost_status=complete|incomplete`. Complete runs exit 0 and use the normal
+metric keys. Partial runs exit 2 and use `partial_*` metrics over completed documents only. These
+metrics guide diagnosis but are never final scores. `document_results_json` reports each document's
+status, source and API tokens, observed spend, latency, and safe failure category.
 
-When cost metering is incomplete, budget accounting uses the larger of the observed subtotal and the
-pre-run estimate. This preserves real spend without treating an incomplete subtotal as a cap.
+When metering is incomplete, budget accounting uses the larger of observed spend and the pre-run
+estimate.
 
 ### Blind final evaluation
 
-Researchers must not access `data/test-*` files or detailed test results. The complete dataset name
-is supplied for the final evaluation rather than hard-coded.
+Researchers may discover the complete blind dataset name by listing directories matching
+`data/test-*`, but must not inspect their contents or detailed test results without explicit
+permission.
 
 After development is complete, commit the chosen `solution.py` and leave it unchanged. Run the one
 final blind evaluation by passing that current commit explicitly:
 
 ```bash
 uv run python -m src.evaluation.cli \
-  --dataset test-<provided-name> \
+  --dataset test-<discovered-name> \
   --frozen-commit "$(git rev-parse HEAD)"
 ```
 
@@ -158,4 +223,5 @@ against the result; changing the solution invalidates it.
   labeled PII values.
 - `data/test-*`: blind final-evaluation data.
 
-`data/raw` and `data/test-*` must not be exposed to the research agent.
+`data/raw` must not be exposed to the research agent. The agent may list `data/test-*` directory
+names but must not inspect their contents without explicit permission.

@@ -10,8 +10,10 @@ To set up a new experiment, work with the user to:
 2. **Create the branch**: git checkout -b autoresearch/<tag> from current main.
 3. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
 4. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
-5. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every invocation counts as a run even when it exits before an API request.
-6. **Confirm and go**: Confirm setup looks good.
+5. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
+6. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
+7. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every evaluation invocation counts as a run even when it exits before an API request.
+8. **Confirm and go**: Confirm setup looks good.
 
 Once you get confirmation, kick off the experimentation.
 
@@ -33,7 +35,7 @@ The denominator counts each original document once and excludes system prompts, 
 
 The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. `dev-87k` costs several times more, so use it occasionally and for final development validation. These three datasets are development datasets: you may inspect their diagnostics and tune against them.
 
-The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced invalidates the experiment instead of counting as zero cost. Provider-hosted tools or other billable endpoints are unavailable until the evaluator has an explicit pricing rule for them.
+The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced makes cost accounting incomplete instead of counting as zero cost. Provider-hosted tools and other billable endpoints remain unavailable until the evaluator has a pricing rule.
 
 Target no more than $1.50 per million source tokens—about 2.9 cents on `dev-19k`—and estimate cost before each run. The meter enforces only an 8-cent total limit, overridable with `--cents-limit`, so modest target overruns still return useful results.
 
@@ -105,18 +107,19 @@ unsupported by the source or changes the person-value association.
 
 ### Blind final evaluation
 
-Every `test-*` dataset is blind. Its complete name is supplied for the final evaluation rather than hard-coded.
+Every `test-*` dataset is blind. You may discover its complete name by listing matching directory names, but must not inspect anything inside those directories without explicit user permission.
 
-Do not access `data/test-*` files or detailed test results, including through code or side effects. Never pass `--diagnostics` with a blind dataset.
+Do not inspect `data/test-*` files or detailed test results, including through code or side effects, without explicit user permission. The frozen final evaluator is the only routine exception. Never pass `--diagnostics` with a blind dataset.
 
 After development, commit the final `solution.py` and pass that commit with `--frozen-commit`. The evaluator verifies it before and after the run. The final evaluation is outside the 20-run allowance, but its spend counts toward the $0.50 budget. It returns only aggregate score, precision, recall, API cost, and duration. Success ends the run; never tune against the result, and any solution change invalidates it.
 
 
 ## Restrictions
 - You can NOT use models from the gpt-5 and later family, and other LLM providers, such as Google or Anthropic. Only use gpt-4o and gpt-4o-mini from OpenAI.
-- You can NOT execute `solution.py`, call `extract_pii` directly, run live tests, or make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
+- You can NOT make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
+- **Offline debugging:** You may run unlimited non-live tests, import `solution.py`, call its helper functions, and execute it against synthetic inputs using fake or patched model responses. These checks must not contact OpenAI or another external service, require provider credentials, access repository datasets, or produce evaluation metrics. They do not count toward the 20-evaluation limit and cost $0. Any command that may make a real model call must still run through the evaluation CLI and counts as an evaluation.
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
-- You can NOT access `data/test-*` except through the final evaluator invocation. Do not use commands, code, or side effects to inspect it.
+- You may list directory names matching `data/test-*` to discover the blind dataset. Do not inspect anything inside those directories except through the final evaluator invocation unless the user explicitly permits it.
 - You may modify and commit only `solution.py` as the experiment implementation.
 - You may create or update `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and `diagnostics.json` only for experiment logging and communication. Do not commit these files. `diagnostics.json` contains labeled PII and source context: keep it local, overwrite it on each development run, and do not copy its contents into committed files. Never create blind-test diagnostics. Do not intentionally modify any other repository files.
 
@@ -180,7 +183,7 @@ Stop development after 20 evaluations or when only the budget reserved for the f
 12. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the evidence justifies it; otherwise return to the incumbent without losing the recorded result.
 13. When development ends, summarize its results and select the final solution without blind-test evidence. Report the best `dev-87k` score separately.
 14. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
-15. If its estimated spend fits the remaining budget, run one evaluation with the supplied blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<provided-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
+15. If its estimated spend fits the remaining budget, run one evaluation with the discovered blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
 16. Report only `f_score`, `precision`, `recall`, `api_cost_usd`, and `duration_seconds`; charge the cost and stop. Any later solution change invalidates the result.
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.

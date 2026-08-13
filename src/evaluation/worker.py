@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import Callable, Dict, List, Mapping, Sequence, Tuple, cast
 
@@ -19,10 +20,22 @@ RESULT_FD_ENVIRONMENT = "EVALUATION_RESULT_FD"
 MAX_RESULT_BYTES = 10_000_000
 PROCESS_GRACE_SECONDS = 0.5
 CheckpointCallback = Callable[[Sequence[DocumentExecution], MeteringOutcome], None]
+MAX_CONCURRENT_DOCUMENTS = 8
 
 
 class WorkerProtocolError(RuntimeError):
     pass
+
+
+def extract_documents(
+    texts: Mapping[str, str],
+    *,
+    module_name: str,
+) -> Dict[str, List[PIIItem]]:
+    extract_pii: Callable[[str], List[PIIItem]] = importlib.import_module(module_name).extract_pii
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_DOCUMENTS) as executor:
+        predictions = executor.map(extract_pii, texts.values())
+        return dict(zip(texts, predictions))
 
 
 def run_worker(module_name: str) -> int:
