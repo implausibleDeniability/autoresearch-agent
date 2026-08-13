@@ -1,0 +1,7 @@
+
+To          : Craig MacKenzie [craig_mackenzie@mckinsey.com]; Anna Draganova [anna_draganova@mckinsey.com]; Laura Moran [laura_moran@mckinsey.com]; Tom Ruby [Tom_Ruby@mckinsey.com]; Anna Draganova [anna_draganova@mckinsey.com]; Craig MacKenzie [craig_mackenzie@mckinsey.com]; Arnab Ghatak [arnab_ghatak@mckinsey.com]; Laura Moran [laura_moran@mckinsey.com]
+
+Start        : 11/16/2018 4:30:00 PM
+End          : 11/16/2018 5:00:00 PM
+
+Recurrence   : (none)

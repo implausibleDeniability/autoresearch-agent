@@ -10,7 +10,7 @@ To set up a new experiment, work with the user to:
 2. **Create the branch**: git checkout -b autoresearch/<tag> from current main.
 3. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
 4. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
-5. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
+5. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-205k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
 6. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
 7. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every evaluation invocation counts as a run even when it exits before an API request.
 8. **Confirm and go**: Confirm setup looks good.
@@ -33,7 +33,7 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and either `dev-19k` or `dev-87k` as appropriate. `dev-19k` is a subset of `dev-87k` biased toward PII-dense documents. It is noticeably cheaper, making it useful for hypothesis testing. `dev-87k` covers more data and may better represent the blind test, especially when judging generality or selecting a final candidate. You are not required to evaluate every candidate on both datasets. These three datasets are development datasets: you may inspect their diagnostics and tune against them.
+The evaluation worker defaults to a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and choose among `dev-19k`, `dev-87k`, and `dev-205k` based on the evidence needed. `dev-19k` is a PII-dense subset of `dev-87k`, making it cheaper for hypothesis testing. `dev-87k` provides broader validation at moderate cost. `dev-205k` is the largest, most diverse dataset and is likely the most representative for evaluating quality, but it also has the highest API cost and runtime. Run it with `--timeout 600` when the default is insufficient. Use it when the stronger quality estimate justifies that expense, especially for generality checks and final candidate selection; every candidate need not run on every dataset. All four are development datasets: you may inspect their diagnostics and tune against them.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced makes cost accounting incomplete instead of counting as zero cost. Provider-hosted tools and other billable endpoints remain unavailable until the evaluator has a pricing rule.
 
@@ -87,7 +87,7 @@ If a lower-ranked experiment is selected, briefly record why it became the best 
 
 Model-backed evaluations may vary even when the implementation is unchanged. Treat each result as evidence, not exact truth.
 
-`baseline-results.tsv` contains five baseline evaluations on each of `dev-19k` and `dev-87k`, with metrics, error counts, costs, and durations. Use the matching dataset's observed range to distinguish ordinary variation from meaningful changes, then run one fresh baseline for the current research. Keep model and sampling settings consistent across comparable experiments. If a seed is used, choose it as a reproducibility setting and do not optimize it for score.
+`baseline-results.tsv` contains five baseline evaluations on each development dataset. Use the matching dataset's observed range to distinguish ordinary variation from meaningful changes. Then run one fresh baseline for the current research. Keep model and sampling settings consistent across comparable experiments. If a seed is used, choose it as a reproducibility setting and do not optimize it for score.
 
 Use additional evaluations only when uncertainty could change a research decision. A clearly inferior candidate may be discarded after one run. A candidate that appears competitive with the incumbent should receive enough confirmation to determine whether the improvement is credible within the remaining run and cost budgets.
 
@@ -141,7 +141,7 @@ commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
 5. USD per million source-document tokens achieved — use 0.000000 for crashes
 6. status: `keep`, `discard`, `inconclusive`, or `crash`
 7. short text description of what this experiment tried
-8. dataset: `debug`, `dev-19k`, or `dev-87k`
+8. dataset: `debug`, `dev-19k`, `dev-87k`, or `dev-205k`
 9. API cost charged to the budget; when metering is incomplete, use the larger of the observed subtotal and the pre-run estimate
 
 Example:
@@ -181,14 +181,14 @@ Stop development after 40 evaluations or when only the budget reserved for the f
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 11. If a candidate is competitive and uncertainty could change the decision, repeat it within the remaining limits and evaluate the combined evidence.
 12. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the evidence justifies it; otherwise return to the incumbent without losing the recorded result.
-13. When development ends, summarize its results and select the final solution without blind-test evidence. Report the best `dev-87k` score separately.
+13. When development ends, summarize its results and select the final solution without blind-test evidence. Report the best `dev-87k` score and, if evaluated, the best `dev-205k` score separately.
 14. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
 15. If its estimated spend fits the remaining budget, run one evaluation with the discovered blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
 16. Report only `f_score`, `precision`, `recall`, `api_cost_usd`, and `duration_seconds`; charge the cost and stop. Any later solution change invalidates the result.
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.
 
-**Timeout**: Each experiment has a 3-minute wall-clock limit from worker launch, including startup, evaluation, cleanup, and cost finalization. The evaluator terminates the worker process group at the limit. Treat any partial result as diagnostic evidence only: log a crash, charge its conservative budget cost, and never promote or reject a candidate from its partial score alone.
+**Timeout**: Each experiment defaults to a 3-minute wall-clock limit from worker launch, including startup, evaluation, cleanup, and cost finalization. Use `--timeout 600` for `dev-205k` only when needed. The evaluator terminates the worker process group at the selected limit. Treat any partial result as diagnostic evidence only: log a crash, charge its conservative budget cost, and never promote or reject a candidate from its partial score alone.
 
 **Crashes**: If a run crashes (OOM, protocol failure, solution bug, or similar), preserve and inspect any partial diagnostics. They may identify a repair or next hypothesis, but they are not a final score. If the failure is easy to fix, fix it and re-run. If the idea itself is fundamentally broken, log `crash` and move on. Never assume a zero-dollar crash: charge the observed cost when complete, or the larger of observed cost and the pre-run estimate when incomplete.
 

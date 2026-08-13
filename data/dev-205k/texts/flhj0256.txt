@@ -1,0 +1,384 @@
+Project Memphis –
+Preliminary Forecast
+6/12/2015
+
+Project Memphis Situation Overview
+Memphis has proposed a JV to commercialize a portfolio of assets for the Hospital channel
+Purdue would lead all commercialization and R&D efforts, initiating with 50 FTE's and building to 150 FTE's in 3 years (by 2017)
+Purdue Commercial team has selected the following products from Memphis' portfolio:
+Pain products:
+Ionsys (US approved): transdermal mu-opioid agonist
+ABP-700 (NDA in 2017): injectable Gamma-aminobutyric acid (GABA) A modulator
+Anti-infectives:
+Orbactiv (US launch Oct 2014): First and only single-dose treatment for ABSSSI
+Carbavance: (Launch in 2017): IV fixed-dose combination antibiotic
+Minocin IV (Launched 2009, reformulation scheduled to launch July 2015): approved for treatment of infections caused by Acinetobacter spp.
+‹#›
+
+Focus on MDCO Pain and Anti-infectives Products
+	Product	Indication	Current SOC	Description/MOA	Status/
+Launch	Patent Expiry and/or LOE
+	Ionsys	Inpatient
+post-op pain	IV PCA of Morphine or  fentanyl	Fentanyl iontophoretic transdermal system) is a compact, disposable, needleless patient-controlled system for the short-term management of acute postoperative pain in the hospital setting
+iontophoresis = an electric charge facilitates drug delivery across the skin)	US Approved/
+Launch Q2 2015	2032; Device patent expires 6/05/2015
+	ABP-700	IV anesthetic for patients undergoing diagnostic or
+therapeutic procedures
+	Diprivan (Propofol)	Shorter duration of action – bail out and recovery: rapidly reversible anesthetic effect within 1–2 minutes
+Ability to precisely tailor control of effect to specific situations; appears to have a highly titratable PD effect
+Positive allosteric modulator of the ã-aminobutyric acid type A (GABAA) ligand-gated ion channel
+Improved safety profile, e.g. hemodynamic, respiratory or adrenal suppression	Phase 2 ready/NDA submission in 2017	Currently assume 2028; need input from legal
+	Orbactiv	Acute bacterial skin and skin structure infections (ABSSSI) caused or suspected to be caused by susceptible isolates of gram-positive bacteria, including MRSA	Vancomycin (Vancocin)	First and only single-dose treatment for ABSSSI. Three mechanisms of action
+?Inhibition of transglycosylation
+?Inhibition of transpeptidation
+?Disruption of cell membrane	Marketed/
+Launched Oct 2014	AUG 2029
+	Carbavance	Gram-negative infections	Merrem, Doribax	IV fixed-dose combination antibiotic:
+?Meropenem (approved carbapenem)
+?RPX7009 (novel beta-lactamase inhibitor)	Phase 3/2017	AUG 2031
+	Minocin IV	Approved for treatment of infections caused by Acinetobacter spp	Minocycline, Doxycycline, Tetracycline (all generic)	Minocycline for injection, a sterile formulation of a semisynthetic derivative of
+tetracycline,	Launched 2009/reformulation to launch July 2015	5 Years data exclusivity, 2020
+‹#›
+
+Post-Operative Pain Treatment Landscape
+	Acetaminophen	NSAIDs	Opioids	Sodium  Channel Blockers
+	Drug class descriptions	Centrally acting analgesic and antipyretic	Function by blocking inflammation enzymes COX-1/2; both anti-inflammatory and analgesic 	Bind opioid receptions; most commonly administered drug class for treating acute post-surgical pain	Prevent depolarization of nerve cells by binding to and blocking sodium channels
+	Commonly used agents and route of administration	Tylenol: oral
+Panadol: oral	Ketorolac: IV or oral
+Ibuprofen: oral (predominantly) or IV
+Aspirin: oral
+	Morphine: IV or oral
+Fentanyl: sublingual lozenges, IV, nasal sprays, or transdermal
+Oxycodone: oral or IV	Bupivicane: IV
+Procaine: IV
+	Recently launched hospital based branded products	Ofirmev: IV acetaminophen, 2014 gross sales: $251M	Caldalor: IV ibuprofen, 2014 gross sales: $3M
+	Exparel: Liposome injection of bupivacaine (lasts up to 72 hours), 2014 gross sales: $197M
+	How used in practice	May be used in combination with NSAIDs and/or opioids for baseline post-op pain control	For baseline level of post-surgical pain control; often combined with opioids	Most commonly administered by IV Personal controlled analgesia ("PCA")
+Used to manage acute post-op pain	Local anesthetic in wound infiltration, and continuous and peripheral nerve block
+	Advantages	Antipyretic properties
+Oral and IV formulations available 	No side effects of respiratory depression or constipation	Considered most efficacious class of drugs for managing pain 	Provide baseline level of pain management by administration during surgical procedure
+	Limitations	Does not have anti-inflammatory properties
+Decreased efficacy in pain reduction compared to opioids 	Used with caution in post-surgical setting due to increased bleeding and GI and renal interactions	AE's include respiratory pain, drowsiness, mood changes, nausea and vomiting, constipation, potential abuse 	SOC generic agents offer pain management for only 7 hrs (or less)
+Analgesic Strength
+‹#›
+
+Post-Operative Patient Controlled Analgesia "PCA" Landscape
+	Product	Description	Delivery	Launch	WAC Price per Vial/Dose	Sales	Generic/
+Branded status
+	Morphine,  fentanyl or hydromorphone	Current standard of care 	(IV) PCA Systems
+	1975	$75-$150/2 days 	2014: $340M	Available as Generic
+	Ionsys/MDCO	Fentanyl iontophoretic transdermal system; patient controlled 	Transdermal	Q2 2015	$115/per day	Analyst Peak Sales of $175M in 2020; ~10% market share of 8M procedures that use PCA	Branded
+PCA Products are used to  treat in acute care and rehab hospitals; including: general surgery, surgical sub-specialties (Orthopedics, Colorectal, Urology, etc), anesthesiology, and hospitalists
+There are an estimated 45 million surgical procedures performed annually in the U.S., with over 8 million procedures in the U.S. that use PCA during the recovery period
+Current SOC is either IV PCA of morphine or fentanyl and has several drawbacks:
+ ~50,000 patients  per year are harmed due to PCA errors (79% attributed to device errors)
+Current PCA's devices can be costly (device can cost up to $500 per patient usage) and  have a high rate of AE's that lead to additional medication and hospital costs
+
+Other Products in  Development
+	Product/Company	Description	Delivery	Launch Status	WAC Price per Vial/Dose	Sales	Generic/
+Branded
+	Zalviso/AcelRx	Sublingual form of
+sufentanil	Preprogrammed PCA system designed for sufentanil tablet delivery	Submitted to FDA and  FDA responded with request for additional trials; potential launch in 2018	$150/2 days	Analyst Peak Sales of $190M in 2020	Branded
+‹#›
+Notes
+-----
+70million procedures done annually
+
+Exparel/Pacira
+Extended release (72 hours) Liposome injection of bupivacaine
+Injection
+April 2012
+$300
+2014:$188.5M
+Branded
+Ofirmiv/Mallinckrodt
+Acetaminophen injection
+Injection
+Jan 2011
+$35
+2014:$124.4M
+Branded
+
+
+2014 Sales
+	$208M
+	$290M
+	$199M
+	$171M
+	$108M
+	$96M
+	$67M
+IV Anesthesia Market
+230 million procedures annually worldwide
+More procedures performed in ambulatory setting on older patients with greater co-morbidities
+Shift in care to lighter procedural sedation, regional technique, rapid wake ups and return to baseline function
+Current SOC is Diprivan, available generically as Propofol
+Diprivan (propofol) accounts for 44% of market
+Diprivan maintains branded share of 19% of units; 2014 gross sales: $200M
+4 products (Diprivan, Ultane,  Suprane, Precedex) account for 81% of sales in 2014
+
+IV Anesthesia Product Performance
+‹#›
+
+Pain Product Forecast Assumptions
+	Case	Forecast
+Methodology	Price at launch	GTN	Year 5 Share	Year 5 Net Sales	LOE	Comments
+	Base	Share of Injectable analgesia market
+2014 Morphine share: 36%
+2014 Fentanyl share: 22%
+Exparel: currently 3.5% share (and growing) of generic Bupivicane 	$115/per day	15%	6% of total market	$126	2032	May have potential upside with a less severe generic decline (duragesic analog)
+	High	Share of Injectable analgesia market
+2014 Morphine share: 36%
+2014 Fentanyl share: 22%
+Exparel: currently 3.5% share (and growing) of generic Bupivicane 	$115/per day	15%	10% of total market	$249	2032
+	May have potential upside with a less severe generic decline (duragesic analog)
+	Analyst Forecast	Analyst Forecast	$115/per day
+	N/A	~10% of 8M PCA procedures 	$155	2032
+	Consensus analyst forecast
+	Case	Forecast
+Methodology	Price at launch	GTN	Year 5 Share of propofol units	Year 5 Share of total units
+	Year 5 Net Sales	LOE	Comments
+	Base	Share of Diprivan (propofol) units
+Diprivan branded maintained between 5%-10% of total units after generic launch
+2014 Diprivan (propofol) share of units: 44%	$60 per unit (20% premium to current Diprivan)	15%
+	20% of propofol 	8.8% of total units
+	$133M	2028 	Need LOE confirmation
+No analyst forecast
+
+	High	Share of Diprivan (propofol) units
+Diprivan branded maintained between 5%-10% of total units after generic launch
+2014 Diprivan (propofol) share of units: 44%	$60 per unit (20% premium to current Diprivan)	15%
+	30% of propofol	13.3% of total units
+	$199M	2028 	Need LOE confirmation
+No analyst forecast
+
+ABP-700, Launch 2018
+Ionsys, Launch 2Q 2015
+‹#›
+
+Preliminary Pain MDCO Forecast Scenarios
+Ionsys
+ABP-700
+‹#›
+
+Anti-Infectives Product Forecast Assumptions
+	Case	Forecast
+Methodology	2015 price	GTN	Year 5 Share of mkt units	Year 5 Net Sales	LOE	Comments
+	Base	Analog: Teflaro trend	$1,160 per unit (2015 price) 	15%	0.9%	$140M	Aug 2029	Need LOE confirmation
+
+	Upside	Analog: Better than expected Teflaro trend 	$1,276 per unit (premium to current price)	15%	1.0%	$172M	Aug 2029	Need LOE confirmation
+
+	Analyst Forecast	Analyst Forecast	N/A	N/A	N/A	$206M	Aug 2029
+	Consensus analyst forecast
+	Case	Forecast
+Methodology	Price at launch	GTN	Year 5 Share of mkt units	Year 5 Net Sales	LOE	Comments
+	Base	Analog: Disounted Doribax uptake to account for order of entry
+	Priced to parity as Doribax ($300/WAC pkg)	15%	12%	$80M	2031	Need LOE confirmation
+No analyst forecast for US
+Need launch date confirmation
+	Upside	Analog:Doribax	Priced to parity as Doribax ($300/WAC pkg)	15%	23%	$159M	2031	Need LOE confirmation
+No analyst forecast for US
+Need launch date confirmation
+Carbavance, Launch 2017
+Orbactiv, Launch Oct 2014
+‹#›
+
+Anti-infectives Product Forecast Assumptions (continued)
+Minocin IV, Launched 2009, reformulation to launch July 2015
+	Case	Forecast
+Methodology	2015 price	GTN	Year 5 Share of mkt	Year 5 Net Sales	LOE	Comments
+	Base	Based on current trend	$890 WAC per pkg	15%	0.16%	$7M	2021	Need LOE confirmation
+
+	Upside	Reformulation accelerates current trend 	$1,068 WAC per pkg (20% premium for reformulation)
+	15%	0.13%	$19M	2021	Need LOE confirmation
+
+	Analyst Forecast	Analyst Forecast	N/A	N/A	N/A	$22M	N/A
+	Consensus analyst forecast
+‹#›
+
+Preliminary Anti-infectives MDCO Forecast Scenarios
+Orbactiv
+Carbavance
+‹#›
+
+Preliminary Summary Forecast
+‹#›
+
+Key Assumptions
+‹#›
+
+Preliminary Valuation – MDCO only Base (No Deal Terms)
+‹#›
+
+Preliminary Valuation – MDCO only Upside (No Deal Terms)
+‹#›
+
+Purdue – Incremental Revenue
+Promoting existing products in the inpatient space may generate ~ $30 MM in incremental hospital sales, driven primarily by increased OxyContin® use by general surgeons
+OxyContin® Inpatient Sales Projections
+
+Surgery Utilization? With a hospital sales force, Plastic Surgery utilization may mimic that in Orthopedic Surgery and General Surgery utilization may reach ~1/2 that in Orthopedic Surgery**
+
+Other Utilization? Marginal increases in OxyContin® utilization in the inpatient Rehabilitation settings
+
+Hysingla® and Butrans® Sales Projections
+Assumed Hysingla hospital sales reach the same share of business as  Oxycontin and similar upside uptake. Butrans hospital sales in 2014 were 1.6MM
+Assumes all incremental  OxyContin® business is sourced from current narcotics business and does not include additional gains from potential outpatient setting "spillover"
+includes only labeled use/excludes OxyContin® use in immediate post-surgical setting
+Sources: IMS NSP-2014, Trinity Analyes, Hysingla Purdue 10yr plan (2.2% share of total sales, 2MM hospital sales increase due to organic growth pre-hospital SF implementation)
+‹#›
+
+Preliminary ProForma Valuation – (No Deal Terms)
+‹#›
+
+APPENDIX
+‹#›
+
+US Hospital Market Overview
+‹#›
+
+US in-hospital post-op pain market
+‹#›
+
+Ionsys Device vs. Current SOC PCA's
+‹#›
+
+ABP-700: Anesthesia and Conscious Sedation Opportunity
+US and EU procedures ~184M
+‹#›
+
+Anesthesia is a Large Market Opportunity
+‹#›
+
+Recent Branded Hospital-Based Injectable Launches
+Caldolor
+Non-selective Inhibitor (and not a Cox-2 Inhibitor)
+Can be administered intravenously (IV)
+Launch: 9/2009
+2014 IMS Gross Sales: $2.5M
+
+$ in dollars
+
+Exparel
+Liposome injection of bupivacaine
+Launch: April 2012
+2014 IMS Gross Sales: $197M
+
+Ofirmev
+ IV acetaminophen
+Launch: Jan 2011
+2014 IMS Gross Sales: $251M
+
+‹#›
+
+Product	Pharmacological
+Class	WW Sales 	WW Sales
+	Product	Pharmacological
+Class	2014	2020
+	Raplixa	Fibrinogen & thrombin	-	$178M
+	Recothrom	Thrombin	$64M	$81M
+	Angiomax	Thrombin inhibitor	$636	$63M
+	Cleviprex	Calcium channel
+blocker	$7M	$40M
+	Ionsys	Mu opioid agonist	-	$175M
+	Orbactiv	Glycopeptide	$3M	$285M
+	Carbavance	Carbapenem & betalactamase
+inhibitor	-	$104M
+The Medicines Company Overview
+Business Description
+Management
+Key Products/Pipeline
+Recent News
+Founded in 1996 and is publicly traded on the Nasdaq exchange under the ticker symbol MDCO
+Vision is to be a leading provider of solutions in three areas: acute cardiovascular care, surgery and perioperative care, and serious infectious disease care
+Company operates in the Americas, Europe and the Middle East, and Asia Pacific regions with global centers today in Parsippany, NJ, USA and Zurich, Switzerland
+Focuses on 3,000 leading acute/intensive care hospitals worldwide
+2014 WW Sales: $724M: $688M in US, $33M in Europe and $4M in ROW
+	Chairman & CEO	Clive A. Meanwell, MD, PhD
+	President & CFO	Glenn P. Sblendorio, MB
+	EVP, Human Strategy Officer	Jeff Frazier
+	EVP, IT	Nancye Green
+	EVP, Product Development	Loretta Itri, MD
+	EVP, Global Health Economics 	Stephanie Plent, MD
+
+	EVP, Co-founder 	John Villiger
+Source: Company Website, CapitalIQ, EvaluatePharma
+	4/01/15	MDCO will permit  Sun Pharma to market a generic bivalirudin product in the US on June 30, 2019
+	3/30/15	Receives European Commission Approval for Three Hospital Acute Care Products: KENGREXAL™ (cangrelor), ORBACTIV® (oritavancin) and RAPLIXA™ (sealant powder)
+	3/16/15	Independent Research Confirms Reduction in Mortality and Bleeding Associated with Bivalirudin in High-Risk Acute Coronary Syndrome Patients Undergoing PCI
+	2/04/15	Completed acquisition of Annovation Biopharma, Inc., a company focused on creating more effective, safer therapies for anesthesia and critical care
+	10/28/14	Wins a US patent case against Mylan, which is trying to launch a generic version of TMC's anticoagulant drug, Angiomax
+
+‹#›
+
+MDCO's stock price has been relatively stable
+Source: Company Website, CapitalIQ
+As of April 5, 2015
+Recent Price
+$27.52
+52 Week High
+$32.44
+52 Week Low
+$19.92
+Avg. Volume (M)
+0.87
+Market Value (M)
+$1,801.9
+Enterprise Value
+$1,677.3
+Total Debt
+$246
+2 Year Weekly End Price & Volume
+USD
+Stock snapshot
+Settles Lawsuit with Sun over Generic Angiomax(1 April)
+Fixed-Income Offering of $350.00 million.
+(7 Jan)
+Follow-on Equity Offering in the amount of $175.00 million(13 Aug)
+Earnings results for the 3Q September 30, 2014. Revenue of $172,401,000 compared to $174,282,000 for the same period a year ago
+(22 Oct)
+Acquired ProFibrix B.V. for approx $240M (5 Aug)
+TEV/Revenue
+2.3x
+Cash
+$370
+Beta
+0.90
+‹#›
+
+MDCO Product Portfolio Overview
+Source: Company Website, CapitalIQ
+*Co-Promotion Products
+	Acute Cardiovascular	Surgery and Perioperative	Infectious Disease
+
+	Marketed/Approved	Angiomax/Angiox
+Brilinta*
+Promus Premier Stent*	Recothrom
+Cleviprex surgery
+Argatroban RTU
+PreveLeak surgical sealant
+	Minocyn for injection
+Clindamycin IV
+Azithromycin IV
+Orbactiv ABSSSI
+	NDA or Phase 3	Cangrelor
+Cleviprex AHF	Ionsys
+Raplixa (formerly known as Fibrocaps)	RPX-602
+Carbavance MDR G-
+	Phase 1	ALN-PCSK9sc
+ApoA-I Milano	ABP-700	Orbactiv – new indications
+Oral/IV MDR G-
+	Pre-clinical	Rec Fibrinogen Hemostat	Profile 3 MDR G- Ophthalmic
+
+‹#›
+
+MDCO is heavily reliant on Angiomax performance
+Source: Company Website, CapitalIQ, EvaluatePharma
+Angiomax is primary driver of near-term revenue (>50% in ‘15 and '16
+Angiomax LOE (current assumption is 2019) still under threat with ongoing litigation with Hospira and 6 other generic manufacturers; Hospira court decision expected mid-2015
+Orbactiv (approved in 2014), Raplixa (NDA submitted) and Ionsys (NDA submitted) are key drivers to sustaining revenue post Angiomax LOE, contributing 50% of revenues in '20
+Overall revenue growth is modest with a 5% CAGR from 2015-20
+Key Takeaways
+2015
+2020
+‹#›

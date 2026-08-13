@@ -1,0 +1,613 @@
+The five largest IACs currently operate with high levels of technology overlap in manufacturing and packaging capabilities
+SOURCE: MLG demand forecast 2015-2025; PLP 10 year unit volume forecast
+Additional IACs:
+X facilities by continent
+Average X% utilization
+Total capacity X Billion units
+Wilson
+Bulk: tablets IR / ER
+Pkg: bottling
+Bard
+Bulk: tablets IR / ER; capsules IR / ER; liquid suspension
+Pkg: bottling; liquid fill
+Limberg
+Bulk: tablets IR/ER; Liquid solutions, ointments, scrubs, hydrogels, syrups, suppositories
+Pkg: bottling, liquid fill bottling and tubes
+Beijing
+Tablets IR; Capsules IR; Liquid solutions, sterile injectables
+Pkg: [No information]
+Pickering
+Bulk: tablets IR
+Pkg: bottling and blistering
+Limberg
+Wison
+321
+?
+Bard
+1,317
+?
+150
+Beijing
+141
+?
+?
+165
+Pickering
+?
+Available capacity
+Planned Production
+Site planned production and available capacity
+Annual Units
+FACT BASE
+‹#›
+|
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+
+Many IACs are sub-scale with unclear strategic missions
+Facility
+Mission
+Products
+Technology
+Site production and capacity
+Units
+TBD
+Text
+Text
+Text
+TBD
+Text
+Text
+Text
+Bard
+Text
+Text
+Text
+Lindberg
+Text
+Text
+Text
+TBD
+Text
+Text
+Text
+Pickering
+Text
+Text
+Text
+Rhodes Pharma
+Text
+Text
+Text
+US
+EU
+MAL
+CAN
+Rhodes
+Rhodes Tec
+Text
+Text
+Text
+Wilson
+Text
+Text
+Text
+TBD
+Text
+Text
+Text
+TBD
+Text
+Text
+Text
+42
+35
+18
+13
+22
+26
+22
+26
+18
+18
+13
+13
+42
+35
+35
+22
+42
+18
+42
+26
+35
+13
+Production
+Open capacity
+GHOST – alternate way to show factpack of sites (likely multiple pages to include CMOs, JVs, etc)
+FACT BASE
+‹#›
+|
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+
+The semi-solid business entirely produced through CMO is seeing substantial growth over the next 5 years. These products include Betadine and Betasept surgical scrubs and the Butrans patch
+The overall Purdue Pharma US/CA demand is declining by 12% a major contributor to the decline is driven by US oral solid dose market
+SOURCE: Source
+Solid
+Semi-solid
+Liquid
+Sterile injectable
+Total
+US
+ 282,070
+ -
+ -
+ -
+ 282,070
+CA
+ 86,681
+ -
+-
+ -
+ 86,681
+CMO
+ 151,312
+ 3,729
+ 2,135
+ 128
+ 157,306
+Total
+ 520,064
+ 3,729
+ 2,135
+ 128
+ 526,057
+US
+ 180,927
+ -
+ -
+ -
+ 180,927
+CA
+ 102,676
+ -
+-
+ -
+ 102,676
+CMO
+ 169,741
+ 5,193
+ 1,828
+ -
+ 176,762
+Total
+ 453,345
+ 5,193
+ 1,828
+ -
+ 460,367
+US
+-36%
+-
+-
+-
+-36%
+CA
+18%
+-
+-
+-
+18%
+CMO
+12%
+39%
+-14%
+-100%
+12%
+Total
+-13%
+39%
+-14%
+-100%
+-12%
+2015 forecast by adjusted unit volume
+2020 forecast by adjusted unit volume
+% growth 2015 - 2020
+‹#›
+|
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+
+Top X sites drive 75% of production and revenue; TBD
+SOURCE: Source
+Forecasted demand by site
+MM Units, percent of total US/ROW units
+400
+1,200
+1,000
+0
+800
+1,400
+600
+200
+Mundipharma Thailand
+Purdue Pharma L.P.
+Mundipharma GmbH
+168
+1,317
+0
+Mundipharma Cyprus
+0
+The Purdue Pharmanc.
+39
+54
+150
+Mundipharma Pharmaceutical Ltd.
+NAPP / Bard
+Takeaways
+Takeaways
+FACT BASE
+% total
+Units
+‹#›
+|
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+
+Projected growth of X technology indicates Y capacity opportunity
+2015 Production and capacity
+Production units
+1 Footnote
+SOURCE: Source
+2020 Production and capacity
+Production units
+Value of increasing utilization1
+$M
+GHOST
+Takeaways
+Takeaways
+Technology F
+Technology E
+Technology D
+Technology A
+Technology C
+Technology B
+42
+26
+26
+18
+18
+42
+Excess capacity
+Production volume
+42
+26
+26
+18
+18
+42
+42
+26
+26
+18
+18
+42
+A
+‹#›
+‹#›
+‹#›
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+
+Growth in the US/ROW portfolio is driven by XYZ market
+SOURCE: Source
+1%
+2018
+1%
+1%
+51%
+12%
+13%
+1%
+21%
+14%
+22%
+4,013
+10%
+15%
+2%
+20%
+2016
+49%
+3,480
+4,593
+16%
+17%
+46%
+3,081
+43%
+2015
+12%
+2%
+19%
+20%
+16%
++13.6% p.a.
+2019
+1%
+5,122
+1%
+53%
+1%
+18%
+2017
+1%
+Total volumes worldwide
+Units
+'15-'19 CAGR %
+PRELIMINARY
+United States
+LatAm
+MEA
+Canada
+Europe
+Asia
+16%
+26%
+0%
+18%
+-1%
+-2%
+1 Footnote
+10%
+1%
+1%
+2018
+7%
+56%
+15%
+2017
+3%
+93
+111
+12%
+49%
+19%
+16%
+148
+14%
+15%
+54%
+1%
+53%
+2016
+14%
+1%
+1%
+15%
+2015
+16%
+43%
+23%
+78
+0%
+16%
+2019
+6%
++17.3% p.a.
+9%
+12%
+15%
+130
+2%
+Canada
+EU
+MEA
+US
+Latam
+Asia
+Total revenues worldwide (excludes royalties and markets not in scope1)
+Mill USD
+25%
+134%
+1%
+16%
+'15-'19 CAGR %
+0%
+0%
+GHOST
+
+Potential to add third graph with COGS by region – or change revenue graph to COGS if revenue is not allowed
+B
+‹#›
+|
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+Notes
+-----
+Canada – we assume gross
+US – gross
+MAL – the sheet you shared (copied from BoD) is NET
+Germany – does not specify (simply says Sales)
+
+
+Growth in the US/ROW portfolio is driven by XYZ technology
+SOURCE Source
+1%
+2018
+1%
+1%
+51%
+12%
+13%
+1%
+21%
+14%
+22%
+4,013
+10%
+15%
+2%
+20%
+2016
+49%
+3,480
+4,593
+16%
+17%
+46%
+3,081
+43%
+2015
+12%
+2%
+19%
+20%
+16%
++13.6% p.a.
+2019
+1%
+5,122
+1%
+53%
+1%
+18%
+2017
+1%
+Total volumes worldwide
+Units
+'15-'19 CAGR %
+PRELIMINARY
+United States
+LatAm
+MEA
+Canada
+Europe
+Asia
+16%
+26%
+0%
+18%
+-1%
+-2%
+1 Footnote
+10%
+1%
+1%
+2018
+7%
+56%
+15%
+2017
+3%
+93
+111
+12%
+49%
+19%
+16%
+148
+14%
+15%
+54%
+1%
+53%
+2016
+14%
+1%
+1%
+15%
+2015
+16%
+43%
+23%
+78
+0%
+16%
+2019
+6%
++17.3% p.a.
+9%
+12%
+15%
+130
+2%
+Canada
+EU
+MEA
+US
+Latam
+Asia
+Total revenues worldwide (excludes royalties and markets not in scope1)
+Mill USD
+25%
+134%
+1%
+16%
+'15-'19 CAGR %
+0%
+0%
+GHOST
+
+Potential to add third graph with COGS by technology – or change revenues graph to COGS if revenue is not an option
+B
+‹#›
+|
+Last Modified 12/3/2015 12:58 PM Eastern Standard Time
+Printed
+TRACKER
+Unit of measure
+1 Footnote
+SOURCE: Source
+Title
+Unit of measure
+McKinsey & Company
+Notes
+-----
+Canada – we assume gross
+US – gross
+MAL – the sheet you shared (copied from BoD) is NET
+Germany – does not specify (simply says Sales)

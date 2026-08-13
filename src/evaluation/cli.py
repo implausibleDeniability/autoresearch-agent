@@ -37,7 +37,8 @@ DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
 SOLUTION_MODULE = "solution"
 WORKER_RESULT_PREFIX = "EVALUATION_RESULT="
-MAX_TIMEOUT_SECONDS = 180.0
+DEFAULT_TIMEOUT_SECONDS = 180.0
+MAX_TIMEOUT_SECONDS = 600.0
 USD_PER_CENT = Decimal("0.01")
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
 UPSTREAM_BASE_URL_ENVIRONMENT = "OPENAI_UPSTREAM_BASE_URL"
@@ -57,10 +58,11 @@ class Dataset:
     DEBUG = "debug"
     DEV_19K = "dev-19k"
     DEV_87K = "dev-87k"
+    DEV_205K = "dev-205k"
 
     @classmethod
     def all(cls) -> Tuple[str, ...]:
-        return cls.DEBUG, cls.DEV_19K, cls.DEV_87K
+        return cls.DEBUG, cls.DEV_19K, cls.DEV_87K, cls.DEV_205K
 
     @classmethod
     def is_blind_test(cls, name: str) -> bool:
@@ -558,7 +560,7 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         "--frozen-commit",
         help="current solution commit required for a final blind test",
     )
-    parser.add_argument("--timeout", type=_timeout_seconds, default=MAX_TIMEOUT_SECONDS)
+    parser.add_argument("--timeout", type=_timeout_seconds, default=DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument(
         "--cents-limit",
         type=_positive_decimal,

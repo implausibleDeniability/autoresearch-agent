@@ -16,7 +16,7 @@ def test_cli_requires_dataset():
         _parse_arguments(())
 
 
-@pytest.mark.parametrize("dataset", [Dataset.DEV_19K, Dataset.DEV_87K])
+@pytest.mark.parametrize("dataset", [Dataset.DEV_19K, Dataset.DEV_87K, Dataset.DEV_205K])
 def test_cli_accepts_dev_dataset(dataset: str):
     assert _parse_arguments(("--dataset", dataset)).dataset == dataset
 

@@ -1,0 +1,12 @@
+
+To          : Brianne.Weingarten@pharma.com; Amir Golan [amir_golan@mckinsey.com]; pm@pharma.com
+Subject     : Rescheduled: Daily check-in (Dec 20 14:00 EST in WebEx/Dial in below)
+
+Start        : 12/20/2017 7:00:00 PM
+End          : 12/20/2017 7:30:00 PM
+Show Time As : Busy
+
+Recurrence   : (none)
+
+
+There were too many updates made to this meeting to be properly migrated to Exchange. Updates could not be applied to instances from 21 Nov 18 forward. The chairperson should cancel and recreate the meeting.

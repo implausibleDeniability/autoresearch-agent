@@ -1,0 +1,587 @@
+Potential impact of ADF MS Contin on generics
+Discussion document
+Document type | Date
+PROPRIETARY AND CONFIDENTIAL
+
+Executive summary
+We considered the potential impact of ADF MS Contin on generics in two scenarios:
+Non-ADF generic morphine sulfate will be considered as AB-rated to new ADF version of MS Contin
+Non-ADF generic morphine sulfate will no longer be AB-rated to new ADF version of MS Contin
+If generic morphine sulfate is still considered as AB-rated to ADF version of MS Contin, Rhodes's generic morphine sulfate volume is likely to maintain but with <1% volume shift to the new ADF MS Contin
+The volume shift to the new ADF MS Contin is most likely coming from the new patients (<10% total patients), but majority of the HCPs still have the preference of prescribing non-ADF version in generic name (>90%), which potentially leads to <1% volume shift to new ADF MS Contin
+In the scenario of not being AB-rated, apart from the volume shift to the new ADF version, generic morphine sulfate may lose a small amount of volume (<1% total morphine market) in scripts prescribed with MS Contin brand name since generics are not substitutable without AB-rating
+Rhodes will be able to maintain the most of its generic volume if it is AB-rated to new ADF version of MS Contin
+Even if current non-ADF generics will no longer be considered as AB-rated to the new ADF version of MS Contin, which is a more likely scenario, it will only impact <1% of total morphine market, because majority of physicians are used to prescribe in molecule name of morphine sulfate (accounts for ~99% of scripts) instead of in brand name
+a
+b
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Assume MS Contin is replaced with new ADF version and non-ADF generics have AB-rating
+SOURCE: Industry experts, IQVIA FIA data
+Potential impact on generics morphine sulfate volume assuming AB-rated to ADF version
+If existing generic morphine sulfate is considered to be AB-rated to new ADF version of MS Contin, generic morphine sulfate is likely to maintain its current volume due to state mandatory generics substitution in AB-rated generics
+The volume shift to the new ADF MS Contin is most likely coming from the new patients (<10% total patients), but majority of the HCPs still have the preference of prescribing non-ADF version in generic name (>90%), which potentially leads to <1% volume shift to new ADF MS Contin
+The potential drivers that may shift volume from generics to new ADF version of MS Contin include:
+Improved formulary coverage
+Growth in MS Contin written prescription due to increased awareness among HCPs
+With mandatory substitution
+Without
+mandatory substitution
+State mandatory generics substitution
+With mandatory substitution
+Without
+mandatory substitution
+With mandatory substitution
+Without
+mandatory substitution
+Pharmacy dispensing
+MS Contin
+MS Contin
+Generic
+morphine sulfate
+Generic
+morphine sulfate
+Generic
+morphine sulfate
+MS Contin
+HCP prescription
+Prescribed
+MS Contin in brand name with DAW
+Prescribed
+morphine sulfate in generic name
+Prescribed
+MS Contin in brand name without DAW
+~1%
+<1%
+~99%
+~83%
+~17%
+<1%
+<1%
+<1%
+<1%
+~82%
+~17%
+%
+Estimated percent of total morphine sulfate scripts
+a
+~83%
+~17%
+~83%
+~17%
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Assume MS Contin is replaced with new ADF version and non-ADF generics will not be considered as AB-rated
+SOURCE: Industry experts, IQVIA FIA data
+Potential impact on generics morphine sulfate volume assuming not AB-rated to ADF version
+If existing generic morphine sulfate is not considered to be AB-rated to new ADF version of MS Contin, generic morphine sulfate is may lose a small amount of volume (<1% total morphine market) in scripts prescribed with MS Contin brand name since generics are not substitutable without AB-rating
+Non-ADF version is unlikely to be considered as AB-rated to ADF due to:
+Difference in activity
+May steer patients away from ADF version
+The volume shift to the new ADF MS Contin is most likely coming from the new patients (<10% total patients), but majority of the HCPs still have the preference of prescribing non-ADF version in generic name (>90%), which potentially leads to <1% volume shift to new ADF MS Contin
+With mandatory substitution
+Without
+mandatory substitution
+State mandatory generics substitution
+With mandatory substitution
+Without
+mandatory substitution
+With mandatory substitution
+Without
+mandatory substitution
+Pharmacy dispensing
+MS Contin
+MS Contin
+Generic
+morphine sulfate
+Generic
+morphine sulfate
+MS Contin
+MS Contin
+HCP prescription
+Prescribed
+MS Contin in brand name with DAW
+Prescribed
+morphine sulfate in generic name
+Prescribed
+MS Contin in brand name without DAW
+~1%
+<1%
+~99%
+~83%
+~17%
+<1%
+<1%
+<1%
+<1%
+~82%
+~17%
+%
+Estimated percent of total morphine sulfate scripts
+Generics volume at risk
+b
+~83%
+~17%
+~83%
+~17%
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Appendix
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Other assumptions and findings highlights
+MS Contin can be replaced with ADF without changing the brand name, but the manufacturer has to change the package and inform the HCPs
+If MS Contin is replaced with ADF formulation, generics manufacture will have to apply for AB-rating to the ADF version
+Non-ADF version is unlikely to be considered as AB-rated to ADF due to:
+Difference in activity
+May steer patients away from ADF version
+If non-ADF generics are not AB-rated to ADF MS Contin, pharmacists are not allowed to switch the script to generics
+Pharmacist will have to clarify with HCP on ADF, or patient will have to go back to HCP to change the script
+The potential drivers that may shift volume from generics to new ADF version of MS Contin include:
+Improved formulary coverage
+Growth in MS Contin written prescription due to increased awareness among HCPs
+The formulary access of new ADF version of MS Contin may slightly be better than original MS Contin given ADF label and ADF coverage mandate in 5 states
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Substitution rates of ADF Rxs are low outside of morphine and payor rejection rate of ADF brands has decreased over time
+Substitution rate of ADF opioids
+% of paid or substituted claims for ADF branded version1,2
+25.7
+0.3
+5.6
+0.1
+0.4
+0.1
+0.1
+0.2
+0.3
+4.9
+26.9
+6.2
+5.1
+5.5
+Gx non-ADF
+Branded non-ADF
+Other ADF
+21
+54
+2017
+2018
+Rejection rate of ADF opioids
+% of claims for ADF branded version1,3
+COMMERCIAL
+7
+SOURCE: FIA claims data
+DRAFT
+Hysingla ER
+Morphabond ER / Arymo ER
+Embeda
+Xtampza ER
+OxyContin
+Overall
+Hydrocodone Bitartrate
+Morphine Sulfate
+Morphine-Naltrexone
+Oxycodone
+Oxycodone HCl
+Overall
+ADF opioids brands
+Generic Name
+1 Does not include mandated switch to Gx in applicable states since in these instances pharmacists submit claim directly under the Gx product number
+2 12 months ending Sept 2018	3 Comparing Q1-Q3 data for each year due to data availability
+Pharmacists rarely switches ADF Rxs to non-ADF Gx, except for morphine, which may be driven by lack of coverage given the high rejection rate
+The decrease of payor rejection rate may be driven by the rising trend of state-level mandate on ADF coverage
+PROPRIETARY AND CONFIDENTIAL
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PROPRIETARY AND CONFIDENTIAL
+
+Abuse Deterrent Formulation coverage – introduced state-level mandates
+SOURCE: Press search
+Note: As of 2017. Includes legislation introduced in 2016 and 2017	2 IL legislation does not mandate ADF coverage; it only bans step-through non-ADF requirements and more restrictive prior authorization
+Legislation passed into law
+Mandates ADF coverage on lowest tier
+Mandates ADF coverage equal to non-ADF
+Bans step-through non-ADF
+AL
+AR
+AZ
+CA
+CO
+CT
+FL
+GA
+IA
+ID
+IL2
+IN
+KS
+KY
+LA
+MA
+ME
+MI
+MN
+MO
+MS
+MT
+NC
+ND
+NE
+NH
+NM
+NV
+NY
+OH
+OK
+OR
+PA
+SC
+SD
+TN
+TX
+UT
+VA
+VT
+WA
+WI
+WV
+WY
+DC
+DE
+MD
+NJ
+RI
+HI
+AK
+MI
+Legislation mandating abuse-deterrent formulations of opioids have been introduced in nearly half of US states, though only 5 states have passed legislation into law
+Most of the unpassed bills have stalled in state legislature committees
+Legislation mandating ADF coverage also generally forbids step-through non-ADF restrictions
+Legislation generally includes language that permits the use of prior authorizations for ADFs as long as they are the same or less restrictive as the non-ADF versions
+Legislation generally includes language stating payors cannot achieve compliance by increasing patient cost sharing or by issuing disincentives for prescribers.
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Abuse-deterrent mandate regulations in states introduced legislation (1/2)
+Status1
+ADF Coverage Mandate
+Categorization
+State
+Cost-Sharing Rules
+Passed
+Coverage for ADF
+Mandates ADF coverage equal to non-ADF
+MA
+No increase in cost sharing
+Passed
+2 branded AD opioids, of different molecules, and 2 Gx if available
+Mandates ADF coverage on lowest tier
+MD
+Lowest cost tier
+Passed
+Coverage for ADF
+Mandates ADF coverage equal to non-ADF
+ME
+Not less favorable than non-AD
+Passed
+none specified
+Bans step-through non-ADF
+FL
+No step through non AD, no different PA reqs
+Passed
+1 ADF for each opioid API
+Mandates ADF coverage on lowest tier
+WV
+Lowest tier for Branded or Gx depending on ADF
+Not passed
+none specified
+Bans step-through non-ADF
+CA
+No step through non-ADF
+Only cleared House
+Encouraged 2 ADF opioids
+Mandates ADF coverage on lowest tier
+KY
+Lowest tier for Branded or Gx depending on ADF
+Not passed
+1 per opioid API
+Mandates ADF coverage equal to non-ADF
+NY
+No less favorable than non-ADF version branded or Gx depending on ADF
+Not passed
+1 if formulary covers opioids
+Bans step-through non-ADF
+PA
+No step through non-ADF
+Not passed
+1 per opioid API
+Mandates ADF coverage on lowest tier
+MI
+Lowest tier for Branded or Gx depending on ADF
+Not passed
+Coverage for ADF if covers opioids
+Mandates ADF coverage on lowest tier
+OR
+Lowest cost tier
+Died in committee
+1 per opioid API
+Bans step-through non-ADF
+KS
+Same costs as other coverage of prescription drugs
+1 Not passed indicates no updates were found regarding the introduced bill
+Legislation passed into law
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+
+Abuse-deterrent mandate regulations in states introduced legislation (2/2)
+Status
+ADF Coverage Mandate
+Categorization
+State
+Cost-Sharing Rules
+Not passed
+1 per opioid API for state employee plans only
+Mandates ADF coverage equal to non-ADF
+IN
+No less favorable than non-ADF version branded or Gx depending on ADF
+Not passed
+1 per opioid API
+Mandates ADF coverage equal to non-ADF
+NJ
+No less favorable than non-ADF version branded or Gx depending on ADF
+Died
+no coverage mandate
+Bans step-through non-ADF
+IL
+No step through non-ADF
+Not passed
+Coverage for ADF
+
+Bans step-through non-ADF
+OH
+No step through non-ADF
+Died
+Preferred coverage for ADF
+Mandates ADF coverage on lowest tier
+MN
+Lowest cost tier
+Not passed
+At least 1 per opioid API
+Mandates ADF coverage equal to non-ADF
+WA
+No less favorable than non-ADF version branded or Gx depending on ADF
+Not passed
+At least 1 per opioid API
+Bans step-through non-ADF
+CT
+No step through non-ADF
+Not passed
+At least 1
+Bans step-through non-ADF
+RI
+No step through non-ADF
+Not passed
+At least 1 preferred
+Mandates ADF coverage on lowest tier
+VT
+Lowest cost tier
+Not passed
+At least 2 AD opioid classes
+Mandates ADF coverage on lowest tier
+VA
+Lowest cost tier
+Not passed
+Coverage for ADF
+Mandates ADF coverage on lowest tier
+IA
+Lowest cost tier
+In committee
+Coverage for ADF
+Bans step-through non-ADF
+TX
+unspecified
+TRACKER
+Subtitle
+1 Footnote
+SOURCE : Source
+Title
+Unit of measure
+PROPRIETARY AND CONFIDENTIAL
+‹#›
+DRAFT – WORK IN PROGRESS | This document does not contain any recommendations and is meant for discussion only
+STICKER
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
