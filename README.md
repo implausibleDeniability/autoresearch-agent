@@ -59,15 +59,26 @@ Write a detailed error inventory during the same evaluation with:
 uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v1 aggregate and per-field metrics, raw
-predictions, raw ground truth, person and field-value matches, false positives, false negatives, and
-literal source occurrences. Occurrence offsets are zero-based Python character indexes with an
-end-exclusive `end`; an empty `occurrences` list means the raw value was not found literally in the
-source. This is expected for some normalized or fuzzy matches. The file contains labeled PII and
-source context, is overwritten on each run, has owner-only permissions, and must not be committed.
-Other output paths are supported but are not ignored automatically.
-Each value stores at most 20 source snippets; `occurrence_count` preserves the total and
-`occurrences_truncated` reports whether additional occurrences were omitted.
+The ignored `diagnostics.json` file contains schema-v2 metrics, raw predictions and ground truth,
+matching ledgers, errors, and evaluator-compatible source evidence. Source evidence uses the
+evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
+uniqueness, or one-to-one assignment. A zero evidence count means no accepted source span was found,
+not that the evaluator must reject the value.
+
+Raw evidence preserves case-sensitive substrings. Normalized evidence can come from same-width
+substrings or whitespace-delimited token windows. Fuzzy evidence also considers punctuation-delimited
+subspans such as `Name:Jonh,` → `Jonh`. Overlaps prefer raw, then normalized evidence; fuzzy selection
+maximizes the number of non-overlapping spans. Offsets index the original Python string and `end` is
+exclusive. Each value stores at most 20 spans while counts describe the full selected set.
+
+Fuzzy work is bounded so malformed or unusually long model output cannot stall diagnostics. When
+`fuzzy_search_complete` is false, literal counts remain complete but the fuzzy count is unavailable;
+do not interpret a zero fuzzy count as absence of evaluator-compatible evidence.
+
+Schema-v1 files use different occurrence semantics and must be regenerated. Consumers should reject
+unknown `schema_version` values. The file contains labeled PII and source context, is overwritten on
+each run, has owner-only permissions, and must not be committed. Other paths are not ignored
+automatically. The CLI reports serialization time as `diagnostics_duration_seconds`.
 
 Diagnostics are development-only. The evaluator rejects `--diagnostics` for every dataset whose
 name starts with `test-`.
@@ -76,13 +87,59 @@ The top-level shape is:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "source_matching_policy": {
+    "version": 1,
+    "normalization": "lower_strip_trailing_period_v1",
+    "similarity_algorithm": "difflib_sequence_matcher_autojunk_false",
+    "similarity_threshold": 0.65,
+    "minimum_fuzzy_length": 3,
+    "fuzzy_work_budget": 50000000,
+    "candidate_enumeration_budget": 200000,
+    "comparison_orientation": "prediction_values_value_to_span_ground_truth_values_span_to_value",
+    "candidate_boundaries": "literal_substrings_and_punctuation_delimited_token_windows",
+    "overlap_policy": "raw_then_normalized_then_maximum_cardinality_v1"
+  },
   "dataset": "dev-19k",
   "metrics": {"true_positive": 0, "false_positive": 0, "false_negative": 0},
   "field_metrics": {"email": {"true_positive": 0, "false_positive": 0, "false_negative": 0}},
   "documents": []
 }
 ```
+
+Every prediction, ground-truth value, false positive, and false negative uses this shape:
+
+```json
+{
+  "person_index": 0,
+  "value_index": 0,
+  "value": "john@example.com",
+  "source_evidence_count": 1,
+  "raw_occurrence_count": 0,
+  "normalized_occurrence_count": 1,
+  "fuzzy_occurrence_count": 0,
+  "fuzzy_search_complete": true,
+  "source_evidence_truncated": false,
+  "source_evidence": [{
+    "start": 12,
+    "end": 28,
+    "match_kind": "normalized_exact",
+    "similarity": 1.0,
+    "context_start": 0,
+    "context_end": 50,
+    "context": "Contact JOHN@EXAMPLE.COM for details."
+  }]
+}
+```
+
+List false negatives with their evidence counts:
+
+```bash
+jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | .false_negatives[] | {document_id: $document_id, field: $field, value, source_evidence_count, raw_occurrence_count, normalized_occurrence_count, fuzzy_occurrence_count}' diagnostics.json
+```
+
+Add `select(.fuzzy_occurrence_count > 0)` or `select(.source_evidence_count == 0)` before the final
+object to isolate fuzzy-supported or absent values.
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.

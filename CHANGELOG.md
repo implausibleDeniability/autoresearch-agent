@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0.0] - 2026-08-13
+
+### Added
+
+- Report case-insensitive, normalized, and fuzzy source evidence for diagnostic values using the evaluator's matching rules.
+- Mark bounded fuzzy searches as incomplete when diagnostic safety limits stop candidate enumeration.
+
+### Changed
+
+- Upgrade diagnostic output to schema version 2 with evidence-kind counts, raw source spans, truncation flags, and matching-policy metadata.
+
+### Fixed
+
+- Keep prediction and ground-truth evidence comparisons aligned with the evaluator's direction-sensitive fuzzy matching.
+- Bound fuzzy evidence work and select non-overlapping occurrences without quadratic memory or overlap scans.
+
 ## [0.3.1.0] - 2026-08-12
 
 ### Fixed
