@@ -1,0 +1,4 @@
+interface:
+  display_name: "Run autoresearch"
+  short_description: "Pull main and run a fresh autoresearch cycle"
+  default_prompt: "Use $run-autoresearch to pull latest main and run autoresearch."
