@@ -111,13 +111,13 @@ Every `test-*` dataset is blind. You may discover its complete name by listing m
 
 Do not inspect `data/test-*` files or detailed test results, including through code or side effects, without explicit user permission. The frozen final evaluator is the only routine exception. Never pass `--diagnostics` with a blind dataset.
 
-After development, commit the final `solution.py` and pass that commit with `--frozen-commit`. The evaluator verifies it before and after the run. The final evaluation is outside the 20-run allowance, but its spend counts toward the $0.50 budget. It returns only aggregate score, precision, recall, API cost, and duration. Success ends the run; never tune against the result, and any solution change invalidates it.
+After development, commit the final `solution.py` and pass that commit with `--frozen-commit`. The evaluator verifies it before and after the run. The final evaluation is outside the 40-run allowance, but its spend counts toward the $0.50 budget. It returns only aggregate score, precision, recall, API cost, and duration. Success ends the run; never tune against the result, and any solution change invalidates it.
 
 
 ## Restrictions
 - You can NOT use models from the gpt-5 and later family, and other LLM providers, such as Google or Anthropic. Only use gpt-4o and gpt-4o-mini from OpenAI.
 - You can NOT make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
-- **Offline debugging:** You may run unlimited non-live tests, import `solution.py`, call its helper functions, and execute it against synthetic inputs using fake or patched model responses. These checks must not contact OpenAI or another external service, require provider credentials, access repository datasets, or produce evaluation metrics. They do not count toward the 20-evaluation limit and cost $0. Any command that may make a real model call must still run through the evaluation CLI and counts as an evaluation.
+- **Offline debugging:** You may run unlimited non-live tests, import `solution.py`, call its helper functions, and execute it against synthetic inputs using fake or patched model responses. These checks must not contact OpenAI or another external service, require provider credentials, access repository datasets, or produce evaluation metrics. They do not count toward the 40-evaluation limit and cost $0. Any command that may make a real model call must still run through the evaluation CLI and counts as an evaluation.
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You may list directory names matching `data/test-*` to discover the blind dataset. Do not inspect anything inside those directories except through the final evaluator invocation unless the user explicitly permits it.
 - You may modify and commit only `solution.py` as the experiment implementation.
@@ -164,7 +164,7 @@ In the file REQUESTS.md write things that the human supervisor should know about
 
 The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 
-Stop development after 20 evaluations or when only the budget reserved for the final test remains. Baselines, debug checks, crashes, and reruns count toward 20. The final test does not, but its spend counts toward $0.50.
+Stop development after 40 evaluations or when only the budget reserved for the final test remains. Baselines, debug checks, crashes, and reruns count toward 40. The final test does not, but its spend counts toward $0.50.
 
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
@@ -192,4 +192,4 @@ The idea is that you are a completely autonomous researcher trying things out. A
 
 **Crashes**: If a run crashes (OOM, protocol failure, solution bug, or similar), preserve and inspect any partial diagnostics. They may identify a repair or next hypothesis, but they are not a final score. If the failure is easy to fix, fix it and re-run. If the idea itself is fundamentally broken, log `crash` and move on. Never assume a zero-dollar crash: charge the observed cost when complete, or the larger of observed cost and the pre-run estimate when incomplete.
 
-**DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 20 development experiments have been attempted, only the final-test budget remains, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas during development, think harder — read papers referenced in the code, re-read the in-scope development files for new angles, try combining previous near-misses, and try more radical architectural changes.
+**DO NOT PAUSE BETWEEN EXPERIMENTS**: Once the experiment loop has begun (after the initial setup), do not pause to ask the human if you should continue. Do not ask "should I keep going?" or "is this a good stopping point?". Continue autonomously until 40 development experiments have been attempted, only the final-test budget remains, the human interrupts you, or an unrecoverable failure prevents further evaluation. If you run out of ideas during development, think harder — read papers referenced in the code, re-read the in-scope development files for new angles, try combining previous near-misses, and try more radical architectural changes.
