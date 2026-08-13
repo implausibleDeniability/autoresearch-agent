@@ -115,7 +115,8 @@ After development, commit the final `solution.py` and pass that commit with `--f
 
 ## Restrictions
 - You can NOT use models from the gpt-5 and later family, and other LLM providers, such as Google or Anthropic. Only use gpt-4o and gpt-4o-mini from OpenAI.
-- You can NOT execute `solution.py`, call `extract_pii` directly, run live tests, or make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
+- You can NOT make OpenAI API requests outside the evaluation CLI. Every paid model call must run through `uv run python -m src.evaluation.cli` so the evaluator can meter and limit its cost.
+- **Offline debugging:** You may run unlimited non-live tests, import `solution.py`, call its helper functions, and execute it against synthetic inputs using fake or patched model responses. These checks must not contact OpenAI or another external service, require provider credentials, access repository datasets, or produce evaluation metrics. They do not count toward the 20-evaluation limit and cost $0. Any command that may make a real model call must still run through the evaluation CLI and counts as an evaluation.
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You can NOT access `data/test-*` except through the final evaluator invocation. Do not use commands, code, or side effects to inspect it.
 - You may modify and commit only `solution.py` as the experiment implementation.
