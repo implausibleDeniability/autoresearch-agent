@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0.0] - 2026-08-13
+
+### Added
+
+- Preserve completed-document scores, token usage, cost, and latency when a later development document fails.
+- Checkpoint schema-v2 diagnostics before work, after each document, and after cost finalization.
+
+### Changed
+
+- Mark partial scores as non-final and expose document coverage, safe failure categories, and incomplete-cost status.
+- Keep blind final evaluation concurrent while development runs use document boundaries for accurate attribution.
+
 ## [0.5.0.1] - 2026-08-13
 
 ### Changed

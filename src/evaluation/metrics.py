@@ -28,6 +28,18 @@ def evaluate_trace(
     return build_evaluation_trace(predictions, ground_truth=ground_truth)
 
 
+def evaluate_completed_trace(
+    predictions: Mapping[str, Sequence[PIIItem]],
+    *,
+    document_ids: Sequence[str],
+    ground_truth_path: Path = DEFAULT_GROUND_TRUTH_PATH,
+) -> EvaluationTrace:
+    ground_truth = _load_ground_truth(ground_truth_path)
+    _validate_prediction_documents(predictions, ground_truth=ground_truth)
+    completed_ground_truth = {document_id: ground_truth[document_id] for document_id in document_ids}
+    return build_evaluation_trace(predictions, ground_truth=completed_ground_truth)
+
+
 def _load_ground_truth(path: Path) -> DocumentPII:
     with path.open() as file:
         serialized = json.load(file)

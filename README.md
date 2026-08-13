@@ -59,8 +59,9 @@ Write a detailed error inventory during the same evaluation with:
 uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v2 metrics, raw predictions and ground truth,
-matching ledgers, errors, and evaluator-compatible source evidence. Source evidence uses the
+The ignored `diagnostics.json` file contains schema-v2 run state, per-document execution and cost,
+metrics, raw predictions and ground truth, matching ledgers, errors, and evaluator-compatible source
+evidence. Source evidence uses the
 evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
 uniqueness, or one-to-one assignment. A zero evidence count means no accepted source span was found,
 not that the evaluator must reject the value.
@@ -101,11 +102,20 @@ The top-level shape is:
     "overlap_policy": "raw_then_normalized_then_maximum_cardinality_v1"
   },
   "dataset": "dev-19k",
+  "lifecycle_status": "terminal",
+  "result_status": "complete",
+  "cost_status": "complete",
+  "coverage": {"total": 17, "completed": 17, "failed": 0, "not_attempted": 0},
   "metrics": {"true_positive": 0, "false_positive": 0, "false_negative": 0},
   "field_metrics": {"email": {"true_positive": 0, "false_positive": 0, "false_negative": 0}},
-  "documents": []
+  "documents": [],
+  "document_results": []
 }
 ```
+
+The evaluator writes an initial `running` checkpoint, replaces it after each document, and writes the
+terminal state after cost finalization. Each document ends as `completed`, `failed`, or
+`not_attempted`. Failed and unattempted execution records contain no predictions or ground truth.
 
 Every prediction, ground-truth value, false positive, and false negative uses this shape:
 
@@ -163,7 +173,7 @@ short-lived token and redirects the OpenAI SDK through an evaluator-owned localh
 supports Chat Completions and Responses requests using the pinned GPT-4o and GPT-4o mini models,
 including structured outputs, local function calling, prompt caching, retries, concurrency, and
 streaming. Missing usage, unknown pricing, unsupported models, and unsupported billable endpoints
-fail the evaluation instead of reporting an incomplete cost.
+mark cost accounting incomplete without discarding observed spend.
 
 Cost is reported as total USD and USD per million original source-document tokens. The denominator
 uses `o200k_base` and counts each source document once, independent of solution chunking or repeated
@@ -173,6 +183,15 @@ for experiment logs.
 
 Development allows 40 evaluations. Reserve enough of the $0.50 cumulative API budget for the final
 test. Charge a crash without an observed cost at its pre-run estimate.
+
+Development output includes `result_status=complete|partial`, `score_is_final=true|false`, coverage,
+a termination category, and `cost_status=complete|incomplete`. Complete runs exit 0 and use the normal
+metric keys. Partial runs exit 2 and use `partial_*` metrics over completed documents only. These
+metrics guide diagnosis but are never final scores. `document_results_json` reports each document's
+status, source and API tokens, observed spend, latency, and safe failure category.
+
+When metering is incomplete, budget accounting uses the larger of observed spend and the pre-run
+estimate.
 
 ### Blind final evaluation
 

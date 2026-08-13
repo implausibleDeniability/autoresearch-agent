@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Mapping, Optional, Tuple, cast
+from typing import Literal, Mapping, Optional, Tuple, cast
 
 CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
 RESPONSES_PATH = "/v1/responses"
@@ -9,6 +9,19 @@ SUPPORTED_PATHS = (CHAT_COMPLETIONS_PATH, RESPONSES_PATH)
 SUPPORTED_SERVICE_TIERS = (None, "default")
 SUPPORTED_TOOL_TYPES = ("function",)
 PRICE_TABLE_VERSION = "2026-08-08"
+
+
+class CostStatus:
+    PENDING = "pending"
+    COMPLETE = "complete"
+    INCOMPLETE = "incomplete"
+
+    @classmethod
+    def all(cls) -> Tuple[str, ...]:
+        return cls.PENDING, cls.COMPLETE, cls.INCOMPLETE
+
+
+CostStatusValue = Literal["pending", "complete", "incomplete"]
 
 
 @dataclass(frozen=True)
@@ -76,6 +89,26 @@ class CostReport:
         if source_tokens <= 0:
             raise ValueError(f"source_tokens must be positive, got {source_tokens}")
         return self.total_usd * Decimal(1_000_000) / Decimal(source_tokens)
+
+    @property
+    def input_tokens(self) -> int:
+        return sum(usage.input_tokens for usage in self.usages)
+
+    @property
+    def cached_input_tokens(self) -> int:
+        return sum(usage.cached_input_tokens for usage in self.usages)
+
+    @property
+    def output_tokens(self) -> int:
+        return sum(usage.output_tokens for usage in self.usages)
+
+
+@dataclass(frozen=True)
+class MeteringOutcome:
+    report: CostReport
+    status: CostStatusValue
+    errors: Tuple[str, ...] = ()
+    active_request_count: int = 0
 
 
 class StreamUsageParser:
