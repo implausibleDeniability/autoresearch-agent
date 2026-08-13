@@ -1,0 +1,4 @@
+interface:
+  display_name: "Autoresearch retro"
+  short_description: "Find research-system gaps after a completed run"
+  default_prompt: "Use $autoresearch-retro to review the latest autoresearch run and recommend research-system improvements."
