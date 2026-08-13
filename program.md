@@ -33,7 +33,7 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. `dev-87k` costs several times more, so use it occasionally and for final development validation. These three datasets are development datasets: you may inspect their diagnostics and tune against them.
+The evaluation worker has a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and either `dev-19k` or `dev-87k` as appropriate. `dev-19k` is a subset of `dev-87k` biased toward PII-dense documents. It is noticeably cheaper, making it useful for hypothesis testing. `dev-87k` covers more data and may better represent the blind test, especially when judging generality or selecting a final candidate. You are not required to evaluate every candidate on both datasets. These three datasets are development datasets: you may inspect their diagnostics and tune against them.
 
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced makes cost accounting incomplete instead of counting as zero cost. Provider-hosted tools and other billable endpoints remain unavailable until the evaluator has a pricing rule.
 
@@ -87,7 +87,7 @@ If a lower-ranked experiment is selected, briefly record why it became the best 
 
 Model-backed evaluations may vary even when the implementation is unchanged. Treat each result as evidence, not exact truth.
 
-`baseline-results.tsv` contains five identical baseline evaluations with metrics, error counts, costs, and durations. Use their observed range to distinguish ordinary variation from meaningful changes, then run one fresh baseline for the current research. Keep model and sampling settings consistent across comparable experiments. If a seed is used, choose it as a reproducibility setting and do not optimize it for score.
+`baseline-results.tsv` contains five baseline evaluations on each of `dev-19k` and `dev-87k`, with metrics, error counts, costs, and durations. Use the matching dataset's observed range to distinguish ordinary variation from meaningful changes, then run one fresh baseline for the current research. Keep model and sampling settings consistent across comparable experiments. If a seed is used, choose it as a reproducibility setting and do not optimize it for score.
 
 Use additional evaluations only when uncertainty could change a research decision. A clearly inferior candidate may be discarded after one run. A candidate that appears competitive with the incumbent should receive enough confirmation to determine whether the improvement is credible within the remaining run and cost budgets.
 
