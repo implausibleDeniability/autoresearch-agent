@@ -171,7 +171,7 @@ context. The price table is evaluator-owned and currently uses standard API pric
 models. The CLI prints `f_score` as the optimization metric and precision and recall as diagnostics
 for experiment logs.
 
-Development allows 20 evaluations. Reserve enough of the $0.50 cumulative API budget for the final
+Development allows 40 evaluations. Reserve enough of the $0.50 cumulative API budget for the final
 test. Charge a crash without an observed cost at its pre-run estimate.
 
 ### Blind final evaluation
@@ -190,7 +190,7 @@ uv run python -m src.evaluation.cli \
 ```
 
 The evaluator checks the commit and `solution.py` before and after the run. It prints only aggregate
-`f_score`, precision, recall, API cost, and duration. This final evaluation is outside the 20-run
+`f_score`, precision, recall, API cost, and duration. This final evaluation is outside the 40-run
 allowance, but its spend counts toward the $0.50 budget. Success ends the research run. Never tune
 against the result; changing the solution invalidates it.
 
