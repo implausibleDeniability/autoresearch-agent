@@ -176,15 +176,16 @@ test. Charge a crash without an observed cost at its pre-run estimate.
 
 ### Blind final evaluation
 
-Researchers must not access `data/test-*` files or detailed test results. The complete dataset name
-is supplied for the final evaluation rather than hard-coded.
+Researchers may discover the complete blind dataset name by listing directories matching
+`data/test-*`, but must not inspect their contents or detailed test results without explicit
+permission.
 
 After development is complete, commit the chosen `solution.py` and leave it unchanged. Run the one
 final blind evaluation by passing that current commit explicitly:
 
 ```bash
 uv run python -m src.evaluation.cli \
-  --dataset test-<provided-name> \
+  --dataset test-<discovered-name> \
   --frozen-commit "$(git rev-parse HEAD)"
 ```
 
@@ -203,4 +204,5 @@ against the result; changing the solution invalidates it.
   labeled PII values.
 - `data/test-*`: blind final-evaluation data.
 
-`data/raw` and `data/test-*` must not be exposed to the research agent.
+`data/raw` must not be exposed to the research agent. The agent may list `data/test-*` directory
+names but must not inspect their contents without explicit permission.
