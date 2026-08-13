@@ -178,6 +178,17 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     upstream_base_url = os.environ.get(UPSTREAM_BASE_URL_ENVIRONMENT, DEFAULT_UPSTREAM_BASE_URL)
     run_id = uuid.uuid4().hex
     started_at = EvaluationRun.timestamp()
+    if Dataset.is_blind_test(arguments.dataset):
+        return _evaluate_blind_dataset(
+            arguments,
+            texts=texts,
+            document_tokens=document_tokens,
+            source_tokens=source_tokens,
+            api_key=api_key,
+            upstream_base_url=upstream_base_url,
+            run_id=run_id,
+            started_at=started_at,
+        )
     documents = _not_attempted_documents(texts, document_tokens=document_tokens)
     initial = _make_run(
         run_id=run_id,
@@ -244,6 +255,47 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     )
     _checkpoint_diagnostics(run, arguments=arguments)
     return run
+
+
+def _evaluate_blind_dataset(
+    arguments: argparse.Namespace,
+    *,
+    texts: Mapping[str, str],
+    document_tokens: Mapping[str, int],
+    source_tokens: int,
+    api_key: str,
+    upstream_base_url: str,
+    run_id: str,
+    started_at: str,
+) -> EvaluationRun:
+    predictions, report = _run_metered_solution(
+        texts,
+        api_key=api_key,
+        upstream_base_url=upstream_base_url,
+        spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
+        timeout=arguments.timeout,
+    )
+    documents = tuple(
+        DocumentExecution(
+            ordinal=ordinal,
+            document_id=document_id,
+            status=DocumentStatus.COMPLETED,
+            source_tokens=document_tokens[document_id],
+            predictions=tuple(predictions[document_id]),
+        )
+        for ordinal, document_id in enumerate(texts)
+    )
+    return _make_run(
+        run_id=run_id,
+        dataset=arguments.dataset,
+        texts=texts,
+        source_tokens=source_tokens,
+        documents=documents,
+        cost=MeteringOutcome(report, CostStatus.COMPLETE),
+        lifecycle_status=LifecycleStatus.TERMINAL,
+        termination_category="none",
+        started_at=started_at,
+    )
 
 
 def _make_run(
@@ -326,7 +378,7 @@ def _run_metered_solution(
         spending_limit_usd=spending_limit_usd,
     ) as meter:
         try:
-            predictions = _run_solution(texts, module=SOLUTION_MODULE, meter=meter, timeout=timeout)
+            predictions = _run_batch_solution(texts, module=SOLUTION_MODULE, meter=meter, timeout=timeout)
         except Exception:
             meter.seal_and_report()
             raise
@@ -389,6 +441,27 @@ def _run_solution(
     if failed:
         raise RuntimeError(f"solution failed for documents {failed}; termination={termination}")
     return {document.document_id: list(document.predictions) for document in documents}
+
+
+def _run_batch_solution(
+    texts: Mapping[str, str],
+    *,
+    module: str,
+    meter: MeteringProxy,
+    timeout: float,
+) -> Dict[str, List[PIIItem]]:
+    completed = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module],
+        input=json.dumps(texts),
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+        env=_solution_environment(meter),
+        check=False,
+    )
+    if completed.returncode:
+        raise RuntimeError(f"solution failed with exit code {completed.returncode}")
+    return _parse_worker_result(completed.stdout)
 
 
 def _solution_environment(meter: MeteringProxy, *, source: Mapping[str, str] = os.environ) -> Dict[str, str]:

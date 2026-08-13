@@ -451,6 +451,26 @@ def test_finalization_outcome_is_immutable_when_active_request_finishes_late():
     assert first.report.usages == ()
 
 
+def test_checkpoint_keeps_meter_open_for_later_requests():
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    usage = ModelUsage(
+        model="gpt-4o-mini-2024-07-18",
+        input_tokens=100,
+        cached_input_tokens=0,
+        output_tokens=10,
+    )
+
+    checkpoint = state.checkpoint(timeout=0.0)
+    assert state.begin_request("Bearer run-token") == 0
+    state.finish_request(usage=usage)
+    final = state.finalize(timeout=1.0)
+    state.close()
+
+    assert checkpoint.status == "complete"
+    assert checkpoint.report.usages == ()
+    assert final.report.usages == (usage,)
+
+
 def _chat_response(*, usage="default"):
     payload = {
         "id": "chatcmpl-test",

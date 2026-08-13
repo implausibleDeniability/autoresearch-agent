@@ -157,6 +157,8 @@ def _send_document(process: subprocess.Popen, *, ordinal: int, document_id: str,
 
 
 def _read_record(result_fd: int, *, buffer: bytes, deadline: float) -> Tuple[Dict[str, object], bytes]:
+    if len(buffer) > MAX_RESULT_BYTES:
+        raise WorkerProtocolError(f"worker result exceeded {MAX_RESULT_BYTES} bytes")
     while b"\n" not in buffer:
         readable, _, _ = select.select([result_fd], [], [], _remaining_seconds(deadline))
         if not readable:

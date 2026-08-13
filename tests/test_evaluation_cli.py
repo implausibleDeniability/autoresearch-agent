@@ -572,6 +572,58 @@ def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_pa
     assert completed.stderr == ""
 
 
+def test_blind_test_extracts_documents_concurrently(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path, dataset="test-private-v2")
+    text_directory = tmp_path / "data" / "test-private-v2" / "texts"
+    (text_directory / "second.txt").write_text("Jane")
+    ground_truth = {
+        "doc": [{"first_name": ["John"]}],
+        "second": [{"first_name": ["Jane"]}],
+    }
+    (tmp_path / "data" / "test-private-v2" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""import threading
+
+from src.evaluation.models import PIIItem
+
+barrier = threading.Barrier(2)
+
+
+def extract_pii(text):
+    barrier.wait(timeout=2.0)
+    return [PIIItem(first_name=(text,))]
+""")
+    frozen_commit = _initialize_fixture_repository(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "test-private-v2",
+            "--frozen-commit",
+            frozen_commit,
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode == 0, completed.stderr
+    assert "f_score=1.000000" in completed.stdout
+    assert completed.stderr == ""
+
+
 def test_blind_test_rejects_solution_changed_after_frozen_commit(tmp_path: Path):
     # setup
     _write_cli_fixture(tmp_path, dataset="test-private-v2")
