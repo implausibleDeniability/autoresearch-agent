@@ -1,0 +1,473 @@
+Evaluation of BuTrans' Effect on Repolarization
+Joel Morganroth, MD
+eResearch Technology
+Chief Scientific Officer/Chairman
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM
+
+Cardiovascular Pharmacology of BuTrans
+1 Cmax values listed represent the upper limit of the range of values reported in the literature
+SOURCE: ISS Section 6.3
+Comparison of IC50 values for IHERG inhibition with reported Cmax values
+Drug
+IC50 for HERG block
+Maximum plasma conc. Cmax1
+Ratio IC50/Cmax
+LAAM
+Methadone
+EDDP
+Meperidine
+Fentanyl
+Morphine
+Codeine
+Buprenorphine (BTDS)
+2.2 µM
+9.8 µM
+>50 µM
+76 µM
+1.8 µM
+>1 mM
+300 µM
+7.5 µM
+1.0 µM
+3.6 µM
+1.0 µM
+1.3 µM
+30 nM
+2.5 µM
+0.66 µM
+1 nM
+2.2
+2.7
+>50
+58
+60
+>400
+>455
+7500
+‹#›
+
+BUP1011 "Thorough QT" Study
+Trial design – double-blind, placebo and positive controlled, randomized design
+BTDS 5 or placebo
+BTDS 10 or placebo
+BTDS 20 or placebo
+2 x BTDS 20 or placebo
+Evaluation and discharge
+400 mg moxi-floxacin or placebo
+QT evaluation
+400 mg moxi-floxacin or placebo
+QT evaluation
+Day 3
+Day 6
+Day 9
+Day 13
+Day 14
+Day 0
+‹#›
+
+Statistical analysis of average QTc interval change from Baseline (msec)
+BTDS vs. placebo
+Moxifloxacin vs. placebo
+Visit (study day)1
+Type of
+QTc
+Difference of LS Means
+90% CI
+P-value
+Difference of LS Means
+90% CI
+P-value
+Visit 5 (Day 6)
+QTci
+0.39
+(-1.8, 2.6)
+0.770
+7.64
+(5.4, 9.9)
+0.000
+Visit 7 (Day 13)
+5.91
+(3.4, 8.4)
+0.000
+5.86
+(3.3, 8.4)
+0.000
+Visit 5 (Day 6)
+QTcb
+-0.13
+(-2.9, 2.6)
+0.936
+8.23
+(5.5, 10.9)
+0.000
+Visit 7 (Day 13)
+7.16
+(4.2, 10.1)
+0.000
+7.40
+(4.3, 10.5)
+0.000
+Visit 5 (Day 6)
+QTcf
+1.29
+(-1.4, 4.0)
+0.427
+6.86
+(4.2, 9.6)
+0.000
+Visit 7 (Day 13)
+6.01
+(3.2, 8.8)
+0.001
+4.68
+(1.9, 7.4)
+0.006
+1 For BTDS, Visit
+‹#›
+
+Protocol Change for Chronic Pain Studies in Response to BUP1011
+2004
+BUP1011
+"Thorough
+QT"
+BP96-0101†  BP96-0102† BP96-0604†  BP98-1201† BP99-0203†  BUP3002     BUP3201
+BUP3011  BUP3012 BUP3014  BUP3015 BUP3019  BUP3024
+ More rigorous ECG monitoring
+ Exclusion:
+ Patients with hypokalemia or clinically unstable cardiac disease, including: unstable atrial fibrillation, symptomatic bradycardia, unstable congestive heart failure, or active myocardial ischemia
+ Patients with a history of Long QT Syndrome or an immediate family member with this condition
+ Patients taking Class IA or Class III antiarrhythmic medications antiarrhythmic medications
+† NDA 2000
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM
+
+Analyses for Evaluation of Effect on Repolarization
+ECG intervals (6 enriched studies)
+Central tendency
+Outlier, eg, QT >500 msec, QT change >60 msec
+ECG morphology and rhythm patterns (6 enriched studies)
+Adverse events that signal proarrhythmic potential (ICH E14) (ALL chronic pain studies)
+Query of postmarketing data for proarrhythmic signal
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM
+
+QTcF mean change from baseline in enriched, chronic pain studies (Group A2)
+BTDS dose
+Increase in QTcF (msec)
+5
+10
+20
+1.0
+1.6
+3.8
+‹#›
+
+OTcF mean changes from baseline during double-blind period in Group A2B
+BTDS 10/20
+BTDS 20
+Oxy IR 40 mg
+Study
+BTDS 5
+Placebo
+
++1.0 (11.24) N=48
+
+BUP3014
+
+
++4.5 (11.52) N=202
++2.4 (9.95) N=209
+BUP3015
+
+
++5.7 (13.00) N=139
++1.6 (11.57) N=117
+BUP3019
+
++0.2 (11.71)
+N=45
++1.0 (11.80) N=195
++0.7 (11.77) N=131
+
++2.7 (14.64) N=240
+
+
+BUP3024
+-1.0 (13.96) N=268
+‹#›
+
+Comparison of mean changes from baseline for ECG parameters
+SOURCE: Appendix 11, Tables 6.11 and 6.12
+NN = number of subjects with a baseline and postbaseline value
+Note: The baseline value is the value at screening. The mean changes were calculated based on the number of subjects who had ECGs at both baseline and the end of the open-label run-in or double-blind period
+ECG parameter
+Heart rate (bpm)
+QTcB (msec)
+QTcF (msec)
+BTDS
+NN = 1578
+0.4
+1.8
+1.4
+Mean change
+Open label run-in period
+Double-blind period
+OxyIR
+NN = 326
+-0.6
+2.4
+2.8
+Total BTDS
+NN = 1212
+-0.4
+2.1
+2.5
+BTDS 5
+NN = 415
+0.3
+1.3
+1.0
+BTDS 10 NN = 203
+-1.3
+0.4
+1.6
+Placebo
+NN = 476
+2.1
+1.1
+-1.0
+BTDS 20
+NN = 594
+-0.6
+3.2
+3.8
+Group A2 – enriched, chronic pain studies
+‹#›
+
+Comparison of subjects with QTc interval values >500 msec
+Open-label run-in period
+Double-blind period
+Number (%) of subjects with QT/QTc internal values >500 msec
+OxyIR
+(N=326)
+Total BTDS
+(N=1212)
+BTDS 5
+(N=415)
+BTDS 10
+(N=203)
+Placebo
+(N=476)
+BTDS
+(N=1578)
+OTcB
+OTcF
+5 (0.3)
+3 (0.2)
+BTDS 20
+(N=594)
+ECG parameter
+1 (0.2)
+0
+2 (0.6)
+1 (0.3)
+8 (0.7)
+4 (0.3)
+1 (0.2)
+0
+0
+0
+7 (1.2)
+4 (0.7)
+Group A2 – enriched, chronic pain studies
+‹#›
+
+Subjects with QTcF > 500 msec
+	Total	On Multiple ECG Tracings	On Multiple ECG Tracings	On Multiple ECG Tracings	On Multiple ECG Tracings	On Single ECG Tracing	On Single ECG Tracing	On Single ECG Tracing	On Single ECG Tracing
+	7
+(3 RI, 4 DB)	2	2	2 reported as AEs	2 reported as AEs	5	5	2 out of 5 reported as AEs	2 out of 5 reported as AEs
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM
+
+Comparison of subjects with QTc changes of > 60 msec
+Open-label run-in period
+Double-blind period
+Number (%) of subjects with QTC changes
+OxyIR
+(N=326)
+Total BTDS
+(N=1212)
+BTDS 5
+(N=415)
+BTDS 10
+(N=203)
+Placebo
+N=476
+BTDS
+(N=1578)
+QTcB change of >60 msec
+QTcF change of >60 msec
+17 (1.1)
+7 (0.4)
+BTDS 20
+(N=594)
+ECG parameter
+5 (1.1)
+0
+4 (1.2)
+1 (0.3)
+17 (1.4)
+7 (0.6)
+7 (1.7)
+2 (0.5)
+1 (0.5)
+0
+9 (1.5)
+5 (0.8)
+Group A2 – enriched, chronic pain studies
+‹#›
+
+Subjects with average QTcF change from baseline > 60 msec
+	Total 	Average of all tracings at implicated visit	Average of all tracings at implicated visit	Average of all tracings at implicated visit	Average of all tracings at implicated visit	Average of all tracings at implicated visit
+	Total 	> 60 msec	> 60 msec	>50 to = 60 msec	>50 to = 60 msec	= 50 msec
+	14
+(7 RI, 7 DB)	2	2	6	6	6
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM
+
+Adverse events which can signal potential proarrhythmic effects – Group C
+MedDRA system organ class preferred term
+All SOCs/all preferred terms
+Cardio disorders
+Cardio-respiratory arrest
+Ventricular tachycardia
+General disorders and administration site conditions
+Sudden cardiac death
+Investigations
+Electrocardiogram QT corrected interval prolonged
+Electrocardiogram QT interval abnormal
+Electrocardiogram QT prolonged
+Nervous system disorders
+Syncope
+Convulsion
+Loss of consciousness
+Number (%) of subjects, N=5415
+23 (0.4)
+2 (<0.1)
+1 (<0.1)
+1 (<0.1)
+1 (<0.1)
+1 (<0.1)
+5 (0.1)
+3 (0.1)
+1 (<0.1)
+1 (<0.1)
+16 (0.3)
+14 (0.3)
+3 (0.1)
+1 (<0.1)
+‹#›
+
+Adverse events which can signal potential proarrhythmic effects – Group A
+All SOCs/All preferred terms
+Investigations
+Electrocardiogram QT prolonged
+Nervous system disorders
+Syncope
+Placebo
+(N=995)
+3 (0.3)
+1 (0.1)
+1 (0.1)
+2 (0.2)
+2 (0.2)
+Oxy/APAP
+(N=150)
+0
+0
+0
+0
+0
+OxyIR
+(N=353)
+HCD/APAP
+(N=130)
+1 (0.8)
+0 (0.0)
+0 (0.0)
+1 (0.8)
+1 (0.8)
+MedDRA system organ class preferred term
+BTDS
+(N=2130)
+3 (0.1)
+0
+0
+3 (0.1)
+3 (0.1)
+0
+0
+0
+0
+0
+‹#›
+
+Postmarketing reports of QT prolongation associated with the use of Buprenorphine Formulations through April 30, 2009
+Syncope
+Loss of consciousness
+Cardiac arrest
+Cardio-respiratory arrest
+Cardiac arrest
+Electrocardiogram QT prolonged
+18
+11
+2
+2
+2
+1
+Preferred term
+No. of cases as of April 30, 2009 All buprenorphine formulations
+Note: Individual cases may have more than 1 preferred term per case
+‹#›
+
+Risks associated with potential drug Interaction with 3A4 and 2D6 inhibitors
+Adverse event profiles in users vs nonusers of 3A4 and 2D6 inhibitors (analysis pending)
+‹#›
+
+BuTrans Label - Warning and Precautions
+5.6 Congenital or Acquired QT Prolongation
+"A positive controlled study of effects of BuTrans on the QT interval in normal subjects, demonstrated the therapeutic dose of BuTrans™ 10 mcg/h had no effect on QTci. However, the supratherapeutic dose of BuTrans 40 mcg/h (given as two Bu Trans 20 mcg/h patches) was observed to prolong the QTci interval to an extent comparable to the prolongation seen with 400 mg of moxifloxacin [see CLINICAL PHARMACOLOGY (12.2)]. These observations should be considered in clinical decisions when prescribing BuTrans to patients with hypokalemia or clinically unstable cardiac disease, including: unstable atrial fibrillation, symptomatic bradycardia, unstable congestive heart failure, or active myocardial ischemia. Patients with a history of Long QT Syndrome or an immediate family member with this condition, or those taking Class IA antiarrhythmic medications (eg, quinidine, procainamide, disopyramide) or Class III antiarrhythmic medications (eg, sotalol, amiodarone, dofetilide) should consider the risk of adding BuTrans treatment."
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM
+
+Conclusions
+Low hERG inhibition at therapeutic dose
+Positive TQT study (BUP1011)
+ECG data present some signals of QT prolongation potential
+Clinical studies did not identify a profile that signals proarrhythmic potential
+Postmarketing data reveal a benign cardiac safety profile
+Drug interaction with 3A4 and 2D6 inhibitors is unlikely a serious concern as the therapeutic doses  are low
+‹#›
+Notes
+-----
+Acorda
+1/20/2010 4:18 PM

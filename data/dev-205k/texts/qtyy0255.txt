@@ -1,0 +1,334 @@
+Message
+
+From: Christen Tingley [Christen Tingley@mckinsey.com]
+Sent: 11/16/2017 3:10:05 PM
+To: Barmore, Robert [Robert.Barmore@pharma.com]; CN=Natalya
+      [Gertsik/OU=NYO/OU=NorthAmerica/O=MCKINSEY@mckinsey]
+CC: Emma Kemble [CN=Emma Kemble/OU=NJE/OU=NorthAmerica/O=MCKINSEY@mckinsey]
+Subject: RE: OUD codes for analysis
+
+
+
+
+
+Thanks Rob!
+
+
+
+We have gotten the medical claims over the FTP — just waiting on the pharmacy claims to download J. Haven't
+gotten the file from Accelion, but staying alert for that!
+
+
+
+Thank you!!
+
+
+
+From: Barmore, Robert [mailto:Robert.Barmore@pharma.com]
+Sent: Thursday, November 16, 2017 10:04 AM
+To: Natalya Gertsik@mckinsey.com
+Cc: Christen—Tingley@mckinsey.com
+Subject: RE: OUD codes for analysis
+
+
+
+Thanks. for now I'm going to continue the current process as the first file is about 80% done. I don't want to
+slow it down.
+
+
+
+Maybe I'll try Box for the claims files
+
+
+
+
+
+'•7
+
+
+
+Rob Barmore I Director, Analytics
+
+Purdue Pharma 1 201 Tresser Blvd Stamford CT 06901
+
+
+
+
+                                            MCK-MAAG-1021082
+Robert.barmore(a harma.com I office 203.588.7634 1 cell [ Redacted
+
+
+
+From: Natalya Gertsikkmckinsey.com [mailto:Natalya Gertsikkmckinsey.com]
+Sent: Thursday, November 16, 2017 9:57 AM
+To: Barmore, Robert <Robert.Barmore(cr pharma.com>
+Cc: Christen Tingley@mckinsey.com
+Subject: RE: OUD codes for analysis
+
+
+
+Rob,
+
+
+
+Apologies for the troubles with Box. I just invited you to a folder called "Rob Barmore" and you should be able
+to upload into it. I know you're already uploading to the FTP site which is totally fine, but if you'd like, you can
+also use Box.
+
+
+
+Thanks!
+
+
+
+Natalya Gertsik, Ph.D. I McKinsey & Company 1 Redacted_._._ natalya gertsik(c~mckinse.
+
+
+
+From: Barmore, Robert [mailto:Robert.Barmore(cr pharma.com]
+Sent: Wednesday, November 15, 2017 4:19 PM
+To: Christen Tingleykmckinse.
+
+Cc: EmmaKemble@mckinsey.com; Natalya_Gertsik@mckinsey.com RE: OUD codes for analysis
+
+
+
+I started transferring but its clear that its going to take most of the night to transfer. It will come in 2
+pieces: Rx and claims. They tie together via patient_id.
+
+
+
+
+
+'•7
+
+
+
+Rob Barmore I Director, Analytics
+
+Purdue Pharma 1 201 Tresser Blvd Stamford CT 06901
+
+
+                                           MCK-MAAG-1 021082.000001
+Robert.barmore(cr~pharma.com I office 203.588.7634 1 cell I Redacted
+
+
+
+From: Christen Tingley@mckinsey.com [mailto:Christen Tingley@mckinsey.com]
+Sent: Wednesday, November 15, 2017 3:38 PM
+To: Barmore, Robert <Robert.Barmore@pharma.com>
+Cc: Emma Kemblegmckinsey.com; Natalya Gertsik(mckinsey.com
+Subject: RE: OUD codes for analysis
+
+
+
+Hi Rob! Thank you so much for pushing on this today — we are SO, SO appreciative!
+
+
+
+Let's use the FTP site. We will download the data from the FTP and save it to the box.
+
+
+
+Thank you so much!
+
+Christen
+
+
+
+
+
+
+
+From: Barmore, Robert [mailto:Robert.Barmore@pharma.com]
+Sent: Wednesday, November 15, 2017 3:23 PM
+To: Christen Tingley(r)c,mckinse_
+Cc: Emma Kemblekmckinsey.com; Natalya Gertsikkmckinse.
+Subject: RE: OUD codes for analysis
+
+
+
+So far I have created an Rx file at patient level for ERO's. The good news is that I was able to find a way to
+bridge the data to payor level (to some degree). I have not added claims (diagnoses). I will provide that
+separately. I still plan to have that today.
+
+
+
+The Rx file is 10GB. I can send this via secure FTP if you like.
+
+
+
+I did get an invitation to McKinsey Box. However, it says I do not have permission to upload files...
+
+
+
+
+                                        MCK-MAAG-1 021082.000002
+Please advise.
+
+
+
+
+
+Rob
+
+
+
+Rob Barmore I Director, Analytics
+
+Purdue Pharma 1 201 Tresser Blvd Stamford CT 06901
+
+Robert.barmore@pharma.com I office 203.588.7634 1 cell ;._._.Redacted
+
+
+
+From: Christen Tingley( mckinsey.com [mailto:ChristenTingley(mckinsey.com]
+Sent: Wednesday, November 15, 2017 12:03 PM
+To: Barmore, Robert <Robert.Barmore@pharma.com>
+Cc: Emma Kemblekmckinsey.com; Natalya Gertsikkmckinse.
+Subject: OUD codes for analysis
+
+
+
+Hi Rob,
+
+
+
+Thank you so much for cranking out this data today. I appreciate the way you have organized the way to share
+this data with us. We have done some research on the codes that would be good to flag as OUD. We are still
+working on OD — but I don't want to hold us up, so let's pull data for OUD and Cancer, and we can follow-up
+on OD.
+
+
+
+Thank you!
+
+Christen
+
+
+
+
+
+ICD-9 Codes for opioid dependence
+
+•Opioid Dependence (addiction)
+•304: opioid type dependence unspecified
+•304.01: opioid type dependence continued
+
+
+
+                                        MCK-MAAG-1 021082.000003
+•304.02: opioid type dependence episodic
+•304.03: opioid type dependence in remission
+
+ICD-10 Codes for OUD
+
+•Opioid Dependence (addiction) — F 11.2
+•F11.20: opioid dependence uncomplicated
+•F11.21: opioid dependence in remission
+•F11.22: opioid dependence with intoxication
+•F11.22 opioid dependence with intoxication uncomplicated
+•F11.221... delirium
+•F11.222... with perceptual disturbance
+•F11.229...unspecified
+•F11.23: opioid dependence with withdrawal
+•F11.24: opioid dependence with opioid induced mood disorder
+•F11.25: opioid dependence with opioid induced psychotic disorder
+•F11.250...with delusions
+•F11.251...with hallucinations
+•F11.259...unspecified
+•F11.28: opioid dependence with other opioid-induced disorder
+•F11.281...sexual dysfunction
+•F11.282...sleep disorder
+•F 11.288... other
+•F11.29: opioid dependence with unspecified opioid-induced disorder
+
+
+
+
+
+Emma Kemble
+
+McKinsey & Company, Inc.
+
+M: ' Redacted
+
+
+
++________________________________________________________________________+
+This email is confidential and may be privileged. If you have received it
+in error, please notify us immediately and then delete it. Please do not
+copy it, disclose its contents or use it for any purpose.
++________________________________________________________________________+
+
++________________________________________________________________________+
+This email is confidential and may be privileged. If you have received it
+in error, please notify us immediately and then delete it. Please do not
+copy it, disclose its contents or use it for any purpose.
++________________________________________________________________________+
+
++________________________________________________________________________+
+
+
+
+                           MCK-MAAG-1 021082.000004
+This email is confidential and may be privileged. If you have received it
+in error, please notify us immediately and then delete it. Please do not
+copy it, disclose its contents or use it for any purpose.
++________________________________________________________________________+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           MCK-MAAG-1 021082.000005

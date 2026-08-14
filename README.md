@@ -8,9 +8,9 @@ Inspired by [Karpathy's Autoresearch](https://github.com/karpathy/autoresearch),
 
 ## Method
 
-Development uses the visible `dev-19k` and `dev-87k` datasets. A two-document `debug` dataset
-supports inexpensive pipeline checks. Dataset names beginning with `test-` are reserved for a blind
-final evaluation after development has ended.
+Development uses the visible `dev-19k`, `dev-87k`, and `dev-205k` datasets. A two-document `debug`
+dataset supports inexpensive pipeline checks. Dataset names beginning with `test-` are reserved for
+a blind final evaluation after development has ended.
 
 ## Solution
 
@@ -38,15 +38,17 @@ Evaluate the solution on one complete dataset split:
 uv run python -m src.evaluation.cli --dataset debug
 uv run python -m src.evaluation.cli --dataset dev-19k
 uv run python -m src.evaluation.cli --dataset dev-87k
+uv run python -m src.evaluation.cli --dataset dev-205k
 ```
 
-Use `debug` for inexpensive pipeline checks and `dev-19k` for most experiments. Because `dev-87k`
-costs several times more, use it for occasional checks and final measurement.
+Use `debug` for inexpensive pipeline checks, `dev-19k` for cheap hypothesis tests, and `dev-87k`
+for moderate-cost validation. The larger `dev-205k` is likely more representative for measuring
+quality, but costs more to evaluate; use it for generality checks and final measurement.
 
 Inspect a development dataset's scale before planning paid runs:
 
 ```bash
-uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset
+uv run python -m src.evaluation.cli --dataset dev-205k --describe-dataset
 ```
 
 This free, read-only mode reports the document count and aggregate `o200k_base` source-token
@@ -221,6 +223,8 @@ against the result; changing the solution invalidates it.
   labeled PII values.
 - `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 92 labeled people, and 228
   labeled PII values.
+- `data/dev-205k`: 122 complete documents, 204,153 tokens, 98,127 words, 534 labeled people, and
+  1,334 labeled PII values.
 - `data/test-*`: blind final-evaluation data.
 
 `data/raw` must not be exposed to the research agent. The agent may list `data/test-*` directory

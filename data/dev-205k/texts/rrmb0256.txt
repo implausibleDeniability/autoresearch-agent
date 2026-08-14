@@ -1,0 +1,79 @@
+From    : Abhi Hazarika [/O=EXCHANGELABS/OU=EXCHANGE ADMINISTRATIVE GROUP (FYDIBOHF23SPDLT)/CN=RECIPIENTS/CN=8A28D4B4CBCD45AA8D4233C2AE606974-ABHI HAZARI]
+Sent    : 1/8/2018 1:00:00 PM
+To      : Nagendra Bommadevara
+CC      : Amir Golan [amir_golan@mckinsey.com]; Matteo Foderaro
+Subject : Re: [Scottsdale] - Draft IT pages for Monday meeting
+
+Agree - could be because of business application software not in it budget.
+Matteo - can u send Nagendra the latest pages.
+
+
+
+
+
+On Jan 8, 2018, at 7:34 AM, Nagendra Bommadevara <nagendra_bommadevara@mckinsey.com> wrote:
+
+
+$60M current spend sounds like a lot. I think we got to 45-50M when we did the bottom up analysis in 2016 - and that included Tech Ops. Doubt it went up by that much in the last 2 years
+
+
+Thanks
+Nagendra
+----------------------------------------------------------------
+Nagendra Bommadevara
+McKinsey & Company
+55 East 52nd Street, 16th Floor
+New York, NY 10022
+Phone: +1 415 672 3989
+nagendra_bommadevara@mckinsey.com
+
+Abhi Hazarika---01/05/2018 10:16:33 PM---From: Abhi Hazarika/NYO/NorthAmerica/MCKINSEY To: Matteo Foderaro/NYO/NorthAmerica/MCKINSEY@MCKINSEY, Nagendra Bommadevara/NYO/
+
+
+From: Abhi Hazarika/NYO/NorthAmerica/MCKINSEY
+To: Matteo Foderaro/NYO/NorthAmerica/MCKINSEY@MCKINSEY, Nagendra Bommadevara/NYO/NorthAmerica/MCKINSEY@MCKINSEY
+Cc: Amir Golan/NJE/NorthAmerica/MCKINSEY@MCKINSEY
+Date: 01/05/2018 10:16 PM
+Subject: Fwd: [Scottsdale] - Draft IT pages for Monday meeting
+
+
+
+
+
+Thanks Matteo. Will look over weekend.
+
+For apples to apples w benchmarks we need to include all IT spend related to all activities that generates the revenue. So long as cost for it tech ops and business related to the purdue rev, that is what we need. To that point for the opex spend we may need to include some portion of the tech ops opex in total opex which will reduce the gap to benchmark.
+
+@Nagendra - can you have a look and let us know your thoughts.The gap seems high.
+
+
+Begin forwarded message:
+
+From: "Matteo Foderaro" <Matteo_Foderaro@mckinsey.com>
+To: "Abhi Hazarika" <Abhi_Hazarika@mckinsey.com>
+Cc: "Amir Golan" <amir_golan@mckinsey.com>
+Subject: [Scottsdale] - Draft IT pages for Monday meeting
+
+Abhi,
+
+Attached the draft doc for Philippe.
+(I asked VG to remove the security alerts)
+
+A few thoughts
+-- benchmark suggests clean-sheet OpEx ~$20M
+-- total IT spend (even excluding depreciation) is ~$60M
+-- I would assume Philippe manages ~$38M (G&A IT + TechOps); not sure if TechOps is in scope for our work and how addressable by Philippe the "business" spend is
+
+I am attaching the excel if you want to look through the details.
+I also tried a reconciliation between the latest from Esther and the 2016 global strategy deck (rows 74 on)
+I could do 80%, but there are still gaps. Let me know if you have any advice.
+
+Last, let me know if you want to touchbase first thing on Monday (9-10am)
+
+Thanks and have a great weekend
+Best
+Matteo
+
+
+
+[attachment "20170108_Scottsdale update_Philippe_v6.pptx" deleted by Nagendra Bommadevara/NYO/NorthAmerica/MCKINSEY] [attachment "20180105 IT benchmark_v3.xlsx" deleted by Nagendra Bommadevara/NYO/NorthAmerica/MCKINSEY] [attachment "Copy of 1st pass of Benchmark provided by McKinsey on August 2nd 2017 (002)_MF_v2.xlsm" deleted by Nagendra Bommadevara/NYO/NorthAmerica/MCKINSEY]

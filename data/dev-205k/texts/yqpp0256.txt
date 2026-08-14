@@ -1,0 +1,2366 @@
+Mallinckrodt Pricing
+
+
+
+
+Solution Assessment
+
+
+
+
+
+
+
+
+
+Status Update- Week 6
+
+
+
+
+
+
+
+
+
+ October 4, 2016
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    M' Mallinckrodt
+    Pharmaceuticals
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     MCK-MAAG-1291049
+Redacted
+
+          MCK-MAAG-1 291049.000001
+Redacted
+
+          MCK-MAAG-1 291049.000002
+Redacted
+
+          MCK-MAAG-1 291049.000003
+ While the overall CS landscape is relatively
+
+
+ fragmented, the leakage is concentrated 10
+
+
+
+
+Gross Sales by sub-BU Gross CS Sales by Customer
+FY2015 $ in millions FY2015 $ in millions
+     $389 $137
+
+      11%                    -_- TEVA PHARM USA
+             Redacted- DAIICHI SANKYO CHEMICAL PHARMA
+
+                                           2% ,ACTAVIS/WATSON
+
+                                                     OREXIGEN
+              Controlled VALEANT PHARMACEUTICALS N AMERICA LLC
+              Substances WEST WARD
+
+                                               2% \MYLAN
+
+                                                     IMPAX LABORATORIES INC
+
+                                                    \PAR PHARMACEUTICAL ENDO
+
+
+
+
+
+
+                 icted                                    ping -300 customers
+
+
+
+
+
+
+
+
+
+     By BU                             By Customer
+  Source: API US Txs, 2015, All Source: API US Txs, 2015
+  channels except distributor to
+5 end purchaser
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                             MCK-MAAG-1 291049.000004
+    ► Margin Floors: Minimum opportunity of $2.1 M for CS
+       after vetting with Marketing pr
+
+
+
+
+    Below Floor leakage including    Below Floor leakage excluding
+    artificial floors on Codeine and artificial floors on Codeine and
+    Morphine of $3k and $2k,         Morphine of $3k and $2k,
+    respectively                     respectively
+    Fiscal 2015, $ in thousands      Fiscal 2015, $ in thousands
+                      411 5
+
+  Codeine Phos
+
+
+
+Hydrocodone Bits
+
+
+
+
+    Morphine S
+    Fentanyl Al
+       Remair
+      CS Mole
+
+                     Nominal               Floor Adjusted Expected
+       Source: FY15, US Only, Outbound
+       Channel, excludes internal sales
+      6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                               MCK-MAAG-1 291049.000005
+ Hydrocodone Bitartrate proves to be a viable
+ opportunity taking into account commercial realities
+
+
+
+
+
+  Below Floor leakage for Hydrocodone Bitartrate
+  Fiscal 2015, $ in thousands
+
+       $4.2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   Hydrocodone Bitartrate Hydrocodone Bitartrate
+     Pre-Commercial Realizable in 12 months
+      Realities
+
+7 Source: SKU#158206
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     MCK-MAAG-1 291049.000006
+  Codeine Phosphate is an opportunity for all 4
+  customers where leakage exists ti
+
+
+
+
+
+     Below Floor leakage for Codeine Phosphate
+     Fiscal 2015, $ in thousands
+              10%
+          $139
+                  $125
+HI TECH C/O AKORN
+
+
+
+ MORTON GROVE 36
+     PHARM 32
+
+
+
+PHARMACEUTICAL
+ ASSOCIATES INC
+  TRIS PHARMA\ -p.
+
+       Codeine Phosphate Codeine Phosphate
+        Pre-Commercial Realizable in 12 months
+         Realities
+
+ 8 Source: SKU#154806
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      MCK-MAAG-1 291049.000007
+Redacted
+
+          MCK-MAAG-1 291049.000008
+Redacted
+
+          MCK-MAAG-1 291049.000009
+          Morphine Sulfate pricing appears to have held up
+
+          as volume increased over last 2 years ('9
+
+
+
+     Morphine Sulfate Net Price v Volume, Moving Average 6
+     Months
+
+   1200 1200
+   1100 1100
+   1000 1000 '
+uJ 2 900 900
+     800 800 y
+     700 700
+O    600 600
+     500 500 E
+     400 400 c                                                                                                 V)
+     300 Net Price/KG 300
+a ~  200 - Quantity 200
+     100iilll 100
+
+          9/1/14 1/1/15 5/1/15 9/1/15 1/1/16 5/1/16
+                                            Month of Invoice Date
+
+     Source: SKU # 152106, FY14-16 transactions,
+     excludes internal sales, 6 Month Rolling Window
+
+       11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                      MCK-MAAG-1 291049.000010
+ We have explored price increase planning using MNK's
+
+
+
+ customer segmentation categories
+
+
+
+
+
+
+Net Price per KG and volume for Morphine Sulfate Customers
+
+Fiscal 2016
+
+                     —erisitiv1ty Afla1ySiS
+
+ 2200 4W
+ 2000 0
+
+
+
+ 1800 CQ
+
+
+
+ 1600 Grow Retain and Protect
+
+    W
+
+
+ -1400 O C
+ M
+ W 1200
+
+
+
+
+
+ 1cc -,
+ U
+
+
+ ~ 8t.
+
+
+ Z
+
+
+     Upgrade Diversify
+
+
+
+
+
+                             $155k
+
+
+
+
+
+
+    0 500 1000 1500
+
+
+       Quantity in Eaches (KG)
+
+
+
+Source: SKU # 152106, FY16 transactions, excludes internal sales
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           MCK-MAAG-1 291049.000011
+   Would price increase planning/sensitivity analysis be
+
+
+   useful? (4J
+
+
+
+    Narcotics Customer Segmentation by SKU
+    FY15
+                                     G`          O
+                                         Grow  Retain and Protect
+SKU 1 1 ,$26
+
+
+                                     so
+                                     ao  Upgrade  Diversify
+SKU 2 ® .$39
+
+
+
+SKU 3
+
+
+
+
+SKU 4 M■$49                          each CS SK'
+
+
+
+
+SKU 5 _$48
+
+
+       A+ A B C
+Net Revenue ($)
+
+
+
+
+
+
+  13
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                MCK-MAAG-1 291049.000012
+     Hydrocodone Bitartrate volume has been
+
+
+
+     relatively stable in recent months even with
+
+
+
+     higher prices
+
+
+
+
+Hydrocodone Bitartrate USP Net Price v Volume,
+
+Moving Average 6 Months
+
+
+
+ 2200 2200 - • • • •
+
+
+ 2000 2000 •
+
+
+w 1800 1800 • • -
+
+6 • •
+ 1600 1600 w _
+
+
+
+a 1400 1400 • • • •                                      c
+Y 4
+
+z 1200 1200itI • - •
+
+
+ 1000 1000 E • • . • -
+
+
+  800 800 '^                                             m
+
+  600 600 ,o
+
+
+  400 ce K 400
+
+
+  2000 iE!nI1!!1IIIIIII tity 200
+
+
+
+
+     8/1114 12/1/14 4/1/15 8/1/15 12/1/15 4/1/16 8/1/16
+
+
+                      Month of Invoice Date
+
+
+
+ Source: SKU # 158206, FY14-16 transactions,
+
+ excludes internal sales, 6 Month Rolling Window
+
+
+
+
+
+   14
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                             MCK-MAAG-1 291049.000013
+  Not all Narcotics SKU's can have prices raised
+
+
+
+  unilaterally - Codeine Phosphate USP Powder
+
+
+
+
+
+ Codeine Phosphate USP Powder Net Price v Volume,
+
+ Rolling 6 Months
+
+
+
+
+
+ 1400       1400
+
+
+
+
+m 1200      1200 "m
+w
+
+ti           m
+             w
+w 1000      1000
+
+k
+o.
+
+Z 800       800
+
+0
+
+m 600       600
+0            Ln
+m
+
+
+m 400       400 0
+             a
+
+
+2 200       200
+
+
+
+ 0          0
+
+
+ 9/1/14 1/1/15 5/1/15 9/1/15 1/1/16 5/1/16
+
+
+     Month of Invoice Date
+
+
+
+
+ Source: SKU # 154806, FY14-16 transactions,
+
+ excludes internal sales, 6 Month Rolling Window
+
+
+
+ 15
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                 MCK-MAAG-1 291049.000014
+Redacted
+
+          MCK-MAAG-1 291049.000015
+Redacted
+
+          MCK-MAAG-1 291049.000016
+    Current `variable' costs are skewed by MNK's vertical
+    integration and distort cash contribution analysis
+                                                                                        ri
+
+Cost Example: HYDRO/APAP TABS 5/325 MG
+       Overhead         Volume Variance
+       Labor $1.62 •- - .                                                                   .•
+    •  Material • - • . • -
+                                i
+
+                                                                      $1.12
+
+                                                                                      $0.88
+
+
+
+
+
+
+                       1 2 3 4                                                          5
+
+
+                 Capacity Based Fully Absorbed Variable Cost @ Variable Cost @ Variable Cost Only
+                 Standard (100% Standard (38% Capacity Based Fully Absorbed
+                   Utilization) Utilization for OH) Standard Standard
+
+          1-5
+
+   18
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                   MCK-MAAG-1 291049.000017
+Redacted
+
+          MCK-MAAG-1 291049.000018
+        Distinguishing true FC and VC from the API plant
+
+
+        downstream is a fully manual exercise, but results in
+
+
+        a true contribution margin
+
+  Cost Example: HYDRO/APAP TABS 5/325 MG 6
+
+
+                    Volume Variance
+
+•  Overhead
+
+•  Labor $1.62
+
+•  Material
+
+                             i
+                $1.21 /WO.6$1.12$1.02 0.98
+
+
+
+
+
+
+                         ----------- --IIII ------$0.88 016
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   11 •21 E 3 R •41 •51 I N 6
+
+
+
+
+           Capacity Based Fully Absorbed Variable Cost @ Variable Cost @ Variable Cost Onl Variable Cost @
+           Standard (100% Standard (38% Capacity Based Fully Absorbed Fully Absorbed
+              Utilization) Utilization for OH) Standard Standard Standard
+                                                                                                             Excluding St. Loui:
+                                            •  -  •    •  -       -    • - -  -                              Plant Fixed Costs
+                            6
+
+
+
+   20
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                MCK-MAAG-1 291049.000019
+Redacted
+
+          MCK-MAAG-1 291049.000020
+Redacted
+
+          MCK-MAAG-1 291049.000021
+Redacted
+
+          MCK-MAAG-1 291049.000022
+Which order do you take? Standard costs can distort
+commercial decisions in a low utilization climate
+Using STD cost vs. variable cost as a reference for evaluating the profitability of
+incremental volume can lead to different, and unintended, outcomes
+Cost Basis Scenarios — Hydro APAP
+• Fixed Cost
+
+2. @ STD 3. @ STD Full Variable Cost
+$per Unit variable Capacity cost Absorption cost Std. Margin
+Variable Cost Cost 1
+Contribution Marg n i `
+I
+Hydro APAP 7.38 : $8.57 I '$8.57 $8.57
+Ii I
+- I
+
+Hydro APAP-
+St. Louis FC 7.59 ; $8.57 x$8.57 ;$8 57
+Excluded ;
+I
+Per unit Per unit Per unit
+Market Price Market Price Market Price
+Note: Market Price per unit of $8.57 is avg. dead dead net price for FY15 for SKU# 012301
+MCK-MAAG-1 291049.000023
+
+
+Generics Analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       Mallinckrodt
+       Pharmaceuticals
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       MCK-MAAG-1 291049.000024
+Redacted
+
+          MCK-MAAG-1 291049.000025
+Redacted
+
+          MCK-MAAG-1 291049.000026
+Redacted
+
+          MCK-MAAG-1 291049.000027
+     The 500 tab bottle of Oxy APAP seems to be an opportunity
+
+     to test what the market will bear to
+
+
+
+
+     Net Price per tab by Bottle Size- Oxy
+     APAP 5/325 Tabs, FY15
+
+
+               051201 050205
+         $0.09  O
+
+         $0.08 $0.0870
+                                            ttataiiwn Fê1 O
+      .0 $0.07        #-                 pace increase the market can bear on the larger, slower
+      H                                   oving bottles I
+      CL $0.06        $0.D665
+
+      y  $0.05
+      Z
+
+      d  $004                            Loss of volume assumption of 20°/a from price increases
+
+         $003
+
+
+         $0.02
+
+
+         $0-0J-                                          $721k
+
+         $0 00
+                100 500
+               Tabs per Bottle
+29   SKUs: 051201, 051205
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                   MCK-MAAG-1 291049.000028
+          Hydro APAP, in varying strengths, can be a sizable
+
+
+
+          opportunity 10
+
+
+
+
+
+
+
+
+          Net Price per tab by Bottle Size-
+
+          Hydrocodone APAP 5/325 Tabs, FY15
+
+
+
+
+
+                   • •      111 0=05
+
+
+                   $0.09
+
+
+                                   0
+
+                   $0 Q8
+
+
+                                50.0®
+
+
+                   $0.07      .'- --------
+
+
+
+
+
+
+              L    $0.66                        W.0033
+
+              d
+              Q
+
+              V3   $0.o5
+              Q)
+              d
+              Z
+
+              •a      :04
+
+
+              d
+
+                                                                                                                $680k
+                   $003
+
+
+
+
+
+
+                   $0.02
+
+
+
+
+
+
+                   $0.01
+
+
+
+
+                   $0.00
+
+
+                                   100 50C
+
+
+                                Tabs per Bottle
+
+
+30
+          SKUs: 012301, 012305
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                       MCK-MAAG-1 291049.000029
+ We believe the opportunity exists for 4 products within the
+ Generics portfolio and the market should be tested to
+ determine what it can bear
+
+
+     Product increase
+
+
+
+
+
+
+
+
+
+
+
+
+
+31
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                      MCK-MAAG-1 291049.000030
+     In Generics, the incoming hypothesis of price variation
+
+
+     has been quantified to be a significant                                       opportunity
+
+
+
+Avg. Generics Net Price per each by customer
+ Time Period: FY15
+Excludes Internal Sales
+      Long Item 'Ibr/Prri.:..   Long Item Nbr/ProdutDesc1 Long It Nbr/ProdoctDexl
+                -                     048501                    012501
+                              zs
+
+   ao                         za
+                              zz
+
+                                                        ao
+   zs                         "'
+
+
+
+
+   zO                         1~
+                              14~                 -                                                                           J
+
+
+
+
+                              10
+
+   10                         g
+                                                                                     (60%yield $18M
+
+
+
+                                                                                      Expected $12M
+                              ;20m                                                   (40% yield)
+                            Pet~centile
+             _                                          o
+      ~` 'DROC EAF=.F.                                    HYDROCODONEAPAPIC".'~    Conservative $6M
+
+                                                                                     (20% yield)
+
+Source: FY15, Long Item #'s: 012301, 048501, 012501
+  32
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                            MCK-MAAG-1 291049.000031
+Redacted
+
+          MCK-MAAG-1 291049.000032
+~Hydrocodone APAP 5/325 Tabs also showing minimal
+
+
+
+    correlation between market share and net price
+
+
+
+
+
+                                                                                              W
+Hvdrocodone APAP 5/325 Tabs Market Share vs Net Price FY15
+
+
+
+    100%                                                                            Mallinckrodt
+
+
+
+
+                                                                                    Actavis
+
+
+
+     90%UI14                                                                        AmenalPharm
+
+
+     80%
+
+                                                                   12               Sandoz
+ w
+
+     70%                                                                              Endogenericprod
+
+
+ o                                                                        yr
+                                                                   10
+     60%                                                                  f       —# Malinckrodt Net
+ c                                                                        rC          Price/Each
+ U,                                                                       w
+
+
+
+     50% '                                                         s      n~
+
+ GS                                                                       V
+ L
+
+
+     40%
+                                                                   6      w
+
+ Y ~                                                                      ~
+
+
+
+
+                                                                   4
+
+
+     20%
+
+
+
+
+                                                                   2
+     10%
+
+
+
+
+       0%                                                          0
+
+           201501 201502 201503 ?01504 201505 201506 201507 201508
+
+
+   201501 = Oct 2014                                    201512 = Sept 2015
+
+
+   Source: SKU # 012301, FY15 transactions,
+
+
+   excludes internal sales,
+
+
+
+
+   34
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                          MCK-MAAG-1 291049.000033
+Redacted
+
+          MCK-MAAG-1 291049.000034
+Redacted
+
+          MCK-MAAG-1 291049.000035
+Redacted
+
+          MCK-MAAG-1 291049.000036
+Redacted
+
+          MCK-MAAG-1 291049.000037
+Redacted
+
+          MCK-MAAG-1 291049.000038
+Redacted
+
+          MCK-MAAG-1 291049.000039
+Redacted
+
+          MCK-MAAG-1 291049.000040
+Redacted
+
+          MCK-MAAG-1 291049.000041
+Redacted
+
+          MCK-MAAG-1 291049.000042
+Redacted
+
+          MCK-MAAG-1 291049.000043
+Redacted
+
+          MCK-MAAG-1 291049.000044
+Redacted
+
+          MCK-MAAG-1 291049.000045
+Redacted
+
+          MCK-MAAG-1 291049.000046

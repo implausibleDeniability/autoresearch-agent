@@ -1,0 +1,9 @@
+From        : John Goldie [/O=EXCHANGELABS/OU=EXCHANGE ADMINISTRATIVE GROUP (FYDIBOHF23SPDLT)/CN=RECIPIENTS/CN=88A68A9A81B348FB8558F71371EAE616-JOHN GOLDIE]
+Sent        : 1/30/2018 6:31:37 AM
+To          : John Goldie [john_goldie@mckinsey.com]; Akiko Shimamura [Akiko_Shimamura@mckinsey.com]
+Subject     : Purdue client discussion: shadow
+
+Start        : 6/10/2016 1:00:00 PM
+End          : 6/10/2016 2:00:00 PM
+
+Recurrence   : (none)

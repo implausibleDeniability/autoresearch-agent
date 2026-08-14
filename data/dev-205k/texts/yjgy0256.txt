@@ -1,0 +1,15 @@
+
+Location    : US +1-212-798-0808,,81997706#  || VoIP: 400-0808 PC: 81997706
+
+Start        : 1/4/2019 4:30:00 PM
+End          : 1/4/2019 5:00:00 PM
+Show Time As : Tentative
+
+Recurrence   : (none)
+
+Participants:
+Laura Moran
+Anna Draganova
+Craig MacKenzie
+Arnie Ghatak (opt)
+Tom Ruby

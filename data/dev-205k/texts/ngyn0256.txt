@@ -1,0 +1,1283 @@
+Market survey results
+Discussion document
+October 7, 2015
+Document type
+Date
+©2015 Endo Pharmaceuticals Inc. All rights reserved.
+Notes
+-----
+0
+
+Contents
+Appendix
+Backup
+TPPs
+Over-estimation adjustment
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+1
+
+Contents
+Appendix
+Backup
+TPPs
+Over-estimation adjustment
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+2
+
+Source: Physician survey, team analysis
+Belbuca's baseline TPP does not stand out from other branded products
+p=0.76
+p=0.94
+p=0.91
+Average
+LAO, % of patients prescribed to
+Takeaways
+Belbuca uptake appears better than Nucynta but worse than Butrans; however, no differences seen are statistically significant
+Numbers are overestimates and will likely need adjustments:
+Zohydro prescriptions (as a new, unbranded product) are significantly overestimated by physicians
+Need to adjust for consumer overstatement, awareness, and distribution
+Also consider insurance, reimbursement, and patient cost
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+3
+
+Improving the baseline TPP does not result in a statistically significant increase in reported SAO prescription habits
+Source: Physician survey, team analysis
+17.6
+17.3
+20.4
+20.1
+19.2
+p=0.73
+p=0.66
+p=0.52
+p=0.52
+p=0.63
+p=0.33
+p=0.96
+p=0.56
+p=0.85
+p=0.95
+p=0.76
+Ease of Use TPPs
+Pain TPPs
+Abuse TPPs
+Butrans
+13
+Safer
+Baseline
+5
+Back pain
+1
+Belbuca
+6
+Neuropathic pain
+7
+Elderly population
+8
+Sleep/Mood/Cognition
+9
+Functionality
+10
+Less addictive
+11
+Less "likeable"
+12
+Less misuse
+14
+7 dosages/titrations
+Description
+2
+Butrans
+LAO, % of patients prescribed to
+Average
+SAO
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+4
+
+Baseline TPPs: PCPs vs. Specialists
+Average
+Specialists2
+PCPs1
+Source: Physician survey, team analysis
+1 PCPs: n=263  2  Specialists: n=115
+SAO, % of patients prescribed to
+LAO, % of patients prescribed to
+Add p values
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+5
+
+Ease of Use TPPs
+Pain TPPs
+Abuse TPPs
+Butrans
+Baseline
+Additional TPPs: PCPs vs. Specialists
+Source: Physician survey, team analysis
+0.06
+0.82
+0.97
+0.61
+0.67
+0.97
+0.41
+0.92
+0.88
+0.22
+0.98
+0.98
+1 PCPs: n=263  2  Specialists: n=115
+Safer
+Back pain
+Belbuca
+Neuropathic pain
+Elderly population
+Sleep/Mood/Cognition
+Functionality
+Less addictive
+Less "likeable"
+Less misuse
+7 dosages/titrations
+SAO, % of patients prescribed to
+P-values
+Description
+Butrans
+13
+5
+1
+6
+7
+8
+9
+10
+11
+12
+14
+2
+If SAO value props are extended:
+PCPs are more likely to prescribe Belbuca for back pain than specialists
+PCPs may also be more dissuaded by difficult titration
+Specialists
+PCPs
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+6
+
+Additional TPPs: PCPs vs. Specialists
+Specialists
+LAO
+Ease of Use TPPs
+Pain TPPs
+Abuse TPPs
+Butrans
+Baseline
+13
+Safer
+5
+Back pain
+1
+Belbuca
+6
+Neuropathic pain
+7
+Elderly population
+8
+Sleep/Mood/Cognition
+9
+Functionality
+10
+Less addictive
+11
+Less "likeable"
+12
+Less misuse
+14
+7 dosages/titrations
+LAO, % of patients prescribed to
+P-values
+Description
+2
+Butrans
+If LAO value props are extended:
+PCPs are more likely to prescribe Belbuca for back pain and neuropathic pain  than specialists
+Specialists are more likely to prescribe it for elderly patients
+Source: Physician survey, team analysis
+1 PCPs: n=263  2  Specialists: n=115
+0.04
+0.16
+0.12
+0.24
+0.60
+0.86
+0.41
+0.40
+0.28
+0.80
+0.87
+0.45
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+7
+
+Where is the 17.6% Belbuca LAO share coming from?
+Source: Physician survey, team analysis
+Belbuca would take share from all LAOs almost equally; perhaps less from Butrans (not statistically significant)
+TPP Description
+Hydroco-done ER
+%
+Oxyco-done ER
+%
+Morphine ER
+%
+Tramadol ER
+%
+Hydromor-phone ER
+%
+ Oxymor-phone ER
+%
+Tapentadol ER
+%
+Metha-done
+%
+Fentanyl
+%
+Butrans
+%
+Back pain
+32
+22
+22
+7
+13
+5
+19
+20
+19
+21
+5
+Belbuca
+20
+18
+17
+17
+15
+18
+22
+16
+19
+7
+1
+Neuropathic pain
+12
+23
+23
+20
+15
+18
+10
+25
+18
+18
+6
+Elderly population
+23
+26
+25
+22
+24
+14
+19
+18
+17
+8
+7
+Sleep/Mood/Cognition
+27
+20
+22
+22
+24
+14
+19
+18
+24
+19
+8
+Functionality
+17
+20
+23
+24
+19
+15
+28
+0
+22
+21
+9
+Less addictive
+20
+21
+25
+32
+14
+25
+27
+20
+26
+7
+10
+Less "likeable"
+24
+20
+11
+16
+24
+28
+14
+14
+17
+26
+11
+Less misuse
+23
+24
+22
+32
+17
+23
+2
+19
+22
+1
+12
+Safer
+14
+18
+22
+9
+25
+17
+31
+15
+21
+13
+13
+7 dosages/titrations
+15
+17
+18
+18
+17
+4
+20
+23
+20
+14
+14
+Butrans
+29
+20
+19
+27
+12
+12
+15
+13
+19
+9
+2
+Nucynta ER
+16
+17
+19
+24
+22
+16
+-5
+18
+17
+22
+3
+4
+Zohydro
+11
+20
+22
+6
+27
+6
+22
+19
+18
+18
+Average
+20
+21
+21
+20
+19
+15
+18
+17
+20
+15
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+8
+
+LAO Belbuca prescription by length of practice
+Source: Physician survey, team analysis
+There is no statistically significant difference in reported Belbuca prescribing patterns based on length of practice
+0.94
+0.84
+0.48
+0.55
+0.51
+P-values
+Length of practice
+# of phy-sicians
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+Average
+3-5 years
+16
+24
+31
+17
+15
+15
+29
+29
+28
+47
+35
+50
+23
+10
+5
+25
+6-10 years
+74
+16
+20
+27
+16
+22
+20
+17
+21
+19
+19
+16
+25
+13
+16
+19
+11-15 years
+97
+19
+17
+12
+21
+16
+19
+25
+20
+15
+25
+19
+13
+24
+20
+19
+16-20 years
+67
+14
+17
+23
+24
+15
+20
+21
+31
+18
+23
+21
+32
+22
+25
+22
+>20 years
+120
+18
+20
+14
+14
+23
+20
+21
+14
+25
+22
+16
+17
+17
+13
+18
+Average
+…
+18
+19
+17
+18
+19
+20
+21
+21
+20
+23
+18
+21
+19
+17
+19
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+9
+
+Ease of Use TPPs
+Pain TPPs
+Abuse TPPs
+Butrans
+Baseline
+Additional TPPs: PCPs vs. Specialists
+Source: Physician survey, team analysis
+0.06
+0.82
+0.97
+0.61
+0.67
+0.97
+0.41
+0.92
+0.88
+0.22
+0.98
+0.98
+1 PCPs: n=263  2  Specialists: n=115
+SAO, % of patients prescribed to
+If SAO value props are extended:
+PCPs are more likely to prescribe Belbuca for back pain than specialists
+PCPs may also be more dissuaded by difficult titration
+13
+Safer
+5
+Back pain
+1
+Belbuca
+6
+Neuropathic pain
+7
+Elderly population
+8
+Sleep/Mood/Cognition
+9
+Functionality
+10
+Less addictive
+11
+Less "likeable"
+12
+Less misuse
+14
+7 dosages/titrations
+P-values
+Description
+2
+Butrans
+@VGA: Please use consistent formatting for the P-values column: make them all orange circles like row 1 on all pages
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+10
+
+LAO, % of patients prescribed to
+P-values
+Additional TPPs: PCPs vs. Specialists
+Specialists
+LAO
+0.04
+0.16
+0.12
+0.24
+0.60
+0.86
+0.41
+0.40
+0.28
+0.80
+0.87
+0.45
+Ease of Use TPPs
+Pain TPPs
+Abuse TPPs
+Butrans
+Baseline
+13
+Safer
+5
+Back pain
+1
+Belbuca
+6
+Neuropathic pain
+7
+Elderly population
+8
+Sleep/Mood/Cognition
+9
+Functionality
+10
+Less addictive
+11
+Less "likeable"
+12
+Less misuse
+14
+7 dosages/titrations
+Description
+2
+Butrans
+If LAO value props are extended:
+PCPs are more likely to prescribe Belbuca for back pain and neuropathic pain  than specialists
+Specialists are more likely to prescribe it for elderly patients
+Source: Physician survey, team analysis
+1 PCPs: n=263  2  Specialists: n=115
+@VGA: Please use consistent formatting for the P-values column: make them all orange circles like row 1 on all pages
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+11
+
+Hydroco-done ER	Oxyco-done ER	Mor-phine ER	Tramadol ER	Hydromor-phone ER	 Oxymor-phone ER	Tapentadol ER	Metha-done	Fentanyl	Butrans
+Where is the 17.6% Belbuca LAO share coming from?
+Source: Physician survey, team analysis
+	20%	18%	17%	17%	15%	18%	22%	16%	19%	7%
+	29%	20%	19%	27%	12%	12%	15%	13%	19%	9%
+	16%	17%	19%	24%	22%	16%	-5%	18%	17%	22%
+	11%	20%	22%	6%	27%	6%	22%	19%	18%	18%
+	32%	22%	22%	7%	13%	5%	19%	20%	19%	21%
+	12%	23%	23%	20%	15%	18%	10%	25%	18%	18%
+	23%	26%	25%	22%	24%	14%	19%	18%	17%	8%
+	27%	20%	22%	22%	24%	14%	19%	18%	24%	19%
+	17%	20%	23%	24%	19%	15%	28%	0%	22%	21%
+	20%	21%	25%	32%	14%	25%	27%	20%	26%	7%
+	24%	20%	11%	16%	24%	28%	14%	14%	17%	26%
+	23%	24%	22%	32%	17%	23%	2%	19%	22%	1%
+	14%	18%	22%	9%	25%	17%	31%	15%	21%	13%
+	15%	17%	18%	18%	17%	4%	20%	23%	20%	14%
+	20%	21%	21%	20%	19%	15%	18%	17%	20%	15%
+TPP Description
+5
+Back pain
+1
+Belbuca
+6
+Neuropathic pain
+7
+Elderly population
+8
+Sleep/Mood/Cognition
+9
+Functionality
+10
+Less addictive
+11
+Less "likeable"
+12
+Less misuse
+13
+Safer
+14
+7 dosages/titrations
+2
+Butrans
+3
+Nucynta ER
+4
+Zohydro
+Average
+Belbuca would take share from all LAOs almost equally; perhaps less from Butrans (not statistically significant)
+@VGA:  Make all columns same width, eliminate excel graph and replace with text
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+12
+
+LAO Belbuca prescription by length of practice
+	Length of practice	# of phy-sicians	1	2	3	4	5	6	7	8	9	10	11	12	13	14	Average
+	3-5 years	16	24	31	17	15	15	29	29	28	47	35	50	23	10	5	25
+	6-10 years	74	16	20	27	16	22	20	17	21	19	19	16	25	13	16	19
+	11-15 years	97	19	17	12	21	16	19	25	20	15	25	19	13	24	20	19
+	16-20 years	67	14	17	23	24	15	20	21	31	18	23	21	32	22	25	22
+	>20 years	120	18	20	14	14	23	20	21	14	25	22	16	17	17	13	18
+	Average	18	19	17	18	19	20	21	21	20	23	18	21	19	17	19
+Source: Physician survey, team analysis
+There is no statistically significant difference in reported Belbuca prescribing patterns based on length of practice
+P-values
+0.94
+0.84
+0.48
+0.55
+0.51
+@VGA: Please use consistent formatting for the P-values column: make them all orange circles like row 1 on all pages
+@VGA:  Make all columns same width and rows the same height eliminate excel graph and replace with text
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+13
+
+Contents
+Appendix
+Backup
+TPPs
+Over-estimation adjustment
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+14
+
+Baseline TPPs
+Buprenorphine buccal film
+1
+Hydrocodone oral tablets
+4
+Product X is an LAO with buprenorphine, a partial agonist, as the active ingredient.   A phase III clinical trial demonstrated safety, efficacy, a favorable tolerability profile, and favorable discontinuation rates for Product X.  It is classified as Schedule III, for which you can call in refills.  Product X is a buprenorphine buccal film with an indication for pain, which is administered every 12 hours with efficacy up to 160 morphine sulfate equivalents (MSEs).
+Buprenorphine transdermal patch
+2
+Product X is an LAO with buprenorphine, a partial agonist, as the active ingredient. A phase III clinical trial demonstrated safety, efficacy, a favorable tolerability profile, and favorable discontinuation rates for Product X.  It is classified as Schedule III, for which you can call in refills. Product X is a transdermal patch that delivers seven days of buprenorphine with efficacy up to 80 morphine sulfate equivalents (MSEs).
+Tapentadol oral tablets
+3
+Product X is an LAO with Tapentadol, a dual opioid receptor agonist and norepinephrine reuptake inhibitor, as the active ingredient.  A phase III clinical trial demonstrated safety, efficacy, a favorable tolerability profile, and favorable discontinuation rates for Product X.  It is classified as Schedule II, for which you cannot call in refills.  It is also approved for neuropathic pain.  Product X is an oral tablet administered every 12 hours, available in dosage forms up to 150 morphine sulfate equivalents (MSE)..
+Product X is an LAO with hydrocodone, an opioid receptor agonist, as the active ingredient. A phase III clinical trial demonstrated safety, efficacy, a favorable tolerability profile, and favorable discontinuation rates for Product X.  It is classified as Schedule II, for which you cannot call in refills.  Product X is an oral tablet administered every 12 hours, available in dosage forms up to 150 morphine sulfate equivalents (MSE).
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+15
+
+Test TPPs: to be added to Buprenorphine buccal film baseline (1/2)
+Pain TPPs
+5
+Additionally, Product X has been proven in clinical trials to be efficacious for low-back pain. Its long-acting formulation also means better consistent pain management when compared to SAOs.
+6
+Additionally, Product X has been proven in clinical trials and approved for neuropathic pain associated with diabetic peripheral neuropathy.
+7
+Additionally, Product X's favorable tolerability has been demonstrated in the elderly population.
+8
+Additionally, patients taking product X were found to have improved sleep, mood, and cognition.
+9
+Additionally, patients taking product X were found to have improved functionality, as measured by the patient's global impression of change (PGIC) and the Roland Morris Disability Questionnaire (RMDQ).
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+16
+
+Test TPPs: to be added to Buprenorphine buccal film baseline (2/2)
+Abuse TPPs
+Ease of Use TPPs
+14
+Product X has seven dosage strengths, and patients must be titrated to the appropriate dosage.  This takes on average 17 days for opioid naïve patients and 25 days for opioid experienced.
+11
+Because it is only a partial agonist, Buprenorphine as a molecule is less "likeable" than other molecules in SAOs.  This has been shown in clinical studies for other buprenorphine products.
+12
+Product X is an LAO that is less likely to be misused than other opioids due to its dosage form.  It has been shown in misuse trials that the buccal film is harder to crush or melt than a typical SAO or LAO pill, such as Percocet or Oxycodone.
+Product X has been proven to be less addictive than SAOs in a 2 year study of actual use by patients, i.e., patients are less likely to become opioid dependent and exhibit drug-seeking behavior.
+10
+13
+Product X is an LAO that has a better safety profile after an accidental or purposeful overdose, supported by real world evidence.  If patients overdose on the product, they are less likely to suffer fatal respiratory depression due to a ceiling effect.
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+17
+
+Contents
+Appendix
+Backup
+TPPs
+Over-estimation adjustment
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+18
+
+Main adjustments need to account for consumer overstatement, awareness and distribution level
+Detail in following pages
+Source: McKinsey Consumer and Shopper Insights (CSI) Practice
+Type of adjustment
+Description
+Consumer overstatement
+Respondents typically overstate their intention to buy a product
+There are no real life budget constraints when taking a survey
+Interviewer biases may be present (in interviewer administered surveys)
+Respondents use scales differently vs. their actual intentions
+Overstatement varies by
+Category, e.g., bigger ticket items have higher overstatement since real decision is more complex
+Regions, countries and demographic groups
+Data collection method, e.g., online vs phone surveys
+These responses (incl. those saying ‘definitely will buy') must be discounted
+Awareness
+Since we show the concept to everyone in the survey, we assume the product will have 100% awareness
+Ideally, adjust assumptions based on intended marketing investment
+Distribution level
+Concept testing assumes 100% availability to the product, which may be unrealistic if:
+Launch will only take place in certain geographies
+Product will not be available in all relevant channels
+Ideally, adjust assumptions based on intended distribution plan and information on the category
+Other
+Other potential adjustments may include inertia (such as in several categories where a purchase is not necessarily warranted) & execution assumptions (e.g., promotional introductory plans, advertising execution/appeal)
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+19
+
+Example: application of multiple adjustments to estimate product take rate based on concept testing
+Awareness adjustment
+Distribution adjustment
+Overstatement adjustment
+30
+10
+Would
+definitely
+purchase
+Would
+probably
+purchase
+Rationale for adjustment
+Assumptions for example
+Original Top 2 Box
+Adjusted take rate 1
+Adjusted take rate 2
+Final
+take rate
+Percent
+Final take rate can be multiplied by size of target population to estimate volume
+Final take rate is directional, even after all these adjustments
+Source: McKinsey Consumer and Shopper Insights (CSI) Practice
+ILLUSTRATIVE
+Inertia or stick-iness (e.g. in financial services) is often included as part of  overstatement adjustment but can be treated separately
+Need to narrow gap between declared intention and actual behavior
+Applied discount guidelines for packaged goods
+Concept testing assumes 100% availability, which is unrealistic
+Product availability: 70%
+Concept testing assumes 100% awareness, which is unrealistic
+Product awareness & understanding: 40%
+TRACKER
+Title
+Unit of measure
+1 Footnote
+Source: Source
+Unit of measure
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+Legend
+PRELIMINARY
+Legend
+Legend
+Legend
+Legend
+Legend
+‹#›
+Notes
+-----
+20

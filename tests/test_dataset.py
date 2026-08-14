@@ -8,7 +8,7 @@ JUSTIN_EMAILS = {"schwabjustin@epa.gov", "schwab.justin@epa.gov"}
 
 @pytest.mark.parametrize(
     ("dataset", "expected_people", "expected_values"),
-    (("dev-19k", 73, 196), ("dev-87k", 92, 228)),
+    (("dev-19k", 73, 196), ("dev-87k", 92, 228), ("dev-205k", 534, 1334)),
 )
 def test_visible_dataset_consolidates_justin_schwab(dataset: str, expected_people: int, expected_values: int):
     # setup

@@ -1,0 +1,291 @@
+Message
+
+From: John Goldie [CN=John Goldie/OU=NYO/OU=NorthAmerica/O=MCKINSEY]
+Sent: 2/12/2014 6:20:51 PM
+To: Arnab Ghatak [CN=Arnab Ghatak/OU=NJE/OU=NorthAmerica/O=MCKINSEY@MCKINSEY]
+CC: Alessandro Radici [CN=Alessandro Radici/OU=NJE/OU=NorthAmerica/O=MCKINSEY@MCKINSEY]; Laura Moran
+        [CN=Laura Moran/OU=NJE/OU=NorthAmerica/O=MCKINSEY@MCKINSEY]; Rob Rosiello [CN=Rob
+        Rosiello/OU=STA/OU=NorthAmerica/O=MCKINSEY@MCKINSEY]
+Subject: Re: Call Implementation - Update
+
+
+
+Not sure what you mean by the call reporting.
+
+The FCR and national metrics will track total calls, vacancies, calls/day, primary mix, secondary attainment. What really
+needs to be tracked (and should be in Jon's metrics) is the reach and tier selection for prescribers by value decile right
+after target selection is complete. Then tracking attainment against these tiers as the quarter goes on.
+
+Note the new call list structure will go into place on April 1.
+
+What you might want to see is for Q1 QTD, what is the reach and frequency by value decile so far. Are we on pace with
+the highest potential prescribers?
+
+John
+
+
+John Goldie
+McKinsey & Co
+55 e52nd St
+New York, NY, 10022
+o: (212) 446-7349
+m: Redacted
+
+
+
+From: Arnab Ghatak/NJE/NorthAmerica/MCKINSEY
+To: Laura Moran/NJE/NorthAmerica/MCKINSEY@mckinsey,
+Cc: Rob Rosiello/STA/NorthAmerica/MCKINSEY@mckinsey, John Goldie/NYO/NorthAmerica/MCKINSEY@mckinsey, Alessandro
+Radici/NJE/NorthAmerica/MCKINSEY@mckinsey
+Date: 02/12/2014 01:08 PM
+Subject: Re: Call Implementation - Update
+
+
+When can we see the call reporting?
+
+On Feb 12, 2014, at 6:06 PM, "Laura Moran" <laura moran@mckinsey.com> wrote:
+
+Arnie,
+We've double-checked the metrics, the facts are right.
+My bias is to agree with your point that these are less important than right frequency of calls on the right targets, but to add that call
+reporting itself is an activity metric, and what we want to closely monitor is if these are driving increased sales.
+Rob Rosiello---02/12/2014 12:37 PM EST---Good draft... ideas from my end... 1. Would drop first sentence
+
+
+From: Rob Rosiello
+To: Arnab Ghatak; Laura Moran; John Goldie; Alessandro Radici
+Date: 02/12/2014 12:37 PM EST
+Subject: Re: Fwd: Call Implementation - Update
+
+
+
+
+
+
+
+                                                       MCK-MAAG-3385164
+Good draft.. .ideas from my end...
+1. Would drop first sentence
+
+2. Add sentence on "when and how" we will know it's time to celebrate
+
+Arnab Ghatak---02/12/2014 12:28 PM EST---
+
+
+From: Arnab Ghatak
+To: Rob Rosiello; Laura Moran; John Goldie; Alessandro Radici
+Cc:
+Date: 02/12/2014 12:28 PM EST
+Subject: Fwd: Call Implementation - Update
+
+
+
+Welcome thoughts on draft response - when can we tell him if the field is changing their call plan
+
+Mark,
+
+Thanks for sharing.
+
+My initial reaction is that this is mostly just positioning and not something to really celebrate. Almost all of
+these results were known going into Florida.
+
+The real thing we are working on tracking is whether the field is actually changing their call plan - seeing the
+new target drs and at the right frequency.
+
+
+
+Begin forwarded message:
+
+From: "Timney, Mark" <Mark.Timneygpharma.com>
+Date: February 12, 2014 at 3:59:41 PM GMT
+To: "arnab hatak e,mckinse-y.com" <arnab hatak e,mckinse-y. com>
+Subject: FW: Call Implementation - Update
+
+Arnie,
+
+
+
+Thoughts? In line with the agreement?
+
+
+
+Mark.
+
+
+
+From: Gasdia, Russell
+Sent: Wednesday, February 12, 2014 10:56 AM
+To: Fisher, Windell; Cramer, Phil; Pettit, John
+Cc: Timney, Mark; Mahony, Edward; Mallin, William
+
+
+
+                                         MCK-MAAG-3385164.000001
+Subject: Call Implementation - Update
+
+
+
+Windell, Phil and Jane
+
+
+
+
+
+   YTD through the week ending 2/7/14 it appears as if you are gaining implementation of key call activity
+metrics
+
+   Primary presentations are achieving the objective of 60:40 (OxyContin:Butrans)
+
+   Prescriber call average is 7.2, below goal of 7.5. However, trend have been improving and the past three
+weeks have averaged 7.4. With continued focus this should get to at least 7.5
+
+   Retail pharmacy call average is 1.1 versus the goal of 1.0 per day. Recent weeks have been .09 per day.
+
+   Vacancy rate has been favorable with 97.1% of territories filled per week versus assumption of 96.5%
+(3.5% vacancy rate)
+
+
+
+Good job thus far. Keep the management team focused on execution of E2E and these objectives and I'm
+confident results will follow.
+
+
+
+Russ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                       MCK-MAAG-3385164.000002
+1st QTR 2013 Key
+Call Activity
+Objectives
+
+
+Data from Weekly
+Metrics Reports
+
+
+                     Dec  Jan 04 - Jan       Jan 11 - Jan 17 2014      Jan 18 - Jan 24 Jan Feb
+                     28-    102014                                          2014      25-   01 -
+                     Jan                                                              Jan   Feb
+                      03                                                               31    07
+                     2014                                                             2014  2014
+ Butrans 1st Position 2,237      6,504                6,456                     6,264 1,021 6,103
+Butrans 2nd Position 2,603       8,616                9,421                     9,089 1,591 8,996
+ % Prim for Butrans 45%           42%                  39%                       40%   38%   40%
+% Calls Butrans 2nd 96%           95%                  94%                       95%   97%   96%
+                 pos
+   PDEs for Butrans 3,539       10,812               11,167                    10,809 1,81710,601
+   PDEs for Butrans 49%           47%                  46%                       47%   46%   47%
+           (% total)
+
+      OxyContin 1st 2,715        9,094                9,970                     9,527 1,646 9,344
+            Position
+     OxyContin 2nd 1,992         5,764                5,796                     5,687   966 5,634
+            Position
+         % Prim for 55%           58%                  61%                       60%   62% 60%
+         OxyContin
+  % Calls OxyContin 89%           89%                  90%                       91%   95% 92%
+            2nd pos
+PDEs for OxyContin 3,711        11,976               12,868                    12,371 2,12912,161
+PDEs for OxyContin 51%            53%                  54%                       53%   54% 53%
+           (% total)
+
+
+         Total PDEs 7,250 22,788                     24,035 23,179 3,94622,762
+(Butrans/OxyContin)
+
+
+  Total Laxative Pres 1,020 3,339                     3,443                     3,402 560 2,982
+
+     Total Prescriber 4,961 15,602                   16,423                    15,800 2,66815,450
+               Calls
+     Pharmacy Calls 914 2565                           2664                      2423 341 1960
+     Prescriber Call 6.9 7.2                             7.3                       7.4 7.4 7.4
+            Average
+     Pharmacy Call 1.3 1.2                               1.2                       1.1 0.9 0.9
+            Average
+
+
+     Representative 509 508 508 512 512 510
+
+
+                                                                            MCK-MAAG-3385164.000003
+Count (Filled Terr)
+% Terr Filled (Goal 97.0% 96.8%            96.8%                97.5%97.5% 97.1%
+          96.5%)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                              MCK-MAAG-3385164.000004

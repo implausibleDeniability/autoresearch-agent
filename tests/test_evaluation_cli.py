@@ -49,7 +49,7 @@ def test_cli_accepts_diagnostics_path():
 
 
 def test_cli_accepts_dataset_description_mode():
-    parsed = _parse_arguments(("--dataset", "dev-87k", "--describe-dataset"))
+    parsed = _parse_arguments(("--dataset", "dev-205k", "--describe-dataset"))
 
     assert parsed.describe_dataset
 
