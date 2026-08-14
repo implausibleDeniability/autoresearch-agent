@@ -33,9 +33,13 @@ class MeterStateProtocol(Protocol):
     upstream_base_url: str
     client: httpx.Client
 
+    def resolve_run_token(self, authorization: Optional[str]) -> Optional[str]: ...
+
     def begin_request(self, authorization: Optional[str]) -> int: ...
 
-    def finish_request(self, *, usage: Optional[ModelUsage], error: str = "") -> None: ...
+    def finish_request(
+        self, *, usage: Optional[ModelUsage], error: str = "", run_token: str = ""
+    ) -> None: ...
 
 
 class MeterServerProtocol(Protocol):
@@ -47,10 +51,14 @@ class MeterHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         state = cast(MeterServerProtocol, self.server).state
-        rejection_status = state.begin_request(self.headers.get("Authorization"))
+        authorization = self.headers.get("Authorization")
+        run_token = state.resolve_run_token(authorization)
+        rejection_status = state.begin_request(authorization)
         if rejection_status:
             self._send_json(rejection_status, payload={"error": "metering request rejected"})
             return
+        if run_token is None:
+            raise RuntimeError("accepted metering request has no run token")
         self._observed_usage = None
         error = ""
         try:
@@ -59,7 +67,7 @@ class MeterHandler(BaseHTTPRequestHandler):
             error = f"metering failed for {self.path}: {caught_error}"
             self._send_json(502, payload={"error": error})
         finally:
-            state.finish_request(usage=self._observed_usage, error=error)
+            state.finish_request(usage=self._observed_usage, error=error, run_token=run_token)
 
     def _forward(self, state: MeterStateProtocol) -> Optional[ModelUsage]:
         path = urlsplit(self.path).path

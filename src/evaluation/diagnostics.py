@@ -3,6 +3,7 @@ import os
 import tempfile
 from collections import Counter
 from dataclasses import asdict
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Mapping, Optional
 
@@ -144,6 +145,7 @@ def serialize_document_execution(document: DocumentExecution) -> Dict[str, objec
     }
 
 
+@lru_cache(maxsize=None)
 def _serialize_document(document: DocumentEvaluation, *, text: str) -> Dict[str, object]:
     source_matcher = SourceTextMatcher(text)
     return {
