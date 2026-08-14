@@ -1,21 +1,15 @@
 # autoresearch-prompting
 
-This is an experiment to have the LLM do its own research on prompting other LLMs.
+This is an experiment to have the LLM do its own research on optimizing LLM systems performance.
 
 ## Setup
 
-To set up a new experiment, work with the user to:
-
-1. **Agree on a run tag**: propose a tag based on today's date (e.g. mar5). The branch autoresearch/<tag> must not already exist — this is a fresh run.
-2. **Create the branch**: git checkout -b autoresearch/<tag> from current main.
-3. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
-4. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
-5. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-205k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
-6. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
-7. **Preflight the evaluator**: Before any counted run, verify the worktree, dependencies, credentials, and command are ready. The evaluator does not load `.env`, and every evaluation invocation counts as a run even when it exits before an API request.
-8. **Confirm and go**: Confirm setup looks good.
-
-Once you get confirmation, kick off the experimentation.
+To start the research:
+1. **Create an experiment worktree**: `git checkout -b autoresearch/<tag>` from current main. `tag` should indicate day and time: `aug-8-11-52` 
+2. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
+3. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
+4. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
+5. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
 
 ## Experimentation
 
