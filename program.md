@@ -19,6 +19,26 @@ Your PII-extracting system lives in the file `solution.py`. You can change the p
 
 F-score is the primary objective. Cost is secondary until the solution reaches the $1.50-per-million target; once it does, do not sacrifice meaningful quality for further savings.
 
+The evaluation worker defaults to a **3-minute wall-clock limit**. Run it with `--timeout 600` when the default is insufficient.
+
+### Quality objective
+
+The research goal is at least 99% recall and 95% precision while meeting the cost and runtime constraints. F-score remains the primary comparison metric between experiments. 
+
+After the baseline, quantify the gap to the targets and the approximate reduction in errors required. Use this to judge the ambition of proposed experiments.
+
+#### Simplicity criterion 
+
+All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.1% cost reduction that adds 20 lines of hacky code? Probably not worth it. A 0.1% cost reduction from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
+
+### Data
+
+You have several datasets on which you can run evaluation:
+- `test-*` - the quality of your solution will be measured on that dataset. You can't read its files, but you can discover the name of the dataset.
+- `debug` - development dataset with two documents that you can use that to cheaply test if your solution doesn't crash.
+- `dev-19k`, `dev-87k`, and `dev-205k` — three datasets you can use for experimenting with performance. The number in the name tells the total number of tokens in the dataset. You can run the experiments on whichever you want. The smaller datasets are cheaper to run on, while bigger datasets are more representative to the test distribution. You can read documents in all three, inspect their diagnostics and tune against them. However, be careful and don't over-optimize to the smaller datasets. 
+
+### Cost
 Cost is measured in USD per million source-document tokens:
 
 ```
@@ -27,19 +47,9 @@ cost = total actual USD cost of all model calls / total tokens in the original s
 
 The denominator counts each original document once and excludes system prompts, instructions, repeated context, and generated tokens. Those tokens still affect the numerator through their actual API charges. The evaluator defines how source-document tokens are counted.
 
-The evaluation worker defaults to a **3-minute wall-clock limit**. Use `debug` for inexpensive pipeline checks and choose among `dev-19k`, `dev-87k`, and `dev-205k` based on the evidence needed. `dev-19k` is a PII-dense subset of `dev-87k`, making it cheaper for hypothesis testing. `dev-87k` provides broader validation at moderate cost. `dev-205k` is the largest, most diverse dataset and is likely the most representative for evaluating quality, but it also has the highest API cost and runtime. Run it with `--timeout 600` when the default is insufficient. Use it when the stronger quality estimate justifies that expense, especially for generality checks and final candidate selection; every candidate need not run on every dataset. All four are development datasets: you may inspect their diagnostics and tune against them.
-
 The evaluator measures API usage outside `solution.py` and prints cost immediately after the run. It supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. A successful API response that cannot be priced makes cost accounting incomplete instead of counting as zero cost. Provider-hosted tools and other billable endpoints remain unavailable until the evaluator has a pricing rule.
 
 Target no more than $1.50 per million source tokens—about 2.9 cents on `dev-19k`—and estimate cost before each run. The meter enforces only an 8-cent total limit, overridable with `--cents-limit`, so modest target overruns still return useful results.
-
-**Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.1% cost reduction that adds 20 lines of hacky code? Probably not worth it. A 0.1% cost reduction from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
-
-### Quality objective
-
-The research goal is at least 99% recall and 95% precision while meeting the cost and runtime constraints. F-score remains the primary comparison metric between experiments, but improvements that do not create a credible path toward both quality targets are not sufficient by themselves.
-
-After the baseline, quantify the gap to the targets and the approximate reduction in errors required. Use this to judge the ambition of proposed experiments.
 
 ### Research trajectory
 
@@ -181,8 +191,6 @@ Stop development after 40 evaluations or when only the budget reserved for the f
 16. Report only `f_score`, `precision`, `recall`, `api_cost_usd`, and `duration_seconds`; charge the cost and stop. Any later solution change invalidates the result.
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.
-
-**Timeout**: Each experiment defaults to a 3-minute wall-clock limit from worker launch, including startup, evaluation, cleanup, and cost finalization. Use `--timeout 600` for `dev-205k` only when needed. The evaluator terminates the worker process group at the selected limit. Treat any partial result as diagnostic evidence only: log a crash, charge its conservative budget cost, and never promote or reject a candidate from its partial score alone.
 
 **Crashes**: If a run crashes (OOM, protocol failure, solution bug, or similar), preserve and inspect any partial diagnostics. They may identify a repair or next hypothesis, but they are not a final score. If the failure is easy to fix, fix it and re-run. If the idea itself is fundamentally broken, log `crash` and move on. Never assume a zero-dollar crash: charge the observed cost when complete, or the larger of observed cost and the pre-run estimate when incomplete.
 
