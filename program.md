@@ -187,10 +187,11 @@ Stop development after 40 evaluations or when only the budget reserved for the f
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 11. If a candidate is competitive and uncertainty could change the decision, repeat it within the remaining limits and evaluate the combined evidence.
 12. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the evidence justifies it; otherwise return to the incumbent without losing the recorded result.
-13. When development ends, summarize its results and select the final solution without blind-test evidence. Report the best `dev-87k` score and, if evaluated, the best `dev-205k` score separately.
+13. When development ends, select the final solution without blind-test evidence. Do not send the final report yet.
 14. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
 15. If its estimated spend fits the remaining budget, run one evaluation with the discovered blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
-16. Report only `f_score`, `precision`, `recall`, `api_cost_usd`, and `duration_seconds`; charge the cost and stop. Any later solution change invalidates the result.
+16. Leave the blind evaluator's aggregate output in `run.log`, charge its cost, and stop experimenting. Any later solution change invalidates the result.
+17. Whether or not the blind evaluation ran, invoke `$report-autoresearch-progress` for the current run and use its output as the final user-facing report. Do not replace it with an ad hoc metric summary.
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.
 
