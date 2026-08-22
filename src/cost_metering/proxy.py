@@ -42,6 +42,7 @@ class MeterState:
         self._limit_exceeded = False
         self._spending_limit_usd = spending_limit_usd
         self._observed_spending_usd = Decimal()
+        self._reserved_spending_usd = Decimal()
         self._active_requests = 0
         self._active_requests_by_token = {run_token: 0}
         self._usages: List[ModelUsage] = []
@@ -66,20 +67,35 @@ class MeterState:
         with self._condition:
             return run_token if run_token in self._run_tokens else None
 
-    def begin_request(self, authorization: Optional[str]) -> int:
+    def begin_request(self, authorization: Optional[str], *, reservation_usd: Decimal = Decimal()) -> int:
         run_token = self.resolve_run_token(authorization)
         if run_token is None:
             return 401
         with self._condition:
+            while self._must_wait_for_budget(reservation_usd):
+                self._condition.wait()
             if not self._accepting:
                 return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
+            self._reserved_spending_usd += reservation_usd
             self._active_requests += 1
             self._active_requests_by_token[run_token] += 1
         return 0
 
-    def finish_request(self, *, usage: Optional[ModelUsage], error: str = "", run_token: str = "") -> None:
+    def _must_wait_for_budget(self, reservation_usd: Decimal) -> bool:
+        projected = self._observed_spending_usd + self._reserved_spending_usd + reservation_usd
+        return self._accepting and self._active_requests > 0 and projected > self._spending_limit_usd
+
+    def finish_request(
+        self,
+        *,
+        usage: Optional[ModelUsage],
+        error: str = "",
+        run_token: str = "",
+        reservation_usd: Decimal = Decimal(),
+    ) -> None:
         run_token = run_token or self._run_token
         with self._condition:
+            self._reserved_spending_usd -= reservation_usd
             if usage is not None:
                 self._usages.append(usage)
                 self._usages_by_token[run_token].append(usage)
@@ -92,6 +108,12 @@ class MeterState:
                 self._errors_by_token[run_token].append(error)
             self._active_requests -= 1
             self._active_requests_by_token[run_token] -= 1
+            self._condition.notify_all()
+
+    def record_error(self, run_token: str, *, error: str) -> None:
+        with self._condition:
+            self._errors.append(error)
+            self._errors_by_token[run_token].append(error)
             self._condition.notify_all()
 
     def seal_and_report(self, *, timeout: float) -> CostReport:
@@ -162,6 +184,7 @@ class MeterState:
     def stop_accepting(self) -> None:
         with self._condition:
             self._accepting = False
+            self._condition.notify_all()
 
     def close(self) -> None:
         self.client.close()

@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.7.0.0] - 2026-08-14
+## [0.7.0.0] - 2026-08-22
 
 ### Added
 
@@ -10,6 +10,11 @@
 
 - Preserve exact per-document metering and partial recovery with isolated concurrent workers.
 - Reuse completed source-evidence diagnostics across checkpoints.
+
+### Fixed
+
+- Bound concurrent spending by reserving each request's maximum cost before forwarding it.
+- Preserve a terminal partial result when a document worker cannot start.
 
 ## [0.6.0.0] - 2026-08-13
 

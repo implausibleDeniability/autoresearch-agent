@@ -162,9 +162,16 @@ def _run_document_task(
     task: DocumentTask, *, module: str, environment: Mapping[str, str], deadline: float
 ) -> WorkerResult:
     started_at = time.monotonic()
-    process, result_fd, logs = _start_worker(
-        module=module, environment=_worker_environment(environment, run_token=task.run_token)
-    )
+    try:
+        process, result_fd, logs = _start_worker(
+            module=module, environment=_worker_environment(environment, run_token=task.run_token)
+        )
+    except OSError:
+        return WorkerResult(
+            task=task,
+            failure_category="worker_protocol_error",
+            latency_seconds=time.monotonic() - started_at,
+        )
     try:
         _send_document(process, ordinal=task.ordinal, document_id=task.document_id, text=task.text)
         record, _ = _read_record(result_fd, buffer=b"", deadline=deadline)
@@ -260,16 +267,22 @@ def _start_worker(*, module: str, environment: Mapping[str, str]):
     child_environment = dict(environment)
     child_environment[RESULT_FD_ENVIRONMENT] = str(write_fd)
     logs = tempfile.TemporaryFile(mode="w+")
-    process = subprocess.Popen(
-        [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module],
-        stdin=subprocess.PIPE,
-        stdout=logs,
-        stderr=logs,
-        text=True,
-        env=child_environment,
-        pass_fds=(write_fd,),
-        start_new_session=True,
-    )
+    try:
+        process = subprocess.Popen(
+            [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module],
+            stdin=subprocess.PIPE,
+            stdout=logs,
+            stderr=logs,
+            text=True,
+            env=child_environment,
+            pass_fds=(write_fd,),
+            start_new_session=True,
+        )
+    except OSError:
+        os.close(read_fd)
+        os.close(write_fd)
+        logs.close()
+        raise
     os.close(write_fd)
     return process, read_fd, logs
 

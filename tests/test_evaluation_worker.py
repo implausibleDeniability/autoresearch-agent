@@ -5,12 +5,34 @@ import time
 import pytest
 
 from src.cost_metering.accounting import CostReport
+from src.evaluation import worker
 from src.evaluation.worker import (
+    DocumentTask,
     MAX_RESULT_BYTES,
     WorkerProtocolError,
     _parse_document_record,
     _read_record,
 )
+
+
+def test_worker_start_failure_returns_protocol_error(monkeypatch):
+    task = DocumentTask(ordinal=0, document_id="doc", text="text", source_tokens=1, run_token="token")
+
+    def fail_to_start(**_kwargs):
+        raise OSError("cannot start worker")
+
+    monkeypatch.setattr(worker, "_start_worker", fail_to_start)
+
+    result = worker._run_document_task(
+        task,
+        module="solution",
+        environment={},
+        deadline=time.monotonic() + 1.0,
+    )
+
+    assert result.task == task
+    assert result.failure_category == "worker_protocol_error"
+    assert result.record is None
 
 
 def test_worker_record_rejects_wrong_sequence_or_document():

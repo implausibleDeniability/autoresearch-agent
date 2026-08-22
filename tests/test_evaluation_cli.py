@@ -21,6 +21,7 @@ from src.evaluation.cli import (
     _run_solution,
     _solution_environment,
 )
+from src.evaluation.worker import DEFAULT_MAX_CONCURRENT_DOCUMENTS
 
 
 @pytest.mark.parametrize("dataset", Dataset.all())
@@ -40,6 +41,20 @@ def test_cli_accepts_intentional_cent_limit_override():
     parsed = _parse_arguments(("--dataset", "debug", "--cents-limit", "20"))
 
     assert parsed.cents_limit == Decimal("20")
+
+
+def test_cli_defaults_to_fifty_concurrent_documents_and_accepts_override():
+    default = _parse_arguments(("--dataset", "debug"))
+    overridden = _parse_arguments(("--dataset", "debug", "--max-concurrent-documents", "7"))
+
+    assert default.max_concurrent_documents == DEFAULT_MAX_CONCURRENT_DOCUMENTS == 50
+    assert overridden.max_concurrent_documents == 7
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1.5", "many"])
+def test_cli_rejects_invalid_concurrent_document_limits(value):
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", "debug", "--max-concurrent-documents", value))
 
 
 def test_cli_accepts_diagnostics_path():
@@ -394,6 +409,72 @@ def extract_pii(text):
     assert diagnostics["result_status"] == "partial"
     assert diagnostics["completed_document_count"] == 2
     assert len(diagnostics["documents"]) == 2
+
+
+def test_development_evaluation_runs_concurrently_and_preserves_document_order(tmp_path: Path):
+    # setup
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    documents = {"doc": "John", "fourth": "Dave", "second": "Jane", "third": "Alex"}
+    for document_id, text in documents.items():
+        (text_directory / f"{document_id}.txt").write_text(text)
+    ground_truth = {document_id: [{"first_name": [text]}] for document_id, text in documents.items()}
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""import time
+from pathlib import Path
+
+from src.evaluation.models import PIIItem
+
+DELAYS = {"John": 0.3, "Jane": 0.2, "Alex": 0.1, "Dave": 0.0}
+
+
+def extract_pii(text):
+    Path(f"started-{text}").touch()
+    deadline = time.monotonic() + 2.0
+    while len(tuple(Path(".").glob("started-*"))) < 4:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("documents did not run concurrently")
+        time.sleep(0.01)
+    time.sleep(DELAYS[text])
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["PYTHONPATH"] = str(repository)
+
+    # operate
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--diagnostics",
+            "diagnostics.json",
+            "--max-concurrent-documents",
+            "4",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    # check
+    assert completed.returncode == 0, completed.stderr
+    assert "f_score=1.000000" in completed.stdout
+    results = json.loads(
+        next(
+            line.removeprefix("document_results_json=")
+            for line in completed.stdout.splitlines()
+            if line.startswith("document_results_json=")
+        )
+    )
+    assert [result["document_id"] for result in results] == list(documents)
 
 
 def test_first_document_timeout_writes_terminal_ledger_and_kills_process_group(tmp_path: Path):

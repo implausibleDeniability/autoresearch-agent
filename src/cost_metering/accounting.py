@@ -9,6 +9,8 @@ SUPPORTED_PATHS = (CHAT_COMPLETIONS_PATH, RESPONSES_PATH)
 SUPPORTED_SERVICE_TIERS = (None, "default")
 SUPPORTED_TOOL_TYPES = ("function",)
 PRICE_TABLE_VERSION = "2026-08-08"
+DEFAULT_MAX_OUTPUT_TOKENS = 16_384
+TOKENS_PER_MILLION = Decimal(1_000_000)
 
 
 class CostStatus:
@@ -155,6 +157,27 @@ def prepare_request(path: str, body: bytes) -> Tuple[bytes, bool]:
         stream_options["include_usage"] = True
         payload["stream_options"] = stream_options
     return json.dumps(payload, separators=(",", ":")).encode(), is_stream
+
+
+def request_cost_upper_bound(path: str, body: bytes) -> Decimal:
+    payload = cast(Mapping[str, object], json.loads(body))
+    price = model_price(str(payload["model"]))
+    output_tokens = _maximum_output_tokens(path, payload=payload)
+    input_cost = Decimal(len(body)) * price.input_per_million
+    output_cost = Decimal(output_tokens) * price.output_per_million
+    return (input_cost + output_cost) / TOKENS_PER_MILLION
+
+
+def _maximum_output_tokens(path: str, *, payload: Mapping[str, object]) -> int:
+    field_names = (
+        ("max_completion_tokens", "max_tokens") if path == CHAT_COMPLETIONS_PATH else ("max_output_tokens",)
+    )
+    value = next((payload[name] for name in field_names if payload.get(name) is not None), None)
+    if value is None:
+        return DEFAULT_MAX_OUTPUT_TOKENS
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise MeteringError(f"invalid maximum output tokens {value!r} for {path}")
+    return value
 
 
 def parse_response_usage(path: str, content: bytes) -> ModelUsage:
