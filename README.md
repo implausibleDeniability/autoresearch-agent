@@ -41,6 +41,8 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 uv run python -m src.evaluation.cli --dataset dev-205k
 ```
 
+Each evaluation has a hard three-minute wall-clock limit.
+
 Evaluations process up to 50 documents concurrently by default. Lower the limit to reduce
 simultaneous worker and API load:
 
