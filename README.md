@@ -74,7 +74,7 @@ Write a detailed error inventory during the same evaluation with:
 uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v3 run state, per-document execution and cost,
+The ignored `diagnostics.json` file contains schema-v4 run state, per-document execution and cost,
 metrics, raw predictions and ground truth, matching ledgers, errors, and evaluator-compatible source
 evidence. Source evidence uses the
 evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
@@ -107,7 +107,8 @@ The top-level shape is:
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "evaluator_contract_version": 2,
   "source_matching_policy": {
     "version": 1,
     "normalization": "lower_strip_trailing_period_v1",
@@ -136,7 +137,8 @@ The evaluator writes an initial `running` checkpoint, replaces it after each com
 writes the terminal state after cost finalization. Each document ends as `completed`, `failed`, or
 `not_attempted`. Failed and unattempted execution records contain no predictions or ground truth.
 
-Every prediction, ground-truth value, false positive, and false negative uses this shape:
+Every prediction, ground-truth value, match, neutral value, false positive, and false negative uses
+this shape:
 
 ```json
 {
@@ -144,6 +146,7 @@ Every prediction, ground-truth value, false positive, and false negative uses th
   "value_index": 0,
   "value": "john@example.com",
   "variants": [],
+  "optional": false,
   "source_value": "john@example.com",
   "source_evidence_count": 1,
   "raw_occurrence_count": 0,
@@ -172,6 +175,12 @@ jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $
 Add `select(.fuzzy_occurrence_count > 0)` or `select(.source_evidence_count == 0)` before the final
 object to isolate fuzzy-supported or absent values.
 
+List optional values that matched or were omitted without affecting metrics:
+
+```bash
+jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | (.ignored_optional_matches[].ground_truth, .unmatched_optional_values[]) | {document_id: $document_id, field: $field, value}' diagnostics.json
+```
+
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible
 development-data checks.
 
@@ -184,6 +193,9 @@ cost, and one quality metric: F-score with recall weighted five times as heavily
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-19k
 ```
+
+Every scored run prints `evaluator_contract_version`. Compare quality metrics only when this value
+matches; contract version 2 introduces optional email-derived names.
 
 Runs should target no more than $1.50 per million source tokens, but only the 8-cent total-cost guard
 is enforced (overridable with `--cents-limit`). Before forwarding a request, the meter reserves its
@@ -231,10 +243,10 @@ uv run python -m src.evaluation.cli \
   --frozen-commit "$(git rev-parse HEAD)"
 ```
 
-The evaluator checks the commit and `solution.py` before and after the run. It prints only aggregate
-`f_score`, precision, recall, API cost, and duration. This final evaluation is outside the 40-run
-allowance, but its spend counts toward the $0.50 budget. Success ends the research run. Never tune
-against the result; changing the solution invalidates it.
+The evaluator checks the commit and `solution.py` before and after the run. It prints only the
+evaluator contract version, aggregate `f_score`, precision, recall, API cost, and duration. This
+final evaluation is outside the 40-run allowance, but its spend counts toward the $0.50 budget.
+Success ends the research run. Never tune against the result; changing the solution invalidates it.
 
 ## Data
 
@@ -265,6 +277,49 @@ ambiguity or a supported alias can instead use one canonical value with source-v
 
 The canonical value and its variants count as one label; any accepted transcription can match it
 once. Variants never represent separate phone numbers, email addresses, or other distinct values.
+
+#### Optional email-derived names
+
+When a first, middle, or last name is recoverable only from that person's email local-part, annotate
+it with `"optional": true`. The same person must have a required email label:
+
+```json
+{
+  "document": [{
+    "first_name": [{"canonical": "John", "optional": true}],
+    "middle_name": [],
+    "last_name": [{"canonical": "Doe", "optional": true}],
+    "age": [],
+    "birthdate": [],
+    "phone": [],
+    "email": ["john.doe@example.com"],
+    "social_network_identifier": [],
+    "location": [],
+    "ssn": []
+  }]
+}
+```
+
+Optional names are accepted and ignored, not weak positives:
+
+| Prediction within the email-matched person | Result |
+|---|---|
+| Name omitted | Neither FN nor TP |
+| Canonical value or explicit variant, normalized-exact | Neither FP nor TP |
+| Similar but non-exact name | FP |
+| Name emitted on a separate person | FP |
+
+Optional values never help or block person matching. Required values are assigned first; only
+remaining predictions can match optional values. `optional` accepts only JSON `true` or `false`;
+false is the default and is omitted when labels are serialized. The marker is invalid outside name
+fields or without an email on the same person. Normalized-exact matching lowercases values, trims
+surrounding whitespace, and ignores trailing periods; it does not use fuzzy similarity.
+
+Validate the schema and visible dataset invariants offline, without an API key:
+
+```bash
+uv run pytest tests/test_evaluation_models.py tests/test_dataset.py
+```
 
 Labels retain explicit partial names and person-associated contact details, including fax, direct,
 and secondary numbers. Professional mailing addresses and profile locations count when the document

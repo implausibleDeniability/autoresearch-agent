@@ -93,7 +93,7 @@ If a lower-ranked experiment is selected, briefly record why it became the best 
 
 Model-backed evaluations may vary even when the implementation is unchanged. Treat each result as evidence, not exact truth.
 
-`baseline-results.tsv` contains five baseline evaluations on each development dataset. Use the matching dataset's observed range to distinguish ordinary variation from meaningful changes. Then run one fresh baseline for the current research. Keep model and sampling settings consistent across comparable experiments. If a seed is used, choose it as a reproducibility setting and do not optimize it for score.
+`baseline-results.tsv` contains five historical baseline evaluations per development dataset from evaluator contract 1. They predate optional email-derived names and are not comparable with contract 2 scores. Run a fresh baseline for the current research and compare only runs that print the same `evaluator_contract_version`. Keep model and sampling settings consistent. If a seed is used, choose it as a reproducibility setting and do not optimize it for score.
 
 Use additional evaluations only when uncertainty could change a research decision. A clearly inferior candidate may be discarded after one run. A candidate that appears competitive with the incumbent should receive enough confirmation to determine whether the improvement is credible within the remaining run and cost budgets.
 
@@ -101,7 +101,7 @@ Allow experiments to be marked `inconclusive`. Do not force a keep-or-discard de
 
 Record repeated evaluations as separate results. After deciding, give all successful repetitions of the same commit and dataset the same status. Base claims on their combined evidence, not the most favorable run.
 
-Use the saved baseline results and other non-paid evidence when they can resolve uncertainty without another evaluation.
+Use saved baseline results only within the same evaluator contract. Prefer other non-paid evidence when it can resolve uncertainty without another evaluation.
 
 ### OCR ambiguity
 
@@ -117,7 +117,7 @@ Every `test-*` dataset is blind. You may discover its complete name by listing m
 
 Do not inspect `data/test-*` files or detailed test results, including through code or side effects, without explicit user permission. The frozen final evaluator is the only routine exception. Never pass `--diagnostics` with a blind dataset.
 
-After development, commit the final `solution.py` and pass that commit with `--frozen-commit`. The evaluator verifies it before and after the run. The final evaluation is outside the 40-run allowance, but its spend counts toward the $0.50 budget. It returns only aggregate score, precision, recall, API cost, and duration. Success ends the run; never tune against the result, and any solution change invalidates it.
+After development, commit the final `solution.py` and pass that commit with `--frozen-commit`. The evaluator verifies it before and after the run. The final evaluation is outside the 40-run allowance, but its spend counts toward the $0.50 budget. It returns only the evaluator contract version, aggregate score, precision, recall, API cost, and duration. Success ends the run; never tune against the result, and any solution change invalidates it.
 
 
 ## Restrictions

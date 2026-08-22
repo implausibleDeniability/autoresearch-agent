@@ -41,12 +41,42 @@ def evaluate_completed_trace(
 
 
 def _load_ground_truth(path: Path) -> DocumentGroundTruth:
-    with path.open() as file:
-        serialized = json.load(file)
+    serialized = _read_ground_truth(path)
+    if not isinstance(serialized, dict):
+        raise TypeError(f"ground truth in {path} must be an object")
     return {
-        document_id: [GroundTruthPIIItem.from_serialized(person) for person in people]
+        document_id: _deserialize_ground_truth_people(
+            people,
+            path=path,
+            document_id=document_id,
+        )
         for document_id, people in serialized.items()
     }
+
+
+def _read_ground_truth(path: Path) -> object:
+    try:
+        with path.open() as file:
+            return json.load(file)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid ground-truth JSON in {path}: {error}") from error
+
+
+def _deserialize_ground_truth_people(
+    serialized: object,
+    *,
+    path: Path,
+    document_id: str,
+) -> List[GroundTruthPIIItem]:
+    if not isinstance(serialized, list):
+        raise TypeError(f"{path}: document={document_id!r} must contain a list of people")
+    return [
+        GroundTruthPIIItem.from_serialized(
+            person,
+            context=f"{path}: document={document_id!r} person[{person_index}]",
+        )
+        for person_index, person in enumerate(serialized)
+    ]
 
 
 def _validate_prediction_documents(

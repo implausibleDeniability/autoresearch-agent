@@ -24,7 +24,10 @@
       ],
       "middle_name": [],
       "last_name": [
-        "Mangamoori"
+        {
+          "canonical": "Mangamoori",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -164,11 +167,17 @@
     },
     {
       "first_name": [
-        "Eric"
+        {
+          "canonical": "Eric",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Soller"
+        {
+          "canonical": "Soller",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -182,11 +191,17 @@
     },
     {
       "first_name": [
-        "Vlad"
+        {
+          "canonical": "Vlad",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Popescu"
+        {
+          "canonical": "Popescu",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -200,11 +215,17 @@
     },
     {
       "first_name": [
-        "Aalap"
+        {
+          "canonical": "Aalap",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Dighe"
+        {
+          "canonical": "Dighe",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -296,11 +317,17 @@
     },
     {
       "first_name": [
-        "Simon"
+        {
+          "canonical": "Simon",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Goeller"
+        {
+          "canonical": "Goeller",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -332,11 +359,17 @@
     },
     {
       "first_name": [
-        "Ashish"
+        {
+          "canonical": "Ashish",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Srivastava"
+        {
+          "canonical": "Srivastava",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -350,11 +383,17 @@
     },
     {
       "first_name": [
-        "Tanmay"
+        {
+          "canonical": "Tanmay",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Jain"
+        {
+          "canonical": "Jain",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -929,11 +968,17 @@
     },
     {
       "first_name": [
-        "Greg"
+        {
+          "canonical": "Greg",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Gryzwa"
+        {
+          "canonical": "Gryzwa",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -947,11 +992,17 @@
     },
     {
       "first_name": [
-        "Sean"
+        {
+          "canonical": "Sean",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "OConnell"
+        {
+          "canonical": "OConnell",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -971,7 +1022,10 @@
         "R"
       ],
       "last_name": [
-        "Paley"
+        {
+          "canonical": "Paley",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1169,11 +1223,17 @@
     },
     {
       "first_name": [
-        "Laura"
+        {
+          "canonical": "Laura",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Moran"
+        {
+          "canonical": "Moran",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1187,11 +1247,17 @@
     },
     {
       "first_name": [
-        "John"
+        {
+          "canonical": "John",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Goldie"
+        {
+          "canonical": "Goldie",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1205,11 +1271,17 @@
     },
     {
       "first_name": [
-        "Beatrice"
+        {
+          "canonical": "Beatrice",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Liem"
+        {
+          "canonical": "Liem",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1295,11 +1367,17 @@
     },
     {
       "first_name": [
-        "Eric"
+        {
+          "canonical": "Eric",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Soller"
+        {
+          "canonical": "Soller",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1313,11 +1391,17 @@
     },
     {
       "first_name": [
-        "Pasha"
+        {
+          "canonical": "Pasha",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Sarraf"
+        {
+          "canonical": "Sarraf",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1349,11 +1433,17 @@
     },
     {
       "first_name": [
-        "Varun"
+        {
+          "canonical": "Varun",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Mangamoori"
+        {
+          "canonical": "Mangamoori",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1367,11 +1457,17 @@
     },
     {
       "first_name": [
-        "Vlad"
+        {
+          "canonical": "Vlad",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Popescu"
+        {
+          "canonical": "Popescu",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1411,7 +1507,10 @@
       ],
       "middle_name": [],
       "last_name": [
-        "Mangamoori"
+        {
+          "canonical": "Mangamoori",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1587,11 +1686,17 @@
     },
     {
       "first_name": [
-        "Pasha"
+        {
+          "canonical": "Pasha",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Sarraf"
+        {
+          "canonical": "Sarraf",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1605,11 +1710,17 @@
     },
     {
       "first_name": [
-        "Vlad"
+        {
+          "canonical": "Vlad",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Popescu"
+        {
+          "canonical": "Popescu",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1641,11 +1752,17 @@
     },
     {
       "first_name": [
-        "Eric"
+        {
+          "canonical": "Eric",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Soller"
+        {
+          "canonical": "Soller",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1722,11 +1839,17 @@
     },
     {
       "first_name": [
-        "Eric"
+        {
+          "canonical": "Eric",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Soller"
+        {
+          "canonical": "Soller",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1740,11 +1863,17 @@
     },
     {
       "first_name": [
-        "Varun"
+        {
+          "canonical": "Varun",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Mangamoori"
+        {
+          "canonical": "Mangamoori",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -1758,11 +1887,17 @@
     },
     {
       "first_name": [
-        "Pasha"
+        {
+          "canonical": "Pasha",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Sarraf"
+        {
+          "canonical": "Sarraf",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -2499,7 +2634,10 @@
       ],
       "middle_name": [],
       "last_name": [
-        "Golan"
+        {
+          "canonical": "Golan",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -2513,13 +2651,22 @@
     },
     {
       "first_name": [
-        "Albert"
+        {
+          "canonical": "Albert",
+          "optional": true
+        }
       ],
       "middle_name": [
-        "G"
+        {
+          "canonical": "G",
+          "optional": true
+        }
       ],
       "last_name": [
-        "Lee"
+        {
+          "canonical": "Lee",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -2533,11 +2680,17 @@
     },
     {
       "first_name": [
-        "Matteo"
+        {
+          "canonical": "Matteo",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Foderaro"
+        {
+          "canonical": "Foderaro",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -2551,11 +2704,17 @@
     },
     {
       "first_name": [
-        "Yang"
+        {
+          "canonical": "Yang",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Wang"
+        {
+          "canonical": "Wang",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -2644,11 +2803,17 @@
     },
     {
       "first_name": [
-        "Laura"
+        {
+          "canonical": "Laura",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Moran"
+        {
+          "canonical": "Moran",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -2662,7 +2827,10 @@
     },
     {
       "first_name": [
-        "Arnab"
+        {
+          "canonical": "Arnab",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -2680,11 +2848,17 @@
     },
     {
       "first_name": [
-        "Rob"
+        {
+          "canonical": "Rob",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Rosiello"
+        {
+          "canonical": "Rosiello",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -3097,11 +3271,17 @@
     },
     {
       "first_name": [
-        "Katie"
+        {
+          "canonical": "Katie",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Robinson"
+        {
+          "canonical": "Robinson",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -4975,7 +5155,7 @@
       ],
       "middle_name": [],
       "last_name": [
-        "Peña"
+        "Pe\u00f1a"
       ],
       "age": [],
       "birthdate": [],
@@ -6195,11 +6375,17 @@
     },
     {
       "first_name": [
-        "Cereta"
+        {
+          "canonical": "Cereta",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Boykin"
+        {
+          "canonical": "Boykin",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6232,11 +6418,17 @@
   "txvd0256": [
     {
       "first_name": [
-        "Arnab"
+        {
+          "canonical": "Arnab",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Ghatak"
+        {
+          "canonical": "Ghatak",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6334,11 +6526,17 @@
     },
     {
       "first_name": [
-        "Amir"
+        {
+          "canonical": "Amir",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Golan"
+        {
+          "canonical": "Golan",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6388,11 +6586,17 @@
     },
     {
       "first_name": [
-        "Arnab"
+        {
+          "canonical": "Arnab",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Ghatak"
+        {
+          "canonical": "Ghatak",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6406,11 +6610,17 @@
     },
     {
       "first_name": [
-        "Jeff"
+        {
+          "canonical": "Jeff",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Smith"
+        {
+          "canonical": "Smith",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6424,11 +6634,17 @@
     },
     {
       "first_name": [
-        "Abhi"
+        {
+          "canonical": "Abhi",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Hazarika"
+        {
+          "canonical": "Hazarika",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6442,11 +6658,17 @@
     },
     {
       "first_name": [
-        "John"
+        {
+          "canonical": "John",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Goldie"
+        {
+          "canonical": "Goldie",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6460,13 +6682,22 @@
     },
     {
       "first_name": [
-        "Albert"
+        {
+          "canonical": "Albert",
+          "optional": true
+        }
       ],
       "middle_name": [
-        "G"
+        {
+          "canonical": "G",
+          "optional": true
+        }
       ],
       "last_name": [
-        "Lee"
+        {
+          "canonical": "Lee",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6480,11 +6711,17 @@
     },
     {
       "first_name": [
-        "Yang"
+        {
+          "canonical": "Yang",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Wang"
+        {
+          "canonical": "Wang",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],
@@ -6498,11 +6735,17 @@
     },
     {
       "first_name": [
-        "Matteo"
+        {
+          "canonical": "Matteo",
+          "optional": true
+        }
       ],
       "middle_name": [],
       "last_name": [
-        "Foderaro"
+        {
+          "canonical": "Foderaro",
+          "optional": true
+        }
       ],
       "age": [],
       "birthdate": [],

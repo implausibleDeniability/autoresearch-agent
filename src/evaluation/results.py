@@ -42,6 +42,7 @@ class ValueReference:
     value_index: int
     value: str
     variants: Tuple[str, ...] = ()
+    optional: bool = False
 
     @property
     def accepted_values(self) -> Tuple[str, ...]:
@@ -58,8 +59,10 @@ class ValueMatch:
 class FieldEvaluation:
     field: str
     matches: Tuple[ValueMatch, ...]
+    ignored_optional_matches: Tuple[ValueMatch, ...]
     false_positives: Tuple[ValueReference, ...]
     false_negatives: Tuple[ValueReference, ...]
+    unmatched_optional_values: Tuple[ValueReference, ...]
 
     @property
     def metrics(self) -> EntityMetrics:

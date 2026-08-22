@@ -33,7 +33,8 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
 
     # check
     result = json.loads(path.read_text())
-    assert result["schema_version"] == 3
+    assert result["schema_version"] == 4
+    assert result["evaluator_contract_version"] == 2
     assert result["source_matching_policy"]["similarity_threshold"] == 0.65
     assert result["source_matching_policy"]["fuzzy_work_budget"] == 50_000_000
     assert result["source_matching_policy"]["candidate_enumeration_budget"] == 200_000
@@ -72,6 +73,36 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
     assert location["false_positives"][0]["source_evidence"] == []
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert path.read_bytes() == first_serialization
+
+
+def test_diagnostics_serialize_optional_values_and_neutral_ledger(tmp_path):
+    # setup
+    prediction = PIIItem(first_name=("John",), email=("john.doe@example.com",))
+    ground_truth = GroundTruthPIIItem(
+        first_name=(GroundTruthValue(canonical="John", optional=True),),
+        last_name=(GroundTruthValue(canonical="Doe", optional=True),),
+        email=(GroundTruthValue(canonical="john.doe@example.com"),),
+    )
+    trace = build_evaluation_trace({"doc": [prediction]}, ground_truth={"doc": [ground_truth]})
+    path = tmp_path / "diagnostics.json"
+
+    # operate
+    write_diagnostics(
+        path,
+        trace=trace,
+        texts={"doc": "john.doe@example.com"},
+        dataset="debug",
+    )
+
+    # check
+    document = json.loads(path.read_text())["documents"][0]
+    first_name = next(field for field in document["field_results"] if field["field"] == "first_name")
+    last_name = next(field for field in document["field_results"] if field["field"] == "last_name")
+    assert document["ground_truth"][0]["first_name"][0]["optional"] is True
+    assert first_name["ignored_optional_matches"][0]["ground_truth"]["optional"] is True
+    assert first_name["matches"] == []
+    assert last_name["unmatched_optional_values"][0]["optional"] is True
+    assert last_name["false_negatives"] == []
 
 
 def test_diagnostics_preserve_ground_truth_variants_and_source_form(tmp_path):

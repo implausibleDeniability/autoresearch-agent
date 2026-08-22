@@ -80,7 +80,9 @@ consolidated into one canonical person. Supported aliases are accepted as varian
 name. Explicit email addresses, office, direct, secondary, mobile, and fax numbers, and locations
 are attached to that person; conference dial-ins and fully redacted values are excluded.
 
-Names recoverable from explicit email addresses are labeled even when the display name is absent.
+Names recoverable only from an explicit email local-part are labeled with `optional: true`. Extracting
+or omitting them does not affect metrics; a non-exact name remains an error. Optional names never
+participate in person matching.
 Honorifics, degrees, job titles, organization names, and redacted names are not labels. A partial
 name is retained only when the document provides no reliable expansion. Values absent from the
 supplied OCR are excluded from this text-input benchmark. No hidden redacted value was inferred.
