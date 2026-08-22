@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.0.1] - 2026-08-22
+
+### Fixed
+
+- Remove the former ten-minute override; `--timeout` now accepts at most 180 seconds.
+
 ## [0.7.0.0] - 2026-08-22
 
 ### Added
