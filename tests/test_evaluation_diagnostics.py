@@ -4,7 +4,7 @@ import stat
 import pytest
 
 from src.evaluation.diagnostics import preflight_diagnostics_path, write_diagnostics
-from src.evaluation.models import PIIItem
+from src.evaluation.models import GroundTruthPIIItem, GroundTruthValue, PIIItem
 from src.evaluation.trace import build_evaluation_trace
 
 
@@ -33,7 +33,7 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
 
     # check
     result = json.loads(path.read_text())
-    assert result["schema_version"] == 2
+    assert result["schema_version"] == 3
     assert result["source_matching_policy"]["similarity_threshold"] == 0.65
     assert result["source_matching_policy"]["fuzzy_work_budget"] == 50_000_000
     assert result["source_matching_policy"]["candidate_enumeration_budget"] == 200_000
@@ -72,6 +72,68 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
     assert location["false_positives"][0]["source_evidence"] == []
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert path.read_bytes() == first_serialization
+
+
+def test_diagnostics_preserve_ground_truth_variants_and_source_form(tmp_path):
+    # setup
+    prediction = PIIItem(first_name=("Shannon",), email=("kenny.shannon@8pa.gov",))
+    ground_truth = GroundTruthPIIItem(
+        first_name=(GroundTruthValue("Shannon"),),
+        email=(
+            GroundTruthValue(
+                canonical="kenny.shannon@epa.gov",
+                variants=("kenny.shannon@8pa.gov",),
+            ),
+        ),
+    )
+    trace = build_evaluation_trace({"doc": [prediction]}, ground_truth={"doc": [ground_truth]})
+    path = tmp_path / "diagnostics.json"
+
+    # operate
+    write_diagnostics(
+        path,
+        trace=trace,
+        texts={"doc": "Kenny.Shannon@8pa.gov"},
+        dataset="debug",
+    )
+
+    # check
+    document = json.loads(path.read_text())["documents"][0]
+    email = next(field for field in document["field_results"] if field["field"] == "email")
+    assert document["ground_truth"][0]["email"][0]["variants"] == ["kenny.shannon@8pa.gov"]
+    assert email["matches"][0]["ground_truth"]["source_value"] == "kenny.shannon@8pa.gov"
+
+
+def test_diagnostics_use_none_when_no_accepted_source_form_matches(tmp_path):
+    # setup
+    ground_truth = GroundTruthPIIItem(
+        first_name=(GroundTruthValue(canonical="Absent", variants=("Missing",)),),
+    )
+    trace = build_evaluation_trace({"doc": []}, ground_truth={"doc": [ground_truth]})
+    path = tmp_path / "diagnostics.json"
+
+    # operate
+    write_diagnostics(path, trace=trace, texts={"doc": "unrelated"}, dataset="debug")
+
+    # check
+    first_name = json.loads(path.read_text())["documents"][0]["field_results"][0]
+    assert first_name["false_negatives"][0]["source_value"] is None
+
+
+def test_diagnostics_aggregate_fuzzy_search_completeness_across_variants(tmp_path):
+    # setup
+    ground_truth = GroundTruthPIIItem(
+        first_name=(GroundTruthValue(canonical="yyy", variants=("y" * 50,)),),
+    )
+    trace = build_evaluation_trace({"doc": []}, ground_truth={"doc": [ground_truth]})
+    path = tmp_path / "diagnostics.json"
+
+    # operate
+    write_diagnostics(path, trace=trace, texts={"doc": "x " * 1_000}, dataset="debug")
+
+    # check
+    first_name = json.loads(path.read_text())["documents"][0]["field_results"][0]
+    assert first_name["false_negatives"][0]["fuzzy_search_complete"] is False
 
 
 def test_trace_field_ledger_totals_equal_document_and_aggregate_metrics():

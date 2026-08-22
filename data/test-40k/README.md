@@ -2,13 +2,13 @@
 
 This directory contains forty-six complete, previously unused documents from the UCSF Industry
 Documents Library's McKinsey Documents collection. Together they contain 40,045 `o200k_base`
-tokens and 16,742 words across 120 pages, including 376 labeled people and 1,003 labeled PII
+tokens and 16,742 words across 120 pages, including 375 labeled people and 985 labeled PII
 values. No-person documents, short iMessage exports, dense material, and emails with large
 recipient lists are included intentionally rather than filtered out for labeling difficulty.
 
-`ground_truth.json` maps each document ID to its document-scoped list of canonical `PIIItem`
-values. `texts/` contains the corresponding UCSF OCR text with line endings normalized to LF and
-trailing whitespace removed.
+`ground_truth.json` maps each document ID to its document-scoped list of people using the
+[ground-truth value format](../../README.md#ground-truth-labels). `texts/` contains the corresponding
+UCSF OCR text with line endings normalized to LF and trailing whitespace removed.
 The source PDFs are not included.
 
 ## Sources
@@ -48,7 +48,7 @@ The source PDFs are not included.
 | `mrnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/mrnp0256) |
 | `nrnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/nrnp0256) |
 | `qrnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/qrnp0256) |
-| `rsnp0256` | iMessage export | 1 | 3 | [record](https://www.industrydocuments.ucsf.edu/docs/rsnp0256) |
+| `rsnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/rsnp0256) |
 | `trnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/trnp0256) |
 | `yrnp0256` | iMessage export | 1 | 2 | [record](https://www.industrydocuments.ucsf.edu/docs/yrnp0256) |
 | `rsbf0256` | Appointment | 1 | 10 | [record](https://www.industrydocuments.ucsf.edu/docs/rsbf0256) |
@@ -76,10 +76,11 @@ layouts were not exclusion criteria.
 Every PDF page was reviewed visually against both the UCSF OCR and a separate local OCR pass.
 Labels include people in message metadata, recipient lists, body text, signatures, appointment
 details, and participant lists. Repeated references to the same person within a document are
-consolidated into one canonical person. Explicit email addresses, phone numbers, and locations
+consolidated into one canonical person. Supported aliases are accepted as variants of one logical
+name. Explicit email addresses, office, direct, secondary, mobile, and fax numbers, and locations
 are attached to that person; conference dial-ins and fully redacted values are excluded.
 
 Names recoverable from explicit email addresses are labeled even when the display name is absent.
 Honorifics, degrees, job titles, organization names, and redacted names are not labels. A partial
-name is retained only when the document provides no reliable expansion. No hidden redacted value
-was inferred.
+name is retained only when the document provides no reliable expansion. Values absent from the
+supplied OCR are excluded from this text-input benchmark. No hidden redacted value was inferred.

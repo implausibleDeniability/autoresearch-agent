@@ -74,7 +74,7 @@ Write a detailed error inventory during the same evaluation with:
 uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v2 run state, per-document execution and cost,
+The ignored `diagnostics.json` file contains schema-v3 run state, per-document execution and cost,
 metrics, raw predictions and ground truth, matching ledgers, errors, and evaluator-compatible source
 evidence. Source evidence uses the
 evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
@@ -86,15 +86,19 @@ substrings or whitespace-delimited token windows. Fuzzy evidence also considers 
 subspans such as `Name:Jonh,` → `Jonh`. Overlaps prefer raw, then normalized evidence; fuzzy selection
 maximizes the number of non-overlapping spans. Offsets index the original Python string and `end` is
 exclusive. Each value stores at most 20 spans while counts describe the full selected set.
+Ground-truth values also expose accepted OCR variants. `source_value` identifies the accepted form
+used for evidence, or is `null` when none matched.
 
 Fuzzy work is bounded so malformed or unusually long model output cannot stall diagnostics. When
-`fuzzy_search_complete` is false, literal counts remain complete but the fuzzy count is unavailable;
-do not interpret a zero fuzzy count as absence of evaluator-compatible evidence.
+any accepted form's fuzzy search is incomplete, `fuzzy_search_complete` is false. Literal counts
+remain complete, but the fuzzy count is unavailable; do not interpret a zero fuzzy count as absence
+of evaluator-compatible evidence.
 
-Schema-v1 files use different occurrence semantics and must be regenerated. Consumers should reject
-unknown `schema_version` values. The file contains labeled PII and source context, is overwritten on
-each run, has owner-only permissions, and must not be committed. Other paths are not ignored
-automatically. The CLI reports serialization time as `diagnostics_duration_seconds`.
+Earlier schema versions use different value or occurrence semantics and must be regenerated.
+Consumers should reject unknown `schema_version` values. The file contains labeled PII and source
+context, is overwritten on each run, has owner-only permissions, and must not be committed. Other
+paths are not ignored automatically. The CLI reports serialization time as
+`diagnostics_duration_seconds`.
 
 Diagnostics are development-only. The evaluator rejects `--diagnostics` for every dataset whose
 name starts with `test-`.
@@ -103,7 +107,7 @@ The top-level shape is:
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "source_matching_policy": {
     "version": 1,
     "normalization": "lower_strip_trailing_period_v1",
@@ -139,6 +143,8 @@ Every prediction, ground-truth value, false positive, and false negative uses th
   "person_index": 0,
   "value_index": 0,
   "value": "john@example.com",
+  "variants": [],
+  "source_value": "john@example.com",
   "source_evidence_count": 1,
   "raw_occurrence_count": 0,
   "normalized_occurrence_count": 1,
@@ -234,13 +240,34 @@ against the result; changing the solution invalidates it.
 
 - `data/raw/industry-document-baseline`: the complete, unchanged source dataset.
 - `data/debug`: one PII-positive and one PII-negative document totaling less than 1,000 tokens.
-- `data/dev-19k`: 17 complete documents, 19,346 tokens, 11,162 words, 73 labeled people, and 196
+- `data/dev-19k`: 17 complete documents, 19,346 tokens, 11,162 words, 74 labeled people, and 203
   labeled PII values.
-- `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 92 labeled people, and 228
+- `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 93 labeled people, and 238
   labeled PII values.
-- `data/dev-205k`: 122 complete documents, 204,153 tokens, 98,127 words, 534 labeled people, and
-  1,334 labeled PII values.
+- `data/dev-205k`: 122 complete documents, 204,153 tokens, 98,127 words, 535 labeled people, and
+  1,329 labeled PII values.
 - `data/test-*`: blind final-evaluation data.
 
 `data/raw` must not be exposed to the research agent. The agent may list `data/test-*` directory
 names but must not inspect their contents without explicit permission.
+
+### Ground-truth labels
+
+Field lists contain distinct logical PII values. A plain string has one accepted form. OCR
+ambiguity or a supported alias can instead use one canonical value with source-visible variants:
+
+```json
+{
+  "canonical": "kenny.shannon@epa.gov",
+  "variants": ["kenny.shannon@8pa.gov"]
+}
+```
+
+The canonical value and its variants count as one label; any accepted transcription can match it
+once. Variants never represent separate phone numbers, email addresses, or other distinct values.
+
+Labels retain explicit partial names and person-associated contact details, including fax, direct,
+and secondary numbers. Professional mailing addresses and profile locations count when the document
+associates them with a person. Shared venues and organization addresses do not. Annotators must
+inspect the rendered page when layout determines the association. Name-component boundaries must
+remain consistent across dataset splits.

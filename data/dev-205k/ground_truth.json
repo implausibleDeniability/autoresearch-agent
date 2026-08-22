@@ -12,11 +12,14 @@
       "age": [],
       "birthdate": [],
       "phone": [
-        "513-558-7949"
+        "513-558-7949",
+        "419-892-2502"
       ],
       "email": [],
       "social_network_identifier": [],
-      "location": [],
+      "location": [
+        "160 Panzeca Way Cincinnati OH 45267-0056"
+      ],
       "ssn": []
     },
     {
@@ -94,12 +97,18 @@
       "age": [],
       "birthdate": [],
       "phone": [
-        "(202) 249-6732"
+        "(202) 249-6732",
+        "(202) 330-5646"
       ],
       "email": [],
       "social_network_identifier": [],
       "location": [
-        "700 2nd Street, NE | Washington, DC | 20002"
+        {
+          "canonical": "700 2nd Street, NE | Washington, DC | 20002",
+          "variants": [
+            "700 2nd9reet, NE | Washington, DC| 20002"
+          ]
+        }
       ],
       "ssn": []
     },
@@ -294,13 +303,22 @@
       "age": [],
       "birthdate": [],
       "phone": [
-        "513-558-7949"
+        "513-558-7949",
+        "419-892-2502"
       ],
       "email": [
-        "doursoml@ucmail.uc.edu"
+        "doursoml@ucmail.uc.edu",
+        {
+          "canonical": "michael.dourson@uc.edu",
+          "variants": [
+            "michael.dourson@ucedu"
+          ]
+        }
       ],
       "social_network_identifier": [],
-      "location": [],
+      "location": [
+        "160 Panzeca Way Cincinnati OH 45267-0056"
+      ],
       "ssn": []
     },
     {
@@ -444,7 +462,22 @@
       "ssn": []
     }
   ],
-  "pzvv0257": [],
+  "pzvv0257": [
+    {
+      "first_name": [
+        "Craig"
+      ],
+      "middle_name": [],
+      "last_name": [],
+      "age": [],
+      "birthdate": [],
+      "phone": [],
+      "email": [],
+      "social_network_identifier": [],
+      "location": [],
+      "ssn": []
+    }
+  ],
   "yrcg0257": [
     {
       "first_name": [
@@ -589,7 +622,9 @@
       "phone": [],
       "email": [],
       "social_network_identifier": [],
-      "location": [],
+      "location": [
+        "California, United States"
+      ],
       "ssn": []
     },
     {
@@ -1007,7 +1042,8 @@
       "age": [],
       "birthdate": [],
       "phone": [
-        "1 973 549 1808"
+        "1 973 549 1808",
+        "1 973 549 6808"
       ],
       "email": [
         "laura.moran@mckinsey.com"
@@ -1046,7 +1082,12 @@
       "birthdate": [],
       "phone": [],
       "email": [
-        "kenny.shannon@8pa.gov"
+        {
+          "canonical": "kenny.shannon@epa.gov",
+          "variants": [
+            "kenny.shannon@8pa.gov"
+          ]
+        }
       ],
       "social_network_identifier": [],
       "location": [],
@@ -1080,7 +1121,12 @@
       "birthdate": [],
       "phone": [],
       "email": [
-        "fbrown.byron@epa.gov"
+        {
+          "canonical": "brown.byron@epa.gov",
+          "variants": [
+            "fbrown.byron@epa.gov"
+          ]
+        }
       ],
       "social_network_identifier": [],
       "location": [],
@@ -1424,7 +1470,8 @@
       "age": [],
       "birthdate": [],
       "phone": [
-        "202-564-8040"
+        "202-564-8040",
+        "202-564-5551"
       ],
       "email": [],
       "social_network_identifier": [],
@@ -1605,8 +1652,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -1808,8 +1859,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -2420,8 +2475,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -3577,8 +3636,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -3925,8 +3988,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -4187,8 +4254,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -4277,8 +4348,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -5001,8 +5076,12 @@
   "rkml0255": [
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -5113,8 +5192,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -6991,8 +7074,12 @@
   "mxhg0256": [
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -7343,8 +7430,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -7749,8 +7840,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -7984,8 +8079,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -8169,8 +8268,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -9079,8 +9182,12 @@
     },
     {
       "first_name": [
-        "Arnab",
-        "Arnie"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [

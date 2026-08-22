@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
-from src.evaluation.models import PIIItem
+from src.evaluation.models import GroundTruthPIIItem, PIIItem
 
 RECALL_WEIGHT = 5
 
@@ -41,6 +41,11 @@ class ValueReference:
     person_index: int
     value_index: int
     value: str
+    variants: Tuple[str, ...] = ()
+
+    @property
+    def accepted_values(self) -> Tuple[str, ...]:
+        return self.value, *self.variants
 
 
 @dataclass(frozen=True)
@@ -69,7 +74,7 @@ class FieldEvaluation:
 class DocumentEvaluation:
     document_id: str
     predictions: Tuple[PIIItem, ...]
-    ground_truth: Tuple[PIIItem, ...]
+    ground_truth: Tuple[GroundTruthPIIItem, ...]
     person_matches: Tuple[Tuple[int, int], ...]
     unmatched_prediction_indexes: Tuple[int, ...]
     unmatched_ground_truth_indexes: Tuple[int, ...]

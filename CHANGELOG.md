@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0.0] - 2026-08-22
+
+### Added
+
+- Represent OCR transcriptions and supported aliases as one canonical ground-truth value with
+  accepted variants.
+
+### Changed
+
+- Preserve accepted label variants and the source-visible matched form in schema-v3 diagnostics.
+
+### Fixed
+
+- Add omitted partial names, person-associated phone numbers, emails, and locations to development
+  labels.
+- Remove test labels absent from the evaluated text and align compound-surname and alias labels
+  across splits.
+
 ## [0.7.0.1] - 2026-08-22
 
 ### Fixed

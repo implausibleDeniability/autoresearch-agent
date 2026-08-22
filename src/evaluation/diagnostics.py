@@ -17,13 +17,14 @@ from src.evaluation.results import (
 from src.evaluation.run_results import DocumentExecution, EvaluationRun
 from src.evaluation.source_evidence import SourceEvidence, SourceMatchKind
 from src.evaluation.source_matching import (
+    SourceMatchResult,
     SourceTextMatcher,
     SourceValueRole,
     SourceValueRoleLiteral,
     source_matching_policy,
 )
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 CONTEXT_RADIUS = 60
 MAX_OCCURRENCES_PER_VALUE = 20
 
@@ -151,7 +152,7 @@ def _serialize_document(document: DocumentEvaluation, *, text: str) -> Dict[str,
     return {
         "document_id": document.document_id,
         "predictions": [asdict(person) for person in document.predictions],
-        "ground_truth": [asdict(person) for person in document.ground_truth],
+        "ground_truth": [person.serialize() for person in document.ground_truth],
         "person_matches": [
             {"prediction_index": prediction_index, "ground_truth_index": ground_index}
             for prediction_index, ground_index in document.person_matches
@@ -216,13 +217,15 @@ def _serialize_value(
     source_matcher: SourceTextMatcher,
     role: SourceValueRoleLiteral,
 ) -> Dict[str, object]:
-    match_result = source_matcher.find(reference.value, role=role)
+    source_value, match_result = _best_source_match(reference, source_matcher=source_matcher, role=role)
     evidence = match_result.evidence
     counts = Counter(item.match_kind for item in evidence)
     return {
         "person_index": reference.person_index,
         "value_index": reference.value_index,
         "value": reference.value,
+        "variants": list(reference.variants),
+        "source_value": source_value,
         "source_evidence_count": len(evidence),
         "raw_occurrence_count": counts[SourceMatchKind.RAW_EXACT],
         "normalized_occurrence_count": counts[SourceMatchKind.NORMALIZED_EXACT],
@@ -233,6 +236,33 @@ def _serialize_value(
             _serialize_source_evidence(item, text=text) for item in evidence[:MAX_OCCURRENCES_PER_VALUE]
         ],
     }
+
+
+def _best_source_match(
+    reference: ValueReference,
+    *,
+    source_matcher: SourceTextMatcher,
+    role: SourceValueRoleLiteral,
+) -> tuple[str | None, SourceMatchResult]:
+    results = [(value, source_matcher.find(value, role=role)) for value in reference.accepted_values]
+    source_value, result = max(results, key=lambda item: _source_match_score(item[1]))
+    return (
+        source_value if result.evidence else None,
+        SourceMatchResult(
+            evidence=result.evidence,
+            fuzzy_search_complete=all(candidate.fuzzy_search_complete for _, candidate in results),
+        ),
+    )
+
+
+def _source_match_score(result: SourceMatchResult) -> tuple[bool, bool, int, float]:
+    kinds = {evidence.match_kind for evidence in result.evidence}
+    return (
+        SourceMatchKind.RAW_EXACT in kinds,
+        SourceMatchKind.NORMALIZED_EXACT in kinds,
+        len(result.evidence),
+        max((evidence.similarity for evidence in result.evidence), default=0.0),
+    )
 
 
 def _serialize_source_evidence(evidence: SourceEvidence, *, text: str) -> Dict[str, object]:

@@ -2,12 +2,12 @@ import json
 from pathlib import Path
 from typing import Dict, List, Mapping, Sequence
 
-from src.evaluation.models import PIIItem
+from src.evaluation.models import GroundTruthPIIItem, PIIItem
 from src.evaluation.results import EntityMetrics, EvaluationTrace
 from src.evaluation.trace import build_evaluation_trace
 
 DEFAULT_GROUND_TRUTH_PATH = Path("data/dev-19k/ground_truth.json")
-DocumentPII = Dict[str, List[PIIItem]]
+DocumentGroundTruth = Dict[str, List[GroundTruthPIIItem]]
 
 
 def evaluate(
@@ -40,21 +40,17 @@ def evaluate_completed_trace(
     return build_evaluation_trace(predictions, ground_truth=completed_ground_truth)
 
 
-def _load_ground_truth(path: Path) -> DocumentPII:
+def _load_ground_truth(path: Path) -> DocumentGroundTruth:
     with path.open() as file:
         serialized = json.load(file)
     return {
-        document_id: [_deserialize_pii_item(person) for person in people]
+        document_id: [GroundTruthPIIItem.from_serialized(person) for person in people]
         for document_id, people in serialized.items()
     }
 
 
-def _deserialize_pii_item(values: Mapping[str, Sequence[str]]) -> PIIItem:
-    return PIIItem(**{field_name: tuple(field_values) for field_name, field_values in values.items()})
-
-
 def _validate_prediction_documents(
-    predictions: Mapping[str, Sequence[PIIItem]], *, ground_truth: DocumentPII
+    predictions: Mapping[str, Sequence[PIIItem]], *, ground_truth: DocumentGroundTruth
 ) -> None:
     unknown = sorted(set(predictions) - set(ground_truth))
     if unknown:
