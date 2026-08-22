@@ -43,6 +43,20 @@ def test_cli_accepts_intentional_cent_limit_override():
     assert parsed.cents_limit == Decimal("20")
 
 
+def test_cli_uses_three_minute_timeout_by_default_and_accepts_the_limit():
+    default = _parse_arguments(("--dataset", "debug"))
+    explicit = _parse_arguments(("--dataset", "debug", "--timeout", "180"))
+
+    assert default.timeout == 180.0
+    assert explicit.timeout == 180.0
+
+
+@pytest.mark.parametrize("value", ["180.0001", "600"])
+def test_cli_rejects_timeout_above_three_minutes(value):
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", "debug", "--timeout", value))
+
+
 def test_cli_defaults_to_fifty_concurrent_documents_and_accepts_override():
     default = _parse_arguments(("--dataset", "debug"))
     overridden = _parse_arguments(("--dataset", "debug", "--max-concurrent-documents", "7"))
