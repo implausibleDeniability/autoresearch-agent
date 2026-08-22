@@ -20,6 +20,7 @@ Your PII-extracting system lives in the file `solution.py`. You can change the p
 F-score is the primary objective. Cost is secondary until the solution reaches the $1.50-per-million target; once it does, do not sacrifice meaningful quality for further savings.
 
 The evaluation worker defaults to a **3-minute wall-clock limit**. Run it with `--timeout 600` when the default is insufficient.
+It evaluates up to 50 documents concurrently by default. Use `--max-concurrent-documents N` to trade runtime for lower simultaneous worker and API load.
 
 ### Quality objective
 

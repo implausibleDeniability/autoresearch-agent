@@ -3,7 +3,7 @@ import threading
 import time
 from decimal import Decimal
 from http.server import ThreadingHTTPServer
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import httpx
 
@@ -36,35 +36,84 @@ class MeterState:
         self.upstream_base_url = upstream_base_url
         self.client = httpx.Client(timeout=300.0)
         self._condition = threading.Condition()
+        self._run_token = run_token
+        self._run_tokens = {run_token}
         self._accepting = True
         self._limit_exceeded = False
         self._spending_limit_usd = spending_limit_usd
         self._observed_spending_usd = Decimal()
+        self._reserved_spending_usd = Decimal()
         self._active_requests = 0
+        self._active_requests_by_token = {run_token: 0}
         self._usages: List[ModelUsage] = []
+        self._usages_by_token: Dict[str, List[ModelUsage]] = {run_token: []}
         self._errors: List[str] = []
+        self._errors_by_token: Dict[str, List[str]] = {run_token: []}
         self._final_outcome: Optional[MeteringOutcome] = None
 
-    def begin_request(self, authorization: Optional[str]) -> int:
-        if authorization != f"Bearer {self.run_token}":
+    def issue_token(self) -> str:
+        with self._condition:
+            run_token = secrets.token_urlsafe(32)
+            self._run_tokens.add(run_token)
+            self._active_requests_by_token[run_token] = 0
+            self._usages_by_token[run_token] = []
+            self._errors_by_token[run_token] = []
+            return run_token
+
+    def resolve_run_token(self, authorization: Optional[str]) -> Optional[str]:
+        if not authorization or not authorization.startswith("Bearer "):
+            return None
+        run_token = authorization.removeprefix("Bearer ")
+        with self._condition:
+            return run_token if run_token in self._run_tokens else None
+
+    def begin_request(self, authorization: Optional[str], *, reservation_usd: Decimal = Decimal()) -> int:
+        run_token = self.resolve_run_token(authorization)
+        if run_token is None:
             return 401
         with self._condition:
+            while self._must_wait_for_budget(reservation_usd):
+                self._condition.wait()
             if not self._accepting:
                 return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
+            self._reserved_spending_usd += reservation_usd
             self._active_requests += 1
+            self._active_requests_by_token[run_token] += 1
         return 0
 
-    def finish_request(self, *, usage: Optional[ModelUsage], error: str = "") -> None:
+    def _must_wait_for_budget(self, reservation_usd: Decimal) -> bool:
+        projected = self._observed_spending_usd + self._reserved_spending_usd + reservation_usd
+        return self._accepting and self._active_requests > 0 and projected > self._spending_limit_usd
+
+    def finish_request(
+        self,
+        *,
+        usage: Optional[ModelUsage],
+        error: str = "",
+        run_token: str = "",
+        reservation_usd: Decimal = Decimal(),
+    ) -> None:
+        run_token = run_token or self._run_token
         with self._condition:
+            self._reserved_spending_usd -= reservation_usd
             if usage is not None:
                 self._usages.append(usage)
+                self._usages_by_token[run_token].append(usage)
                 self._observed_spending_usd += usage.cost_usd
                 if self._observed_spending_usd > self._spending_limit_usd:
                     self._limit_exceeded = True
                     self._accepting = False
             if error:
                 self._errors.append(error)
+                self._errors_by_token[run_token].append(error)
             self._active_requests -= 1
+            self._active_requests_by_token[run_token] -= 1
+            self._condition.notify_all()
+
+    def record_error(self, run_token: str, *, error: str) -> None:
+        with self._condition:
+            self._errors.append(error)
+            self._errors_by_token[run_token].append(error)
             self._condition.notify_all()
 
     def seal_and_report(self, *, timeout: float) -> CostReport:
@@ -74,6 +123,28 @@ class MeterState:
 
     def checkpoint(self, *, timeout: float) -> MeteringOutcome:
         return self._outcome(timeout=timeout, stop_accepting=False)
+
+    def progress(self) -> MeteringOutcome:
+        with self._condition:
+            return self._make_outcome(active_request_count=self._active_requests)
+
+    def token_outcome(self, run_token: str, *, timeout: float) -> MeteringOutcome:
+        deadline = time.monotonic() + max(timeout, 0.0)
+        with self._condition:
+            while self._active_requests_by_token[run_token] and time.monotonic() < deadline:
+                self._condition.wait(max(deadline - time.monotonic(), 0.0))
+            active_requests = self._active_requests_by_token[run_token]
+            errors = list(self._errors_by_token[run_token])
+            if active_requests:
+                errors.append(
+                    f"{active_requests} metered requests for token did not finish within {timeout}s"
+                )
+            return MeteringOutcome(
+                report=CostReport(tuple(self._usages_by_token[run_token])),
+                status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
+                errors=tuple(errors),
+                active_request_count=active_requests,
+            )
 
     def finalize(self, *, timeout: float) -> MeteringOutcome:
         return self._outcome(timeout=timeout, stop_accepting=True)
@@ -89,28 +160,31 @@ class MeterState:
                 self._condition.wait(max(deadline - time.monotonic(), 0.0))
             if self._final_outcome is not None:
                 return self._final_outcome
-            errors = list(self._errors)
-            if self._active_requests:
-                errors.append(f"{self._active_requests} metered requests did not finish within {timeout}s")
-            if self._limit_exceeded:
-                errors.append(
-                    f"observed API spending ${self._observed_spending_usd:.8f} exceeded run "
-                    f"limit ${self._spending_limit_usd:.8f}; in-flight requests may cause bounded overshoot"
-                )
-            status = CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE
-            outcome = MeteringOutcome(
-                report=CostReport(tuple(self._usages)),
-                status=status,
-                errors=tuple(errors),
-                active_request_count=self._active_requests,
-            )
+            outcome = self._make_outcome(active_request_count=self._active_requests, timeout=timeout)
             if stop_accepting:
                 self._final_outcome = outcome
             return outcome
 
+    def _make_outcome(self, *, active_request_count: int, timeout: Optional[float] = None) -> MeteringOutcome:
+        errors = list(self._errors)
+        if active_request_count and timeout is not None:
+            errors.append(f"{active_request_count} metered requests did not finish within {timeout}s")
+        if self._limit_exceeded:
+            errors.append(
+                f"observed API spending ${self._observed_spending_usd:.8f} exceeded run "
+                f"limit ${self._spending_limit_usd:.8f}; in-flight requests may cause bounded overshoot"
+            )
+        return MeteringOutcome(
+            report=CostReport(tuple(self._usages)),
+            status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
+            errors=tuple(errors),
+            active_request_count=active_request_count,
+        )
+
     def stop_accepting(self) -> None:
         with self._condition:
             self._accepting = False
+            self._condition.notify_all()
 
     def close(self) -> None:
         self.client.close()
@@ -177,6 +251,15 @@ class MeteringProxy:
 
     def checkpoint(self, *, timeout: float) -> MeteringOutcome:
         return self._state.checkpoint(timeout=timeout)
+
+    def issue_token(self) -> str:
+        return self._state.issue_token()
+
+    def progress(self) -> MeteringOutcome:
+        return self._state.progress()
+
+    def token_outcome(self, run_token: str, *, timeout: float) -> MeteringOutcome:
+        return self._state.token_outcome(run_token, timeout=timeout)
 
     def finalize(self, *, timeout: float) -> MeteringOutcome:
         outcome = self._state.finalize(timeout=timeout)

@@ -17,6 +17,7 @@ from src.cost_metering.accounting import (
     StreamUsageParser,
     parse_response_usage,
     prepare_request,
+    request_cost_upper_bound,
 )
 from src.cost_metering.proxy import SPENDING_LIMIT_STATUS, MeteringProxy, MeterState
 
@@ -316,6 +317,29 @@ def test_local_function_tools_remain_available():
     assert is_stream is False
 
 
+def test_request_cost_reservation_uses_requested_output_limit():
+    small = json.dumps(
+        {"model": "gpt-4o-mini-2024-07-18", "messages": [], "max_completion_tokens": 10}
+    ).encode()
+    large = json.dumps(
+        {"model": "gpt-4o-mini-2024-07-18", "messages": [], "max_completion_tokens": 100}
+    ).encode()
+
+    assert request_cost_upper_bound(CHAT_COMPLETIONS_PATH, large) > request_cost_upper_bound(
+        CHAT_COMPLETIONS_PATH, small
+    )
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, True])
+def test_request_cost_reservation_rejects_invalid_output_limit(value):
+    body = json.dumps(
+        {"model": "gpt-4o-mini-2024-07-18", "messages": [], "max_completion_tokens": value}
+    ).encode()
+
+    with pytest.raises(MeteringError, match="invalid maximum output tokens"):
+        request_cost_upper_bound(CHAT_COMPLETIONS_PATH, body)
+
+
 @pytest.mark.parametrize(
     "usage",
     [
@@ -469,6 +493,88 @@ def test_checkpoint_keeps_meter_open_for_later_requests():
     assert checkpoint.status == "complete"
     assert checkpoint.report.usages == ()
     assert final.report.usages == (usage,)
+
+
+def test_document_tokens_isolate_usage_and_metering_errors():
+    # setup
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    first_token = state.issue_token()
+    second_token = state.issue_token()
+    first_usage = ModelUsage("gpt-4o-mini-2024-07-18", 100, 0, 10)
+    second_usage = ModelUsage("gpt-4o-mini-2024-07-18", 200, 0, 20)
+
+    # operate
+    assert state.begin_request(f"Bearer {first_token}") == 0
+    state.finish_request(usage=first_usage, run_token=first_token)
+    assert state.begin_request(f"Bearer {first_token}") == 0
+    state.finish_request(
+        usage=first_usage,
+        error="first document metering failed",
+        run_token=first_token,
+    )
+    assert state.begin_request(f"Bearer {second_token}") == 0
+    state.finish_request(usage=second_usage, run_token=second_token)
+    first = state.token_outcome(first_token, timeout=0.0)
+    second = state.token_outcome(second_token, timeout=0.0)
+    state.close()
+
+    # check
+    assert first.status == "incomplete"
+    assert first.report.usages == (first_usage, first_usage)
+    assert first.errors == ("first document metering failed",)
+    assert second.status == "complete"
+    assert second.report.usages == (second_usage,)
+    assert second.errors == ()
+
+
+def test_request_reservations_bound_concurrent_spending():
+    # setup
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    first_token = state.issue_token()
+    second_token = state.issue_token()
+    reservation = Decimal("0.06")
+    usage = ModelUsage("gpt-4o-mini-2024-07-18", 50_000, 0, 0)
+    entered = threading.Event()
+    assert state.begin_request(f"Bearer {first_token}", reservation_usd=reservation) == 0
+
+    # operate
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        second = executor.submit(
+            _begin_reserved_request,
+            state,
+            second_token,
+            reservation,
+            entered,
+        )
+        assert entered.wait(timeout=1.0)
+        assert not second.done()
+        state.finish_request(
+            usage=usage,
+            run_token=first_token,
+            reservation_usd=reservation,
+        )
+        assert second.result(timeout=1.0) == 0
+    state.finish_request(
+        usage=usage,
+        run_token=second_token,
+        reservation_usd=reservation,
+    )
+    outcome = state.finalize(timeout=1.0)
+    state.close()
+
+    # check
+    assert outcome.status == "complete"
+    assert outcome.report.usages == (usage, usage)
+
+
+def _begin_reserved_request(
+    state: MeterState,
+    run_token: str,
+    reservation: Decimal,
+    entered: threading.Event,
+) -> int:
+    entered.set()
+    return state.begin_request(f"Bearer {run_token}", reservation_usd=reservation)
 
 
 def _chat_response(*, usage="default"):

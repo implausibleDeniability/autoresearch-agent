@@ -41,6 +41,16 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 uv run python -m src.evaluation.cli --dataset dev-205k
 ```
 
+Evaluations process up to 50 documents concurrently by default. Lower the limit to reduce
+simultaneous worker and API load:
+
+```bash
+uv run python -m src.evaluation.cli --dataset dev-205k --max-concurrent-documents 20
+```
+
+Each concurrent development document uses an isolated metering credential, preserving exact
+per-document API usage, cost, latency, failures, and partial results.
+
 Use `debug` for inexpensive pipeline checks, `dev-19k` for cheap hypothesis tests, and `dev-87k`
 for moderate-cost validation. The larger `dev-205k` is likely more representative for measuring
 quality, but costs more to evaluate; use it for generality checks and final measurement.
@@ -115,8 +125,8 @@ The top-level shape is:
 }
 ```
 
-The evaluator writes an initial `running` checkpoint, replaces it after each document, and writes the
-terminal state after cost finalization. Each document ends as `completed`, `failed`, or
+The evaluator writes an initial `running` checkpoint, replaces it after each completion batch, and
+writes the terminal state after cost finalization. Each document ends as `completed`, `failed`, or
 `not_attempted`. Failed and unattempted execution records contain no predictions or ground truth.
 
 Every prediction, ground-truth value, false positive, and false negative uses this shape:
@@ -167,8 +177,10 @@ uv run python -m src.evaluation.cli --dataset dev-19k
 ```
 
 Runs should target no more than $1.50 per million source tokens, but only the 8-cent total-cost guard
-is enforced (overridable with `--cents-limit`), allowing modest overruns to return useful results. Once
-the guard is exceeded, new requests are rejected, though in-flight requests may add some overshoot.
+is enforced (overridable with `--cents-limit`). Before forwarding a request, the meter reserves its
+maximum possible cost against the limit. Requests wait when their reservation would exceed the
+remaining budget. One request may still exceed the limit so the run can return useful results;
+further requests are rejected.
 
 The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
 short-lived token and redirects the OpenAI SDK through an evaluator-owned localhost meter. The meter

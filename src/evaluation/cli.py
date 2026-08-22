@@ -31,7 +31,12 @@ from src.evaluation.run_results import (
     LifecycleStatus,
     ResultStatus,
 )
-from src.evaluation.worker import extract_documents, run_solution_documents, run_worker
+from src.evaluation.worker import (
+    DEFAULT_MAX_CONCURRENT_DOCUMENTS,
+    extract_documents,
+    run_solution_documents,
+    run_worker,
+)
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -83,7 +88,7 @@ class DatasetDescription:
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
     if parsed.worker:
-        return _run_worker(parsed.module)
+        return _run_worker(parsed.module, max_concurrent_documents=parsed.max_concurrent_documents)
     if parsed.describe_dataset:
         return _describe_dataset(parsed.dataset)
     return _run_evaluation(parsed)
@@ -190,6 +195,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             upstream_base_url=upstream_base_url,
             run_id=run_id,
             started_at=started_at,
+            max_concurrent_documents=arguments.max_concurrent_documents,
         )
     documents = _not_attempted_documents(texts, document_tokens=document_tokens)
     initial = _make_run(
@@ -236,6 +242,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             environment=_solution_environment(meter),
             source_tokens=document_tokens,
             on_checkpoint=checkpoint,
+            max_concurrent_documents=arguments.max_concurrent_documents,
         )
         cost = meter.finalize(timeout=max(deadline - time.monotonic(), 0.0))
     if termination_category == "none" and cost.status == CostStatus.INCOMPLETE:
@@ -269,6 +276,7 @@ def _evaluate_blind_dataset(
     upstream_base_url: str,
     run_id: str,
     started_at: str,
+    max_concurrent_documents: int,
 ) -> EvaluationRun:
     predictions, report = _run_metered_solution(
         texts,
@@ -276,6 +284,7 @@ def _evaluate_blind_dataset(
         upstream_base_url=upstream_base_url,
         spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
         timeout=arguments.timeout,
+        max_concurrent_documents=max_concurrent_documents,
     )
     documents = tuple(
         DocumentExecution(
@@ -363,7 +372,8 @@ def _not_attempted_documents(
 def _merge_document_ledger(
     completed: Sequence[DocumentExecution], *, initial: Sequence[DocumentExecution]
 ) -> Tuple[DocumentExecution, ...]:
-    return tuple(completed) + tuple(initial[len(completed) :])
+    completed_by_ordinal = {document.ordinal: document for document in completed}
+    return tuple(completed_by_ordinal.get(document.ordinal, document) for document in initial)
 
 
 def _run_metered_solution(
@@ -373,6 +383,7 @@ def _run_metered_solution(
     upstream_base_url: str,
     spending_limit_usd: Decimal,
     timeout: float,
+    max_concurrent_documents: int,
 ) -> Tuple[Dict[str, List[PIIItem]], CostReport]:
     with MeteringProxy(
         api_key=api_key,
@@ -380,7 +391,13 @@ def _run_metered_solution(
         spending_limit_usd=spending_limit_usd,
     ) as meter:
         try:
-            predictions = _run_batch_solution(texts, module=SOLUTION_MODULE, meter=meter, timeout=timeout)
+            predictions = _run_batch_solution(
+                texts,
+                module=SOLUTION_MODULE,
+                meter=meter,
+                timeout=timeout,
+                max_concurrent_documents=max_concurrent_documents,
+            )
         except Exception:
             meter.seal_and_report()
             raise
@@ -438,6 +455,7 @@ def _run_solution(
         environment=_solution_environment(meter),
         source_tokens=tokens,
         on_checkpoint=lambda documents, outcome: None,
+        max_concurrent_documents=DEFAULT_MAX_CONCURRENT_DOCUMENTS,
     )
     failed = [document.document_id for document in documents if document.status != DocumentStatus.COMPLETED]
     if failed:
@@ -451,9 +469,19 @@ def _run_batch_solution(
     module: str,
     meter: MeteringProxy,
     timeout: float,
+    max_concurrent_documents: int,
 ) -> Dict[str, List[PIIItem]]:
     completed = subprocess.run(
-        [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module],
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--worker",
+            "--module",
+            module,
+            "--max-concurrent-documents",
+            str(max_concurrent_documents),
+        ],
         input=json.dumps(texts),
         text=True,
         capture_output=True,
@@ -486,11 +514,15 @@ def _parse_worker_result(output: str) -> Dict[str, List[PIIItem]]:
     }
 
 
-def _run_worker(module_name: str) -> int:
+def _run_worker(module_name: str, *, max_concurrent_documents: int) -> int:
     if "EVALUATION_RESULT_FD" in os.environ:
         return run_worker(module_name)
     texts = json.load(sys.stdin)
-    predictions = extract_documents(texts, module_name=module_name)
+    predictions = extract_documents(
+        texts,
+        module_name=module_name,
+        max_concurrent_documents=max_concurrent_documents,
+    )
     serialized = {
         document_id: [asdict(person) for person in people] for document_id, people in predictions.items()
     }
@@ -561,6 +593,12 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         help="current solution commit required for a final blind test",
     )
     parser.add_argument("--timeout", type=_timeout_seconds, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument(
+        "--max-concurrent-documents",
+        type=_positive_integer,
+        default=DEFAULT_MAX_CONCURRENT_DOCUMENTS,
+        help=f"maximum documents evaluated in parallel (default: {DEFAULT_MAX_CONCURRENT_DOCUMENTS})",
+    )
     parser.add_argument(
         "--cents-limit",
         type=_positive_decimal,
@@ -651,6 +689,16 @@ def _positive_decimal(value: str) -> Decimal:
         raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}") from error
     if not parsed.is_finite() or parsed <= 0:
         raise argparse.ArgumentTypeError(f"expected a positive number, got {value!r}")
+    return parsed
+
+
+def _positive_integer(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"expected a positive integer, got {value!r}") from error
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError(f"expected a positive integer, got {value!r}")
     return parsed
 
 

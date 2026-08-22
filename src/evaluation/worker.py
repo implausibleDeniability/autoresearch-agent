@@ -7,9 +7,9 @@ import subprocess
 import sys
 import tempfile
 import time
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict
-from typing import Callable, Dict, List, Mapping, Sequence, Tuple, cast
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from dataclasses import asdict, dataclass
+from typing import Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, cast
 
 from src.cost_metering.accounting import CostReport, CostStatus, MeteringOutcome
 from src.cost_metering.proxy import MeteringProxy
@@ -20,20 +20,38 @@ RESULT_FD_ENVIRONMENT = "EVALUATION_RESULT_FD"
 MAX_RESULT_BYTES = 10_000_000
 PROCESS_GRACE_SECONDS = 0.5
 CheckpointCallback = Callable[[Sequence[DocumentExecution], MeteringOutcome], None]
-MAX_CONCURRENT_DOCUMENTS = 8
+DEFAULT_MAX_CONCURRENT_DOCUMENTS = 50
 
 
 class WorkerProtocolError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class DocumentTask:
+    ordinal: int
+    document_id: str
+    text: str
+    source_tokens: int
+    run_token: str
+
+
+@dataclass(frozen=True)
+class WorkerResult:
+    task: DocumentTask
+    latency_seconds: float
+    record: Optional[Dict[str, object]] = None
+    failure_category: str = ""
+
+
 def extract_documents(
     texts: Mapping[str, str],
     *,
     module_name: str,
+    max_concurrent_documents: int,
 ) -> Dict[str, List[PIIItem]]:
     extract_pii: Callable[[str], List[PIIItem]] = importlib.import_module(module_name).extract_pii
-    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_DOCUMENTS) as executor:
+    with ThreadPoolExecutor(max_workers=max_concurrent_documents) as executor:
         predictions = executor.map(extract_pii, texts.values())
         return dict(zip(texts, predictions))
 
@@ -59,52 +77,166 @@ def run_solution_documents(
     environment: Mapping[str, str],
     source_tokens: Mapping[str, int],
     on_checkpoint: CheckpointCallback,
+    max_concurrent_documents: int = DEFAULT_MAX_CONCURRENT_DOCUMENTS,
 ) -> Tuple[Tuple[DocumentExecution, ...], str]:
-    process, result_fd, logs = _start_worker(module=module, environment=environment)
-    documents: List[DocumentExecution] = []
-    usage_count = 0
-    buffer = b""
+    tasks = _document_tasks(texts, source_tokens=source_tokens, meter=meter)
+    documents: Dict[int, DocumentExecution] = {}
     termination_category = "none"
+    with ThreadPoolExecutor(max_workers=max_concurrent_documents) as executor:
+        futures = _fill_worker_slots(
+            {},
+            tasks=tasks,
+            executor=executor,
+            module=module,
+            environment=environment,
+            deadline=deadline,
+            max_concurrent_documents=max_concurrent_documents,
+        )
+        while futures:
+            completed, _ = wait(futures, return_when=FIRST_COMPLETED)
+            for future in completed:
+                result = future.result()
+                futures.pop(future)
+                document = _make_document_execution(result, meter=meter, deadline=deadline)
+                documents[document.ordinal] = document
+                progress = meter.progress()
+                termination_category = _updated_termination_category(
+                    termination_category, result=result, progress=progress
+                )
+            on_checkpoint(tuple(documents[index] for index in sorted(documents)), progress)
+            if termination_category == "none":
+                _fill_worker_slots(
+                    futures,
+                    tasks=tasks,
+                    executor=executor,
+                    module=module,
+                    environment=environment,
+                    deadline=deadline,
+                    max_concurrent_documents=max_concurrent_documents,
+                )
+    return (
+        _complete_document_ledger(tuple(documents.values()), texts=texts, source_tokens=source_tokens),
+        termination_category,
+    )
+
+
+def _document_tasks(
+    texts: Mapping[str, str], *, source_tokens: Mapping[str, int], meter: MeteringProxy
+) -> Iterator[DocumentTask]:
+    for ordinal, (document_id, text) in enumerate(texts.items()):
+        yield DocumentTask(
+            ordinal=ordinal,
+            document_id=document_id,
+            text=text,
+            source_tokens=source_tokens[document_id],
+            run_token=meter.issue_token(),
+        )
+
+
+def _fill_worker_slots(
+    futures: Dict[Future, DocumentTask],
+    *,
+    tasks: Iterator[DocumentTask],
+    executor: ThreadPoolExecutor,
+    module: str,
+    environment: Mapping[str, str],
+    deadline: float,
+    max_concurrent_documents: int = DEFAULT_MAX_CONCURRENT_DOCUMENTS,
+) -> Dict[Future, DocumentTask]:
+    while len(futures) < max_concurrent_documents:
+        task = next(tasks, None)
+        if task is None:
+            break
+        future = executor.submit(
+            _run_document_task,
+            task,
+            module=module,
+            environment=environment,
+            deadline=deadline,
+        )
+        futures[future] = task
+    return futures
+
+
+def _run_document_task(
+    task: DocumentTask, *, module: str, environment: Mapping[str, str], deadline: float
+) -> WorkerResult:
+    started_at = time.monotonic()
     try:
-        for ordinal, (document_id, text) in enumerate(texts.items()):
-            started_at = time.monotonic()
-            _send_document(process, ordinal=ordinal, document_id=document_id, text=text)
-            record, buffer = _read_record(result_fd, buffer=buffer, deadline=deadline)
-            checkpoint = meter.checkpoint(timeout=_remaining_seconds(deadline))
-            usage = CostReport(checkpoint.report.usages[usage_count:])
-            usage_count = len(checkpoint.report.usages)
-            document = _parse_document_record(
-                record,
-                ordinal=ordinal,
-                expected_document_id=document_id,
-                source_tokens=source_tokens[document_id],
-                usage=usage,
-                usage_complete=checkpoint.status == CostStatus.COMPLETE,
-                latency_seconds=time.monotonic() - started_at,
-            )
-            documents.append(document)
-            on_checkpoint(tuple(documents), checkpoint)
-            if checkpoint.status == CostStatus.INCOMPLETE:
-                termination_category = _meter_termination_category(checkpoint)
-                break
+        process, result_fd, logs = _start_worker(
+            module=module, environment=_worker_environment(environment, run_token=task.run_token)
+        )
+    except OSError:
+        return WorkerResult(
+            task=task,
+            failure_category="worker_protocol_error",
+            latency_seconds=time.monotonic() - started_at,
+        )
+    try:
+        _send_document(process, ordinal=task.ordinal, document_id=task.document_id, text=task.text)
+        record, _ = _read_record(result_fd, buffer=b"", deadline=deadline)
+        return WorkerResult(task=task, record=record, latency_seconds=time.monotonic() - started_at)
     except TimeoutError:
-        termination_category = "dataset_deadline"
-        _append_current_failure(
-            documents, texts=texts, source_tokens=source_tokens, category=termination_category
+        return WorkerResult(
+            task=task,
+            failure_category="dataset_deadline",
+            latency_seconds=time.monotonic() - started_at,
         )
     except (BrokenPipeError, EOFError, WorkerProtocolError):
-        termination_category = "worker_protocol_error"
-        _append_current_failure(
-            documents, texts=texts, source_tokens=source_tokens, category=termination_category
+        return WorkerResult(
+            task=task,
+            failure_category="worker_protocol_error",
+            latency_seconds=time.monotonic() - started_at,
         )
     finally:
         _stop_worker(process, deadline=deadline)
         os.close(result_fd)
         logs.close()
-    return (
-        _complete_document_ledger(documents, texts=texts, source_tokens=source_tokens),
-        termination_category,
+
+
+def _worker_environment(environment: Mapping[str, str], *, run_token: str) -> Dict[str, str]:
+    child_environment = dict(environment)
+    child_environment["OPENAI_API_KEY"] = run_token
+    return child_environment
+
+
+def _make_document_execution(
+    result: WorkerResult, *, meter: MeteringProxy, deadline: float
+) -> DocumentExecution:
+    task = result.task
+    usage = meter.token_outcome(task.run_token, timeout=max(deadline - time.monotonic(), 0.0))
+    if result.record is not None:
+        return _parse_document_record(
+            result.record,
+            ordinal=task.ordinal,
+            expected_document_id=task.document_id,
+            source_tokens=task.source_tokens,
+            usage=usage.report,
+            usage_complete=usage.status == CostStatus.COMPLETE,
+            latency_seconds=result.latency_seconds,
+        )
+    return DocumentExecution(
+        ordinal=task.ordinal,
+        document_id=task.document_id,
+        status=DocumentStatus.FAILED,
+        source_tokens=task.source_tokens,
+        usage=usage.report,
+        usage_complete=usage.status == CostStatus.COMPLETE,
+        latency_seconds=result.latency_seconds,
+        failure_category=result.failure_category,
+        error_message="document execution did not complete",
+        retryable=True,
     )
+
+
+def _updated_termination_category(current: str, *, result: WorkerResult, progress: MeteringOutcome) -> str:
+    if current != "none":
+        return current
+    if result.failure_category:
+        return result.failure_category
+    if progress.status == CostStatus.INCOMPLETE:
+        return _meter_termination_category(progress)
+    return current
 
 
 def _execute_document(request: Mapping[str, object], *, extract_pii: Callable) -> Dict[str, object]:
@@ -135,16 +267,22 @@ def _start_worker(*, module: str, environment: Mapping[str, str]):
     child_environment = dict(environment)
     child_environment[RESULT_FD_ENVIRONMENT] = str(write_fd)
     logs = tempfile.TemporaryFile(mode="w+")
-    process = subprocess.Popen(
-        [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module],
-        stdin=subprocess.PIPE,
-        stdout=logs,
-        stderr=logs,
-        text=True,
-        env=child_environment,
-        pass_fds=(write_fd,),
-        start_new_session=True,
-    )
+    try:
+        process = subprocess.Popen(
+            [sys.executable, "-m", "src.evaluation.cli", "--worker", "--module", module],
+            stdin=subprocess.PIPE,
+            stdout=logs,
+            stderr=logs,
+            text=True,
+            env=child_environment,
+            pass_fds=(write_fd,),
+            start_new_session=True,
+        )
+    except OSError:
+        os.close(read_fd)
+        os.close(write_fd)
+        logs.close()
+        raise
     os.close(write_fd)
     return process, read_fd, logs
 
@@ -235,46 +373,25 @@ def _deserialize_predictions(serialized: object) -> Tuple[PIIItem, ...]:
         raise WorkerProtocolError("worker predictions do not match the PII schema") from error
 
 
-def _append_current_failure(
-    documents: List[DocumentExecution],
-    *,
-    texts: Mapping[str, str],
-    source_tokens: Mapping[str, int],
-    category: str,
-) -> None:
-    if len(documents) >= len(texts):
-        return
-    document_id = tuple(texts)[len(documents)]
-    documents.append(
-        DocumentExecution(
-            ordinal=len(documents),
-            document_id=document_id,
-            status=DocumentStatus.FAILED,
-            source_tokens=source_tokens[document_id],
-            failure_category=category,
-            error_message="document execution did not complete",
-            retryable=True,
-        )
-    )
-
-
 def _complete_document_ledger(
     documents: Sequence[DocumentExecution],
     *,
     texts: Mapping[str, str],
     source_tokens: Mapping[str, int],
 ) -> Tuple[DocumentExecution, ...]:
-    completed = list(documents)
-    for ordinal, document_id in enumerate(tuple(texts)[len(completed) :], start=len(completed)):
-        completed.append(
+    completed = {document.ordinal: document for document in documents}
+    return tuple(
+        completed.get(
+            ordinal,
             DocumentExecution(
                 ordinal=ordinal,
                 document_id=document_id,
                 status=DocumentStatus.NOT_ATTEMPTED,
                 source_tokens=source_tokens[document_id],
-            )
+            ),
         )
-    return tuple(completed)
+        for ordinal, document_id in enumerate(texts)
+    )
 
 
 def _remaining_seconds(deadline: float) -> float:

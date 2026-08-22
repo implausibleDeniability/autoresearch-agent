@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from http.server import BaseHTTPRequestHandler
 from typing import Dict, Mapping, Optional, Protocol, cast
 from urllib.parse import urlsplit
@@ -10,6 +11,7 @@ from .accounting import (
     StreamUsageParser,
     parse_response_usage,
     prepare_request,
+    request_cost_upper_bound,
 )
 
 UPSTREAM_HEADER_BLOCKLIST = {
@@ -33,9 +35,20 @@ class MeterStateProtocol(Protocol):
     upstream_base_url: str
     client: httpx.Client
 
-    def begin_request(self, authorization: Optional[str]) -> int: ...
+    def resolve_run_token(self, authorization: Optional[str]) -> Optional[str]: ...
 
-    def finish_request(self, *, usage: Optional[ModelUsage], error: str = "") -> None: ...
+    def begin_request(self, authorization: Optional[str], *, reservation_usd: Decimal = Decimal()) -> int: ...
+
+    def finish_request(
+        self,
+        *,
+        usage: Optional[ModelUsage],
+        error: str = "",
+        run_token: str = "",
+        reservation_usd: Decimal = Decimal(),
+    ) -> None: ...
+
+    def record_error(self, run_token: str, *, error: str) -> None: ...
 
 
 class MeterServerProtocol(Protocol):
@@ -47,23 +60,45 @@ class MeterHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         state = cast(MeterServerProtocol, self.server).state
-        rejection_status = state.begin_request(self.headers.get("Authorization"))
+        authorization = self.headers.get("Authorization")
+        run_token = state.resolve_run_token(authorization)
+        if run_token is None:
+            self._send_json(401, payload={"error": "metering request rejected"})
+            return
+        try:
+            path, body, is_stream, reservation_usd = self._prepare_request()
+        except Exception as caught_error:
+            error = f"metering failed for {self.path}: {caught_error}"
+            state.record_error(run_token, error=error)
+            self._send_json(502, payload={"error": error})
+            return
+        rejection_status = state.begin_request(authorization, reservation_usd=reservation_usd)
         if rejection_status:
             self._send_json(rejection_status, payload={"error": "metering request rejected"})
             return
         self._observed_usage = None
         error = ""
         try:
-            self._observed_usage = self._forward(state)
+            self._observed_usage = self._forward(state, path=path, body=body, is_stream=is_stream)
         except Exception as caught_error:
             error = f"metering failed for {self.path}: {caught_error}"
             self._send_json(502, payload={"error": error})
         finally:
-            state.finish_request(usage=self._observed_usage, error=error)
+            state.finish_request(
+                usage=self._observed_usage,
+                error=error,
+                run_token=run_token,
+                reservation_usd=reservation_usd,
+            )
 
-    def _forward(self, state: MeterStateProtocol) -> Optional[ModelUsage]:
+    def _prepare_request(self) -> tuple[str, bytes, bool, Decimal]:
         path = urlsplit(self.path).path
         body, is_stream = prepare_request(path, self._read_body())
+        return path, body, is_stream, request_cost_upper_bound(path, body)
+
+    def _forward(
+        self, state: MeterStateProtocol, *, path: str, body: bytes, is_stream: bool
+    ) -> Optional[ModelUsage]:
         headers = _upstream_headers(self.headers, api_key=state.api_key)
         url = f"{state.upstream_base_url}{path}"
         with state.client.stream("POST", url, content=body, headers=headers) as response:
