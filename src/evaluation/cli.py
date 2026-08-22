@@ -17,6 +17,7 @@ import tiktoken
 from src.cost_metering.accounting import CostReport, CostStatus, MeteringOutcome, PRICE_TABLE_VERSION
 from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
 from src.evaluation.diagnostics import (
+    EVALUATOR_CONTRACT_VERSION,
     SCHEMA_VERSION,
     preflight_diagnostics_path,
     serialize_document_execution,
@@ -533,6 +534,7 @@ def _print_development_result(run: EvaluationRun, *, duration_seconds: float) ->
     status = run.result_status
     metrics = run.trace.metrics
     print(f"result_schema_version={SCHEMA_VERSION}")
+    print(f"evaluator_contract_version={EVALUATOR_CONTRACT_VERSION}")
     print(f"result_status={status}")
     print(f"score_is_final={'true' if status == ResultStatus.COMPLETE else 'false'}")
     print(f"termination_category={run.termination_category}")
@@ -571,6 +573,7 @@ def _print_blind_test_result(
     cost: CostReport,
     duration_seconds: float,
 ) -> None:
+    print(f"evaluator_contract_version={EVALUATOR_CONTRACT_VERSION}")
     print(f"f_score={metrics.f_score:.6f}")
     print(f"precision={metrics.precision:.6f}")
     print(f"recall={metrics.recall:.6f}")

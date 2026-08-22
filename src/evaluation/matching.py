@@ -2,7 +2,7 @@ import itertools
 import math
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Callable, Dict, Sequence, Tuple, TypeVar
+from typing import Callable, Dict, Iterable, Sequence, Tuple, TypeVar
 
 from src.evaluation.models import GroundTruthPIIItem, GroundTruthValue, PIIItem
 
@@ -23,6 +23,12 @@ class ValueComparison:
     normalized_exact: bool
     similarity: float
     result: int
+
+
+@dataclass(frozen=True)
+class ValueMatches:
+    required: MatchIndexes
+    optional: MatchIndexes
 
 
 def compare_values(prediction: str, *, ground_truth: str) -> ValueComparison:
@@ -61,15 +67,87 @@ def match_people(
 def match_values(
     predictions: Sequence[str], *, ground_truth: Sequence[GroundTruthValue | str]
 ) -> MatchIndexes:
-    labels = tuple(
-        value if isinstance(value, GroundTruthValue) else GroundTruthValue(canonical=value)
-        for value in ground_truth
+    return match_value_groups(predictions, ground_truth=ground_truth).required
+
+
+def match_value_groups(
+    predictions: Sequence[str], *, ground_truth: Sequence[GroundTruthValue | str]
+) -> ValueMatches:
+    labels = _coerce_ground_truth_values(ground_truth)
+    required_ground_indexes = tuple(index for index, value in enumerate(labels) if not value.optional)
+    required = _match_required_values(
+        predictions,
+        labels=labels,
+        ground_indexes=required_ground_indexes,
     )
-    return _match_indexes(
+    optional = _match_optional_values(
+        predictions,
+        labels=labels,
+        required=required,
+        required_ground_indexes=required_ground_indexes,
+    )
+    return ValueMatches(required=required, optional=optional)
+
+
+def _coerce_ground_truth_values(
+    values: Sequence[GroundTruthValue | str],
+) -> Tuple[GroundTruthValue, ...]:
+    return tuple(
+        value if isinstance(value, GroundTruthValue) else GroundTruthValue(canonical=value)
+        for value in values
+    )
+
+
+def _match_required_values(
+    predictions: Sequence[str],
+    *,
+    labels: Sequence[GroundTruthValue],
+    ground_indexes: Sequence[int],
+) -> MatchIndexes:
+    return _match_selected_indexes(
         predictions,
         ground_truth=labels,
+        prediction_indexes=tuple(range(len(predictions))),
+        ground_indexes=ground_indexes,
         matching_functions=(_values_match_exactly, _values_match_approximately),
     )
+
+
+def _match_optional_values(
+    predictions: Sequence[str],
+    *,
+    labels: Sequence[GroundTruthValue],
+    required: MatchIndexes,
+    required_ground_indexes: Sequence[int],
+) -> MatchIndexes:
+    unmatched_required_indexes = set(required_ground_indexes) - set(required.values())
+    prediction_indexes = tuple(
+        index
+        for index, prediction in enumerate(predictions)
+        if index not in required
+        and not _matches_any_ground_value(
+            prediction,
+            ground_truth=labels,
+            ground_indexes=unmatched_required_indexes,
+        )
+    )
+    optional_ground_indexes = tuple(index for index, value in enumerate(labels) if value.optional)
+    return _match_selected_indexes(
+        predictions,
+        ground_truth=labels,
+        prediction_indexes=prediction_indexes,
+        ground_indexes=optional_ground_indexes,
+        matching_functions=(_values_match_exactly,),
+    )
+
+
+def _matches_any_ground_value(
+    prediction: str,
+    *,
+    ground_truth: Sequence[GroundTruthValue],
+    ground_indexes: Iterable[int],
+) -> bool:
+    return any(_values_match_approximately(prediction, ground_truth[index]) for index in ground_indexes)
 
 
 def _match_indexes(
@@ -78,8 +156,25 @@ def _match_indexes(
     ground_truth: Sequence[GroundTruth],
     matching_functions: Sequence[MatchingFunction[Prediction, GroundTruth]],
 ) -> MatchIndexes:
-    unmatched_predictions = list(range(len(predictions)))
-    unmatched_ground = list(range(len(ground_truth)))
+    return _match_selected_indexes(
+        predictions,
+        ground_truth=ground_truth,
+        prediction_indexes=tuple(range(len(predictions))),
+        ground_indexes=tuple(range(len(ground_truth))),
+        matching_functions=matching_functions,
+    )
+
+
+def _match_selected_indexes(
+    predictions: Sequence[Prediction],
+    *,
+    ground_truth: Sequence[GroundTruth],
+    prediction_indexes: Sequence[int],
+    ground_indexes: Sequence[int],
+    matching_functions: Sequence[MatchingFunction[Prediction, GroundTruth]],
+) -> MatchIndexes:
+    unmatched_predictions = list(prediction_indexes)
+    unmatched_ground = list(ground_indexes)
     matches: MatchIndexes = {}
     for matching_function in matching_functions:
         current = _match_step(
@@ -145,7 +240,10 @@ def _prediction_core_values(person: PIIItem) -> Tuple[Sequence[str], ...]:
 def _ground_truth_core_values(
     person: GroundTruthPIIItem,
 ) -> Tuple[Sequence[GroundTruthValue], ...]:
-    return person.first_name, person.last_name, person.email
+    return tuple(
+        tuple(value for value in values if not value.optional)
+        for values in (person.first_name, person.last_name, person.email)
+    )
 
 
 def _value_sets_match_exactly(predictions: Sequence[str], ground_truth: Sequence[GroundTruthValue]) -> bool:

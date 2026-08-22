@@ -7,8 +7,8 @@ import pytest
 
 from solution import _has_candidate_content
 from src.evaluation.cli import Dataset, _parse_arguments
-from src.evaluation.metrics import evaluate
-from src.evaluation.models import PIIItem
+from src.evaluation.metrics import evaluate, evaluate_trace
+from src.evaluation.models import GroundTruthPIIItem, GroundTruthValue, PIIItem
 
 
 def test_cli_requires_dataset():
@@ -98,6 +98,205 @@ def test_ground_truth_variants_cannot_match_twice(tmp_path: Path):
 
     # check
     assert (result.true_positive, result.false_positive, result.false_negative) == (3, 1, 0)
+
+
+def test_missing_optional_name_is_not_a_false_negative(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(tmp_path)
+    prediction = PIIItem(email=("john.doe@example.com",))
+
+    # operate
+    result = evaluate({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    assert (result.true_positive, result.false_positive, result.false_negative) == (1, 0, 0)
+
+
+def test_exact_optional_name_is_ignored_instead_of_scored(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(tmp_path)
+    prediction = PIIItem(first_name=("John",), email=("john.doe@example.com",))
+
+    # operate
+    trace = evaluate_trace({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    first_name = next(field for field in trace.documents[0].fields if field.field == "first_name")
+    assert (trace.metrics.true_positive, trace.metrics.false_positive, trace.metrics.false_negative) == (
+        1,
+        0,
+        0,
+    )
+    assert len(first_name.ignored_optional_matches) == 1
+    assert first_name.unmatched_optional_values == ()
+
+
+def test_optional_variant_is_ignored(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(
+        tmp_path,
+        first_name={"canonical": "John", "variants": ["J0hn"], "optional": True},
+    )
+    prediction = PIIItem(first_name=("J0hn",), email=("john.doe@example.com",))
+
+    # operate
+    result = evaluate({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    assert (result.true_positive, result.false_positive, result.false_negative) == (1, 0, 0)
+
+
+def test_fuzzy_optional_name_remains_a_false_positive(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(
+        tmp_path,
+        first_name={"canonical": "Joe", "optional": True},
+    )
+    prediction = PIIItem(first_name=("Jon",), email=("john.doe@example.com",))
+
+    # operate
+    trace = evaluate_trace({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    first_name = next(field for field in trace.documents[0].fields if field.field == "first_name")
+    assert (trace.metrics.true_positive, trace.metrics.false_positive, trace.metrics.false_negative) == (
+        1,
+        1,
+        0,
+    )
+    assert [value.value for value in first_name.false_positives] == ["Jon"]
+    assert [value.value for value in first_name.unmatched_optional_values] == ["Joe"]
+
+
+def test_required_name_matches_before_colliding_optional_name(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(
+        tmp_path,
+        first_name=["John", {"canonical": "John", "optional": True}],
+    )
+    prediction = PIIItem(first_name=("John",), email=("john.doe@example.com",))
+
+    # operate
+    trace = evaluate_trace({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    first_name = next(field for field in trace.documents[0].fields if field.field == "first_name")
+    assert len(first_name.matches) == 1
+    assert first_name.ignored_optional_matches == ()
+    assert len(first_name.unmatched_optional_values) == 1
+
+
+def test_ambiguous_required_names_cannot_be_absorbed_by_optional_name(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(
+        tmp_path,
+        first_name=["John", "Jonn", {"canonical": "Jon", "optional": True}],
+    )
+    prediction = PIIItem(first_name=("Jon",), email=("john.doe@example.com",))
+
+    # operate
+    trace = evaluate_trace({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    first_name = next(field for field in trace.documents[0].fields if field.field == "first_name")
+    assert first_name.matches == ()
+    assert first_name.ignored_optional_matches == ()
+    assert [value.value for value in first_name.false_positives] == ["Jon"]
+    assert [value.value for value in first_name.false_negatives] == ["John", "Jonn"]
+
+
+@pytest.mark.parametrize("optional_name", [(), ("John",), ("Wrong",)])
+def test_optional_name_does_not_change_email_anchored_person_pairing(
+    tmp_path: Path, optional_name: tuple[str, ...]
+):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(tmp_path)
+    prediction = PIIItem(first_name=optional_name, email=("john.doe@example.com",))
+
+    # operate
+    trace = evaluate_trace({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    assert trace.documents[0].person_matches == ((0, 0),)
+
+
+def test_optional_name_on_separate_person_remains_false_positive(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(tmp_path)
+    predictions = [
+        PIIItem(email=("john.doe@example.com",)),
+        PIIItem(first_name=("John",)),
+    ]
+
+    # operate
+    trace = evaluate_trace({"document": predictions}, ground_truth_path=ground_truth_path)
+
+    # check
+    assert trace.documents[0].person_matches == ((0, 0),)
+    assert (trace.metrics.true_positive, trace.metrics.false_positive, trace.metrics.false_negative) == (
+        1,
+        1,
+        0,
+    )
+
+
+def test_unmatched_person_emits_false_negatives_for_required_values_only(tmp_path: Path):
+    # setup
+    ground_truth_path = _write_optional_name_ground_truth(tmp_path)
+
+    # operate
+    trace = evaluate_trace({}, ground_truth_path=ground_truth_path)
+
+    # check
+    first_name = next(field for field in trace.documents[0].fields if field.field == "first_name")
+    assert (trace.metrics.true_positive, trace.metrics.false_positive, trace.metrics.false_negative) == (
+        0,
+        0,
+        1,
+    )
+    assert first_name.false_negatives == ()
+    assert [value.value for value in first_name.unmatched_optional_values] == ["John"]
+
+
+def test_field_ledgers_partition_every_prediction_and_ground_truth_value(tmp_path: Path):
+    # setup
+    ground_truth = GroundTruthPIIItem(
+        first_name=(GroundTruthValue(canonical="John"),),
+        last_name=(GroundTruthValue(canonical="Doe", optional=True),),
+        email=(GroundTruthValue(canonical="john.doe@example.com"),),
+    )
+    predictions = [
+        PIIItem(
+            first_name=("John",),
+            last_name=("Doe",),
+            phone=("555-0100",),
+            email=("john.doe@example.com",),
+        ),
+        PIIItem(first_name=("Hallucinated",)),
+    ]
+    path = tmp_path / "ground_truth.json"
+    path.write_text(json.dumps({"document": [ground_truth.serialize()]}))
+
+    # operate
+    trace = evaluate_trace(
+        {"document": predictions},
+        ground_truth_path=path,
+    )
+
+    # check
+    document = trace.documents[0]
+    for field in document.fields:
+        prediction_count = sum(len(getattr(person, field.field)) for person in document.predictions)
+        ground_truth_count = sum(len(getattr(person, field.field)) for person in document.ground_truth)
+        assert prediction_count == (
+            len(field.matches) + len(field.ignored_optional_matches) + len(field.false_positives)
+        )
+        assert ground_truth_count == (
+            len(field.matches)
+            + len(field.ignored_optional_matches)
+            + len(field.false_negatives)
+            + len(field.unmatched_optional_values)
+        )
 
 
 def test_relaxed_person_matching_preserves_partial_pii_score(tmp_path: Path):
@@ -239,6 +438,30 @@ def test_unknown_prediction_document_fails_fast(tmp_path: Path):
         evaluate({"unknown": []}, ground_truth_path=ground_truth_path)
 
 
+def test_ground_truth_load_errors_include_json_path_context(tmp_path: Path):
+    # setup
+    path = tmp_path / "ground_truth.json"
+    path.write_text(
+        json.dumps(
+            {
+                "document": [
+                    {
+                        "first_name": [{"canonical": "John", "optional": "true"}],
+                        "email": ["john@example.com"],
+                    }
+                ]
+            }
+        )
+    )
+
+    # operate/check
+    with pytest.raises(
+        TypeError,
+        match=rf"{path}: document='document' person\[0\]\.first_name\[0\]\.optional",
+    ):
+        evaluate({}, ground_truth_path=path)
+
+
 def test_prediction_on_negative_document_scores_zero(tmp_path: Path):
     # setup
     ground_truth_path = _write_ground_truth(tmp_path, rows={"negative": []})
@@ -272,4 +495,20 @@ def _write_ground_truth(
     path = tmp_path / "ground_truth.json"
     serialized = {document_id: [asdict(person) for person in people] for document_id, people in rows.items()}
     path.write_text(json.dumps(serialized))
+    return path
+
+
+def _write_optional_name_ground_truth(
+    tmp_path: Path,
+    *,
+    first_name: object | None = None,
+) -> Path:
+    path = tmp_path / "ground_truth.json"
+    if first_name is None:
+        first_name = {"canonical": "John", "optional": True}
+    values = first_name if isinstance(first_name, list) else [first_name]
+    person = asdict(PIIItem())
+    person["first_name"] = values
+    person["email"] = ["john.doe@example.com"]
+    path.write_text(json.dumps({"document": [person]}))
     return path

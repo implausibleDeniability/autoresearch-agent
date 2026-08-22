@@ -3,7 +3,12 @@ from typing import Dict, Mapping, Sequence, Tuple
 
 PIIValues = Tuple[str, ...]
 SerializedGroundTruthValue = str | Mapping[str, object]
-GROUND_TRUTH_VALUE_FIELDS = frozenset({"canonical", "variants"})
+GROUND_TRUTH_VALUE_FIELDS = frozenset({"canonical", "variants", "optional"})
+OPTIONAL_GROUND_TRUTH_FIELDS = frozenset({"first_name", "middle_name", "last_name"})
+
+
+class GroundTruthPersonValidationError(ValueError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -24,8 +29,11 @@ class PIIItem:
 class GroundTruthValue:
     canonical: str
     variants: PIIValues = ()
+    optional: bool = False
 
     def __post_init__(self) -> None:
+        if not isinstance(self.optional, bool):
+            raise TypeError(f"ground-truth optional marker must be a boolean: {self.optional!r}")
         if not self.canonical:
             raise ValueError("ground-truth canonical value must not be empty")
         if any(not variant for variant in self.variants):
@@ -38,27 +46,40 @@ class GroundTruthValue:
         return (self.canonical, *self.variants)
 
     @classmethod
-    def from_serialized(cls, serialized: SerializedGroundTruthValue) -> "GroundTruthValue":
+    def from_serialized(
+        cls,
+        serialized: SerializedGroundTruthValue,
+        *,
+        context: str = "ground-truth value",
+    ) -> "GroundTruthValue":
         if isinstance(serialized, str):
             return cls(canonical=serialized)
-        _validate_mapping(serialized, context="ground-truth value")
+        _validate_mapping(serialized, context=context)
         _validate_known_fields(
             serialized,
             expected=GROUND_TRUTH_VALUE_FIELDS,
-            context="ground-truth value",
+            context=context,
         )
         canonical = serialized.get("canonical")
         variants = serialized.get("variants", [])
+        optional = serialized.get("optional", False)
         if not isinstance(canonical, str) or not isinstance(variants, list):
-            raise TypeError(f"invalid ground-truth value: {serialized}")
+            raise TypeError(f"{context} must contain a string canonical and list variants")
         if any(not isinstance(variant, str) for variant in variants):
-            raise TypeError(f"ground-truth variants must be strings: {serialized}")
-        return cls(canonical=canonical, variants=tuple(variants))
+            raise TypeError(f"{context} variants must be strings")
+        if not isinstance(optional, bool):
+            raise TypeError(f"{context}.optional must be a boolean: {optional!r}")
+        return cls(canonical=canonical, variants=tuple(variants), optional=optional)
 
     def serialize(self) -> str | Dict[str, object]:
-        if not self.variants:
+        if not self.variants and not self.optional:
             return self.canonical
-        return {"canonical": self.canonical, "variants": list(self.variants)}
+        serialized: Dict[str, object] = {"canonical": self.canonical}
+        if self.variants:
+            serialized["variants"] = list(self.variants)
+        if self.optional:
+            serialized["optional"] = True
+        return serialized
 
 
 GroundTruthValues = Tuple[GroundTruthValue, ...]
@@ -77,20 +98,46 @@ class GroundTruthPIIItem:
     location: GroundTruthValues = ()
     ssn: GroundTruthValues = ()
 
+    def __post_init__(self) -> None:
+        optional_fields = self._optional_fields()
+        unsupported = tuple(
+            field_name for field_name in optional_fields if field_name not in OPTIONAL_GROUND_TRUTH_FIELDS
+        )
+        if unsupported:
+            raise GroundTruthPersonValidationError(
+                f"optional ground-truth values are not allowed in fields: {unsupported}"
+            )
+        if optional_fields and not self.email:
+            raise GroundTruthPersonValidationError(
+                "optional ground-truth names require an email on the same person"
+            )
+
+    def _optional_fields(self) -> Tuple[str, ...]:
+        return tuple(
+            field.name for field in fields(self) if any(value.optional for value in getattr(self, field.name))
+        )
+
     @classmethod
     def from_serialized(
-        cls, serialized: Mapping[str, Sequence[SerializedGroundTruthValue]]
+        cls,
+        serialized: Mapping[str, Sequence[SerializedGroundTruthValue]],
+        *,
+        context: str = "ground-truth person",
     ) -> "GroundTruthPIIItem":
-        _validate_mapping(serialized, context="ground-truth person")
+        _validate_mapping(serialized, context=context)
         expected_fields = frozenset(field.name for field in fields(cls))
-        _validate_known_fields(serialized, expected=expected_fields, context="ground-truth person")
+        _validate_known_fields(serialized, expected=expected_fields, context=context)
         values = {
             field.name: _deserialize_ground_truth_values(
-                serialized.get(field.name, []), field_name=field.name
+                serialized.get(field.name, []),
+                context=f"{context}.{field.name}",
             )
             for field in fields(cls)
         }
-        return cls(**values)
+        try:
+            return cls(**values)
+        except GroundTruthPersonValidationError as error:
+            raise GroundTruthPersonValidationError(f"{context}: {error}") from error
 
     @classmethod
     def from_pii_item(cls, person: PIIItem) -> "GroundTruthPIIItem":
@@ -119,7 +166,10 @@ def _validate_known_fields(
         raise ValueError(f"unknown {context} fields: {sorted(unknown, key=repr)}")
 
 
-def _deserialize_ground_truth_values(serialized: object, *, field_name: str) -> GroundTruthValues:
+def _deserialize_ground_truth_values(serialized: object, *, context: str) -> GroundTruthValues:
     if not isinstance(serialized, list):
-        raise TypeError(f"ground-truth person field {field_name!r} must be a list: {serialized!r}")
-    return tuple(GroundTruthValue.from_serialized(value) for value in serialized)
+        raise TypeError(f"{context} must be a list: {serialized!r}")
+    return tuple(
+        GroundTruthValue.from_serialized(value, context=f"{context}[{index}]")
+        for index, value in enumerate(serialized)
+    )

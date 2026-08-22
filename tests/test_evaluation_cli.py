@@ -304,6 +304,7 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     # check
     assert completed.returncode == 0, completed.stderr
     assert "result_status=complete" in completed.stdout
+    assert "evaluator_contract_version=2" in completed.stdout
     assert "score_is_final=true" in completed.stdout
     assert "f_score=1.000000" in completed.stdout
     assert "precision=1.000000" in completed.stdout
@@ -326,7 +327,7 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     )
     assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
-    assert "diagnostics written: diagnostics.json (1 documents, schema v3)" in completed.stderr
+    assert "diagnostics written: diagnostics.json (1 documents, schema v4)" in completed.stderr
     diagnostics_duration = next(
         line.removeprefix("diagnostics_duration_seconds=")
         for line in completed.stderr.splitlines()
@@ -418,7 +419,8 @@ def extract_pii(text):
     assert document_results[1]["failure_category"] == "solution_error"
     assert "secret document content" not in json.dumps(document_results)
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
-    assert diagnostics["schema_version"] == 3
+    assert diagnostics["schema_version"] == 4
+    assert diagnostics["evaluator_contract_version"] == 2
     assert diagnostics["lifecycle_status"] == "terminal"
     assert diagnostics["result_status"] == "partial"
     assert diagnostics["completed_document_count"] == 2
@@ -663,7 +665,14 @@ def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_pa
     # check
     assert completed.returncode == 0, completed.stderr
     fields = [line.partition("=")[0] for line in completed.stdout.splitlines()]
-    assert fields == ["f_score", "precision", "recall", "api_cost_usd", "duration_seconds"]
+    assert fields == [
+        "evaluator_contract_version",
+        "f_score",
+        "precision",
+        "recall",
+        "api_cost_usd",
+        "duration_seconds",
+    ]
     assert completed.stderr == ""
 
 

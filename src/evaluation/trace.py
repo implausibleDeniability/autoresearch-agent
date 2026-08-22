@@ -1,7 +1,7 @@
-from dataclasses import fields
+from dataclasses import dataclass, field, fields
 from typing import List, Mapping, Sequence, Tuple
 
-from src.evaluation.matching import MatchIndexes, match_people, match_values
+from src.evaluation.matching import MatchIndexes, match_people, match_value_groups
 from src.evaluation.models import GroundTruthPIIItem, GroundTruthValue, PIIItem
 from src.evaluation.results import (
     DocumentEvaluation,
@@ -12,6 +12,21 @@ from src.evaluation.results import (
 )
 
 GroundTruthInput = GroundTruthPIIItem | PIIItem
+
+
+@dataclass
+class FieldValueLedger:
+    matches: List[ValueMatch] = field(default_factory=list)
+    ignored_optional_matches: List[ValueMatch] = field(default_factory=list)
+    false_positives: List[ValueReference] = field(default_factory=list)
+    false_negatives: List[ValueReference] = field(default_factory=list)
+    unmatched_optional_values: List[ValueReference] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class GroundTruthValuePartitions:
+    required: Tuple[ValueReference, ...]
+    optional: Tuple[ValueReference, ...]
 
 
 def build_evaluation_trace(
@@ -74,27 +89,29 @@ def _evaluate_field(
     ground_truth: Sequence[GroundTruthPIIItem],
     person_matches: MatchIndexes,
 ) -> FieldEvaluation:
-    matches, false_positives, false_negatives = _matched_people_values(
+    ledger = _matched_people_values(
         field_name,
         predictions=predictions,
         ground_truth=ground_truth,
         person_matches=person_matches,
     )
-    false_positives.extend(
+    ledger.false_positives.extend(
         _unmatched_prediction_people_values(field_name, predictions, matched=set(person_matches))
     )
-    false_negatives.extend(
-        _unmatched_ground_truth_people_values(
-            field_name,
-            ground_truth,
-            matched=set(person_matches.values()),
-        )
+    unmatched = _unmatched_ground_truth_people_values(
+        field_name,
+        ground_truth,
+        matched=set(person_matches.values()),
     )
+    ledger.false_negatives.extend(unmatched.required)
+    ledger.unmatched_optional_values.extend(unmatched.optional)
     return FieldEvaluation(
         field=field_name,
-        matches=tuple(matches),
-        false_positives=tuple(false_positives),
-        false_negatives=tuple(false_negatives),
+        matches=tuple(ledger.matches),
+        ignored_optional_matches=tuple(ledger.ignored_optional_matches),
+        false_positives=tuple(ledger.false_positives),
+        false_negatives=tuple(ledger.false_negatives),
+        unmatched_optional_values=tuple(ledger.unmatched_optional_values),
     )
 
 
@@ -104,44 +121,91 @@ def _matched_people_values(
     predictions: Sequence[PIIItem],
     ground_truth: Sequence[GroundTruthPIIItem],
     person_matches: MatchIndexes,
-) -> Tuple[List[ValueMatch], List[ValueReference], List[ValueReference]]:
-    matches: List[ValueMatch] = []
-    false_positives: List[ValueReference] = []
-    false_negatives: List[ValueReference] = []
+) -> FieldValueLedger:
+    ledger = FieldValueLedger()
     for prediction_person_index, ground_person_index in person_matches.items():
-        predicted_values = getattr(predictions[prediction_person_index], field_name)
-        expected_values = getattr(ground_truth[ground_person_index], field_name)
-        value_matches = match_values(predicted_values, ground_truth=expected_values)
-        matches.extend(
-            ValueMatch(
-                prediction=_prediction_value_reference(
-                    prediction_person_index,
-                    value_index=prediction_index,
-                    value=predicted_values[prediction_index],
-                ),
-                ground_truth=_ground_truth_value_reference(
-                    ground_person_index,
-                    value_index=ground_index,
-                    value=expected_values[ground_index],
-                ),
-            )
-            for prediction_index, ground_index in value_matches.items()
+        _add_matched_person_values(
+            ledger,
+            field_name=field_name,
+            prediction_person_index=prediction_person_index,
+            ground_person_index=ground_person_index,
+            predictions=predictions,
+            ground_truth=ground_truth,
         )
-        false_positives.extend(
-            _unmatched_prediction_values(
+    return ledger
+
+
+def _add_matched_person_values(
+    ledger: FieldValueLedger,
+    *,
+    field_name: str,
+    prediction_person_index: int,
+    ground_person_index: int,
+    predictions: Sequence[PIIItem],
+    ground_truth: Sequence[GroundTruthPIIItem],
+) -> None:
+    predicted_values = getattr(predictions[prediction_person_index], field_name)
+    expected_values = getattr(ground_truth[ground_person_index], field_name)
+    value_matches = match_value_groups(predicted_values, ground_truth=expected_values)
+    ledger.matches.extend(
+        _value_matches(
+            prediction_person_index=prediction_person_index,
+            ground_person_index=ground_person_index,
+            predicted_values=predicted_values,
+            expected_values=expected_values,
+            matches=value_matches.required,
+        )
+    )
+    ledger.ignored_optional_matches.extend(
+        _value_matches(
+            prediction_person_index=prediction_person_index,
+            ground_person_index=ground_person_index,
+            predicted_values=predicted_values,
+            expected_values=expected_values,
+            matches=value_matches.optional,
+        )
+    )
+    matched_predictions = set(value_matches.required) | set(value_matches.optional)
+    ledger.false_positives.extend(
+        _unmatched_prediction_values(
+            prediction_person_index,
+            predicted_values,
+            matched=matched_predictions,
+        )
+    )
+    matched_ground = set(value_matches.required.values()) | set(value_matches.optional.values())
+    unmatched = _unmatched_ground_truth_values(
+        ground_person_index,
+        expected_values,
+        matched=matched_ground,
+    )
+    ledger.false_negatives.extend(unmatched.required)
+    ledger.unmatched_optional_values.extend(unmatched.optional)
+
+
+def _value_matches(
+    *,
+    prediction_person_index: int,
+    ground_person_index: int,
+    predicted_values: Sequence[str],
+    expected_values: Sequence[GroundTruthValue],
+    matches: MatchIndexes,
+) -> List[ValueMatch]:
+    return [
+        ValueMatch(
+            prediction=_prediction_value_reference(
                 prediction_person_index,
-                predicted_values,
-                matched=set(value_matches),
-            )
-        )
-        false_negatives.extend(
-            _unmatched_ground_truth_values(
+                value_index=prediction_index,
+                value=predicted_values[prediction_index],
+            ),
+            ground_truth=_ground_truth_value_reference(
                 ground_person_index,
-                expected_values,
-                matched=set(value_matches.values()),
-            )
+                value_index=ground_index,
+                value=expected_values[ground_index],
+            ),
         )
-    return matches, false_positives, false_negatives
+        for prediction_index, ground_index in matches.items()
+    ]
 
 
 def _unmatched_prediction_people_values(
@@ -157,13 +221,14 @@ def _unmatched_prediction_people_values(
 
 def _unmatched_ground_truth_people_values(
     field_name: str, people: Sequence[GroundTruthPIIItem], *, matched: set[int]
-) -> List[ValueReference]:
-    return [
+) -> GroundTruthValuePartitions:
+    references = [
         _ground_truth_value_reference(person_index, value_index=value_index, value=value)
         for person_index, person in enumerate(people)
         if person_index not in matched
         for value_index, value in enumerate(getattr(person, field_name))
     ]
+    return _partition_ground_truth_references(references)
 
 
 def _unmatched_prediction_values(
@@ -178,12 +243,22 @@ def _unmatched_prediction_values(
 
 def _unmatched_ground_truth_values(
     person_index: int, values: Sequence[GroundTruthValue], *, matched: set[int]
-) -> List[ValueReference]:
-    return [
+) -> GroundTruthValuePartitions:
+    references = [
         _ground_truth_value_reference(person_index, value_index=value_index, value=value)
         for value_index, value in enumerate(values)
         if value_index not in matched
     ]
+    return _partition_ground_truth_references(references)
+
+
+def _partition_ground_truth_references(
+    references: Sequence[ValueReference],
+) -> GroundTruthValuePartitions:
+    return GroundTruthValuePartitions(
+        required=tuple(reference for reference in references if not reference.optional),
+        optional=tuple(reference for reference in references if reference.optional),
+    )
 
 
 def _prediction_value_reference(person_index: int, *, value_index: int, value: str) -> ValueReference:
@@ -198,4 +273,5 @@ def _ground_truth_value_reference(
         value_index=value_index,
         value=value.canonical,
         variants=value.variants,
+        optional=value.optional,
     )

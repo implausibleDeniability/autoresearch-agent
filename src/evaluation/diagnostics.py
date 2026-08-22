@@ -5,13 +5,14 @@ from collections import Counter
 from dataclasses import asdict
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Mapping, Optional
+from typing import Dict, List, Mapping, Optional, Tuple
 
 from src.evaluation.results import (
     DocumentEvaluation,
     EntityMetrics,
     EvaluationTrace,
     FieldEvaluation,
+    ValueMatch,
     ValueReference,
 )
 from src.evaluation.run_results import DocumentExecution, EvaluationRun
@@ -24,7 +25,8 @@ from src.evaluation.source_matching import (
     source_matching_policy,
 )
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
+EVALUATOR_CONTRACT_VERSION = 2
 CONTEXT_RADIUS = 60
 MAX_OCCURRENCES_PER_VALUE = 20
 
@@ -80,6 +82,7 @@ def _serialize_trace(
 ) -> Dict[str, object]:
     serialized = {
         "schema_version": SCHEMA_VERSION,
+        "evaluator_contract_version": EVALUATOR_CONTRACT_VERSION,
         "source_matching_policy": source_matching_policy(),
         "dataset": dataset,
         "dataset_document_count": len(texts),
@@ -172,23 +175,12 @@ def _serialize_field(
     return {
         "field": field.field,
         "metrics": _serialize_metrics(field.metrics),
-        "matches": [
-            {
-                "prediction": _serialize_value(
-                    match.prediction,
-                    text=text,
-                    source_matcher=source_matcher,
-                    role=SourceValueRole.PREDICTION,
-                ),
-                "ground_truth": _serialize_value(
-                    match.ground_truth,
-                    text=text,
-                    source_matcher=source_matcher,
-                    role=SourceValueRole.GROUND_TRUTH,
-                ),
-            }
-            for match in field.matches
-        ],
+        "matches": _serialize_matches(field.matches, text=text, source_matcher=source_matcher),
+        "ignored_optional_matches": _serialize_matches(
+            field.ignored_optional_matches,
+            text=text,
+            source_matcher=source_matcher,
+        ),
         "false_positives": [
             _serialize_value(
                 value,
@@ -207,7 +199,41 @@ def _serialize_field(
             )
             for value in field.false_negatives
         ],
+        "unmatched_optional_values": [
+            _serialize_value(
+                value,
+                text=text,
+                source_matcher=source_matcher,
+                role=SourceValueRole.GROUND_TRUTH,
+            )
+            for value in field.unmatched_optional_values
+        ],
     }
+
+
+def _serialize_matches(
+    matches: Tuple[ValueMatch, ...],
+    *,
+    text: str,
+    source_matcher: SourceTextMatcher,
+) -> List[Dict[str, object]]:
+    return [
+        {
+            "prediction": _serialize_value(
+                match.prediction,
+                text=text,
+                source_matcher=source_matcher,
+                role=SourceValueRole.PREDICTION,
+            ),
+            "ground_truth": _serialize_value(
+                match.ground_truth,
+                text=text,
+                source_matcher=source_matcher,
+                role=SourceValueRole.GROUND_TRUTH,
+            ),
+        }
+        for match in matches
+    ]
 
 
 def _serialize_value(
@@ -225,6 +251,7 @@ def _serialize_value(
         "value_index": reference.value_index,
         "value": reference.value,
         "variants": list(reference.variants),
+        "optional": reference.optional,
         "source_value": source_value,
         "source_evidence_count": len(evidence),
         "raw_occurrence_count": counts[SourceMatchKind.RAW_EXACT],

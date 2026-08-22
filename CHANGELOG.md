@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.0.0] - 2026-08-22
+
+### Added
+
+- Mark names recoverable only from an email local-part as optional ground-truth values.
+- Expose matched and unmatched optional values in a neutral diagnostics ledger.
+
+### Changed
+
+- Upgrade diagnostics to schema version 4 and scored runs to evaluator contract version 2.
+- Treat historical contract-1 baseline scores as incomparable with new results.
+
+### Fixed
+
+- Stop counting omitted optional names as false negatives without hiding incorrect name predictions.
+- Exclude optional names from person matching and match them only by normalized exact values or
+  explicit variants.
+
 ## [0.8.0.0] - 2026-08-22
 
 ### Added

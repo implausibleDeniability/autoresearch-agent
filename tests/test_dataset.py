@@ -3,7 +3,10 @@ from pathlib import Path
 
 import pytest
 
+from src.evaluation.models import GroundTruthPIIItem
+
 JUSTIN_EMAILS = {"schwabjustin@epa.gov", "schwab.justin@epa.gov"}
+NAME_FIELDS = ("first_name", "middle_name", "last_name")
 
 
 @pytest.mark.parametrize(
@@ -75,7 +78,67 @@ def test_extended_dataset_contains_corrected_michael_dourson_labels(dataset: str
     assert michael["location"] == ["160 Panzeca Way Cincinnati OH 45267-0056"]
 
 
+@pytest.mark.parametrize(
+    ("dataset", "expected_optional_values"),
+    (
+        ("debug", 0),
+        ("dev-19k", 0),
+        ("dev-87k", 0),
+        ("dev-205k", 63),
+    ),
+)
+def test_visible_dataset_optional_name_counts_and_invariants(dataset: str, expected_optional_values: int):
+    # setup
+    ground_truth = json.loads((Path("data") / dataset / "ground_truth.json").read_text())
+    people = [person for document in ground_truth.values() for person in document]
+
+    # operate
+    parsed_people = [GroundTruthPIIItem.from_serialized(person) for person in people]
+    optional_values = [
+        value
+        for person in parsed_people
+        for field in NAME_FIELDS
+        for value in getattr(person, field)
+        if value.optional
+    ]
+
+    # check
+    assert len(optional_values) == expected_optional_values
+    for person in parsed_people:
+        email_local_parts = tuple(
+            _normalized_alnum(email.partition("@")[0])
+            for value in person.email
+            for email in value.accepted_values
+        )
+        for field in NAME_FIELDS:
+            for value in getattr(person, field):
+                if value.optional:
+                    assert person.email
+                    assert any(
+                        _normalized_alnum(accepted) in local_part
+                        for accepted in value.accepted_values
+                        for local_part in email_local_parts
+                    )
+
+
+def test_nested_visible_datasets_keep_shared_ground_truth_identical():
+    ground_truth = {
+        dataset: json.loads((Path("data") / dataset / "ground_truth.json").read_text())
+        for dataset in ("dev-19k", "dev-87k", "dev-205k")
+    }
+
+    for document_id, people in ground_truth["dev-19k"].items():
+        assert ground_truth["dev-87k"][document_id] == people
+        assert ground_truth["dev-205k"][document_id] == people
+    for document_id, people in ground_truth["dev-87k"].items():
+        assert ground_truth["dev-205k"][document_id] == people
+
+
 def _person(ground_truth: dict, *, document: str, first_name: str) -> dict:
     matches = [person for person in ground_truth[document] if person["first_name"] == [first_name]]
     assert len(matches) == 1
     return matches[0]
+
+
+def _normalized_alnum(value: str) -> str:
+    return "".join(character.lower() for character in value if character.isalnum())
