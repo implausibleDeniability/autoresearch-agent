@@ -6,7 +6,7 @@ This is an experiment to have the LLM do its own research on optimizing LLM syst
 
 To start the research:
 1. **Create an experiment worktree**: `git checkout -b autoresearch/<tag>` from current main. `tag` should indicate day and time: `aug-8-11-52` 
-2. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed.
+2. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed. Use the 10-column schema in **Logging results** so the final trajectory can be generated without reconstructing findings later.
 3. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
 4. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
 5. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
@@ -134,10 +134,10 @@ After development, commit the final `solution.py` and pass that commit with `--f
 
 Log development experiments to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions). Report the restricted blind result separately.
 
-Use this 9-column header:
+Use this 10-column header. The final `finding` column is appended so older nine-column logs remain readable:
 
 ```
-commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding
 ```
 
 1. git commit hash (short, 7 chars)
@@ -146,16 +146,17 @@ commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
 4. recall — use 0.000000 for crashes
 5. USD per million source-document tokens achieved — use 0.000000 for crashes
 6. status: `keep`, `discard`, `inconclusive`, or `crash`
-7. short text description of what this experiment tried
+7. short public-safe description of what this experiment tried
 8. dataset: `debug`, `dev-19k`, `dev-87k`, or `dev-205k`
 9. API cost charged to the budget; when metering is incomplete, use the larger of the observed subtotal and the pre-run estimate
+10. short evidence-backed conclusion from the result. Keep both `description` and `finding` safe for a public SVG: never include PII, document excerpts, prompts, completions, or sensitive diagnostics. Every `keep` row on `dev-205k` must have a non-empty finding.
 
 Example:
 
 ```tsv
-commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd
-a1b2c3d	0.940000	0.960000	0.936000	1.420000	keep	baseline	dev-19k	0.027467
-d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema	debug	0.000500
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding
+a1b2c3d	0.940000	0.960000	0.936000	0.230000	keep	baseline	dev-205k	0.047000	Measured starting point
+d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema	debug	0.000500	Schema failed before scoring
 ```
 
 ## Extra communication bugs and required packages:
@@ -173,25 +174,26 @@ The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 Stop development after 40 evaluations or when only the budget reserved for the final test remains. Baselines, debug checks, crashes, and reruns count toward 40. The final test does not, but its spend counts toward $0.50.
 
 1. Look at the git state: the current branch/commit we're on
-2. For the first experiment, evaluate the current `solution.py` as the baseline. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
+2. For the first experiment, evaluate the current `solution.py` on `dev-205k` as the measured baseline and mark the complete result `keep`. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
 5. Load `.env` and run the evaluator in the same shell invocation: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json > run.log 2>&1`, substituting another allowed dataset when appropriate.
 6. Read the run status before interpreting metrics: `grep -E '^(result_status|score_is_final|termination_category|documents_completed|documents_failed|documents_not_attempted|cost_status|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|document_results_json)=' run.log`.
 7. Handle the reported status:
    - `result_status=complete` and `score_is_final=true`: use the normal score and cost fields for the candidate decision.
-   - `result_status=partial` and `score_is_final=false`: count the attempt, inspect the completed-document metrics and diagnostics for hypotheses, but never rank, keep, discard, or promote the candidate from this run. Record it as `crash` with zero score fields. Include coverage, the failed document ID, its source, prompt, completion, and total token counts, observed cost, latency, and safe failure category. Charge the larger of `observed_api_cost_usd` and the pre-run estimate when `cost_status=incomplete`.
+   - `result_status=partial` and `score_is_final=false`: count the attempt, inspect the completed-document metrics and diagnostics for hypotheses, but never rank, keep, discard, or promote the candidate from this run. Record it as `crash` with zero score fields and a public-safe failure category. Keep the coverage, failed document ID, source, prompt, completion, token counts, observed cost, and latency only in `diagnostics.json`; keep `research.md` public-safe. Charge the larger of `observed_api_cost_usd` and the pre-run estimate when `cost_status=incomplete`.
    - Missing `result_status`: treat this as an evaluator or protocol crash, inspect the final 50 log lines, and charge the pre-run estimate unless a trustworthy observed subtotal is available.
-8. Before another paid run, inspect `diagnostics.json`. Inventory false negatives and false positives by field and document, inspect the highest-impact documents, and name at least one observed error class in the next experiment's hypothesis and `results.tsv` description. Never optimize aggregate metrics without this error inventory.
-9. Record the result in `results.tsv` and recompute cumulative spend. Do not commit the file.
+8. Before another paid run, inspect `diagnostics.json`. Inventory false negatives and false positives by field and document, inspect the highest-impact documents, and name at least one public-safe error class in the next experiment's hypothesis and `results.tsv` description. Never copy PII or source excerpts into `results.tsv`, and never optimize aggregate metrics without this error inventory.
+9. Record the result and its public-safe `finding` in `results.tsv`, then recompute cumulative spend. Do not commit the file. Every data row is one development experiment number, including debug checks, crashes, discarded candidates, and reruns.
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 11. If a candidate is competitive and uncertainty could change the decision, repeat it within the remaining limits and evaluate the combined evidence.
-12. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the evidence justifies it; otherwise return to the incumbent without losing the recorded result.
-13. When development ends, select the final solution without blind-test evidence. Do not send the final report yet.
-14. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
-15. If its estimated spend fits the remaining budget, run one evaluation with the discovered blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
-16. Leave the blind evaluator's aggregate output in `run.log`, charge its cost, and stop experimenting. Any later solution change invalidates the result.
-17. Whether or not the blind evaluation ran, invoke `$report-autoresearch-progress` for the current run and use its output as the final user-facing report. Do not replace it with an ad hoc metric summary.
+12. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-205k`. Only a complete final score can support acceptance; partial results cannot. Cheaper checks may support `discard` or `inconclusive`, but never promotion. Once the decision is made, update successful repetitions consistently as described in **Evaluation confidence**.
+13. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the complete `dev-205k` evidence justifies it; otherwise return to the incumbent without losing the recorded result.
+14. When development ends, select the final solution without blind-test evidence. Do not send the final report yet.
+15. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
+16. If its estimated spend fits the remaining budget, run one evaluation with the discovered blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.
+17. Leave the blind evaluator's aggregate output in `run.log`, charge its cost, and stop experimenting. Any later solution change invalidates the result.
+18. Whether or not the blind evaluation ran, invoke `$report-autoresearch-progress` for the current run and use its output as the final user-facing report. Do not replace it with an ad hoc metric summary. Generate the research trajectory only through the separate `$generate-autoresearch-trajectory` skill when requested; the experiment loop never edits README.
 
 The idea is that you are a completely autonomous researcher trying things out. Advance the branch when the evidence supports a candidate, otherwise return to the incumbent and keep exploring. If you feel like you're getting stuck, reconsider the research direction rather than repeatedly tuning the same idea.
 

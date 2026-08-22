@@ -1,0 +1,21 @@
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding
+a100001	0.742000	0.801000	0.731000	0.214000	keep	Measured baseline	dev-205k	0.043870	Established the starting quality
+a100002	0.751000	0.823000	0.738000	0.219000	inconclusive	Tighter extraction instructions	dev-19k	0.004240	Promising recall gain on the small split
+a100002	0.000000	0.000000	0.000000	0.000000	crash	Strict schema draft	debug	0.000300	Rejected an invalid schema before scoring
+a100002	0.756000	0.826000	0.743000	0.211000	inconclusive	Tighter extraction instructions	dev-87k	0.010910	Gain survived the broader cheap split
+a100002	0.771000	0.835000	0.760000	0.207000	keep	Tighter extraction instructions	dev-205k	0.042360	Recovered names missed by the baseline
+a100003	0.768000	0.842000	0.754000	0.193000	discard	Extra validation pass	dev-19k	0.003720	Added cost without reliable quality
+a100003	0.789000	0.851000	0.779000	0.188000	inconclusive	Deterministic email recovery	dev-87k	0.009830	Reduced email false negatives
+a100003	0.795000	0.859000	0.784000	0.184000	keep	Deterministic email recovery	dev-205k	0.037720	Recovered exact emails without another model call
+a100003	0.801000	0.865000	0.790000	0.186000	keep	Deterministic email recovery	dev-205k	0.038130	Confirmed the email gain on a repeat
+a100004	0.793000	0.847000	0.783000	0.171000	inconclusive	Merge duplicate people	dev-19k	0.003310	Reduced duplicate predictions
+a100004	0.812000	0.872000	0.801000	0.169000	inconclusive	Merge duplicate people	dev-87k	0.008840	Precision improved without losing recall
+a100004	0.000000	0.000000	0.000000	0.000000	crash	Merge edge-case repair	debug	0.000210	Caught an empty-name edge case offline
+a100004	0.823000	0.884000	0.812000	0.168000	keep	Merge duplicate people	dev-205k	0.034420	Removed duplicate people before evaluation
+a100005	0.819000	0.889000	0.807000	0.153000	inconclusive	Compact evidence prompt	dev-19k	0.002960	Lower token use preserved the small-split score
+a100005	0.832000	0.895000	0.821000	0.151000	inconclusive	Compact evidence prompt	dev-87k	0.007860	The compact prompt generalized cleanly
+a100006	0.815000	0.901000	0.800000	0.146000	discard	Aggressive surname filter	dev-19k	0.002820	Precision gain cost too much recall
+a100005	0.847000	0.903000	0.837000	0.149000	keep	Compact evidence prompt	dev-205k	0.030520	Kept the evidence while removing prompt noise
+a100006	0.839000	0.908000	0.827000	0.141000	inconclusive	OCR-aware name variants	dev-87k	0.007340	Recovered plausible OCR variants
+a100006	0.855000	0.914000	0.844000	0.139000	inconclusive	OCR-aware name variants	dev-19k	0.002690	Recall gain held on PII-dense documents
+a100006	0.861000	0.919000	0.851000	0.137000	keep	OCR-aware name variants	dev-205k	0.028110	Accepted defensible OCR forms without extra calls
