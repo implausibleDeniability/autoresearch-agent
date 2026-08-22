@@ -41,7 +41,8 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 uv run python -m src.evaluation.cli --dataset dev-205k
 ```
 
-Evaluations process up to 50 documents concurrently by default. Override the limit when needed:
+Evaluations process up to 50 documents concurrently by default. Lower the limit to reduce
+simultaneous worker and API load:
 
 ```bash
 uv run python -m src.evaluation.cli --dataset dev-205k --max-concurrent-documents 20
@@ -176,10 +177,10 @@ uv run python -m src.evaluation.cli --dataset dev-19k
 ```
 
 Runs should target no more than $1.50 per million source tokens, but only the 8-cent total-cost guard
-is enforced (overridable with `--cents-limit`), allowing modest overruns to return useful results.
-Once the guard is exceeded, new requests are rejected, though concurrent in-flight requests may add
-some overshoot. Lower `--max-concurrent-documents` when a tighter overshoot bound matters more than
-runtime.
+is enforced (overridable with `--cents-limit`). Before forwarding a request, the meter reserves its
+maximum possible cost against the limit. Requests wait when their reservation would exceed the
+remaining budget. One request may still exceed the limit so the run can return useful results;
+further requests are rejected.
 
 The evaluator keeps the real `OPENAI_API_KEY` in its own process. It gives the solution subprocess a
 short-lived token and redirects the OpenAI SDK through an evaluator-owned localhost meter. The meter
