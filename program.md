@@ -38,7 +38,7 @@ All else being equal, simpler is better. A small improvement that adds ugly comp
 You have several datasets on which you can run evaluation:
 - `test-*` - the quality of your solution will be measured on that dataset. You can't read its files, but you can discover the name of the dataset.
 - `debug` - development dataset with two documents that you can use that to cheaply test if your solution doesn't crash.
-- `dev-19k`, `dev-87k`, and `dev-205k` — three datasets you can use for experimenting with performance. The number in the name tells the total number of tokens in the dataset. You can run the experiments on whichever you want. The smaller datasets are cheaper to run on, while bigger datasets are more representative to the test distribution. You can read documents in all three, inspect their diagnostics and tune against them. However, be careful and don't over-optimize to the smaller datasets. 
+- `dev-19k`, `dev-87k`, and `dev-205k` — readable development datasets named by approximate token count. `dev-19k` is a PII-dense subset of `dev-87k`; both smaller datasets have a selected document mix less representative of the blind test. Use them for cheap hypothesis testing, not as sufficient evidence of generalization. `dev-205k` adds a broad random sample and is likely the closest development proxy for the blind distribution; periodically validate promising changes on it and use it for final candidate selection. You may inspect their documents and diagnostics and tune against them.
 
 ### Cost
 Cost is measured in USD per million source-document tokens:
