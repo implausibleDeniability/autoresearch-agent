@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.0.1] - 2026-08-22
+
+### Fixed
+
+- Restore the three-minute evaluation limit now that documents run concurrently.
+
 ## [0.7.0.0] - 2026-08-22
 
 ### Added

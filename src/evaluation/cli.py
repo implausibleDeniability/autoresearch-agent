@@ -42,8 +42,7 @@ DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
 SOLUTION_MODULE = "solution"
 WORKER_RESULT_PREFIX = "EVALUATION_RESULT="
-DEFAULT_TIMEOUT_SECONDS = 180.0
-MAX_TIMEOUT_SECONDS = 600.0
+MAX_TIMEOUT_SECONDS = 180.0
 USD_PER_CENT = Decimal("0.01")
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
 UPSTREAM_BASE_URL_ENVIRONMENT = "OPENAI_UPSTREAM_BASE_URL"
@@ -592,7 +591,7 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         "--frozen-commit",
         help="current solution commit required for a final blind test",
     )
-    parser.add_argument("--timeout", type=_timeout_seconds, default=DEFAULT_TIMEOUT_SECONDS)
+    parser.add_argument("--timeout", type=_timeout_seconds, default=MAX_TIMEOUT_SECONDS)
     parser.add_argument(
         "--max-concurrent-documents",
         type=_positive_integer,
