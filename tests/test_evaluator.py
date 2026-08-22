@@ -54,6 +54,52 @@ def test_perfect_predictions_score_canonical_labels_and_negative_documents(tmp_p
     assert result.f_score == 1.0
 
 
+@pytest.mark.parametrize("email", ["kenny.shannon@epa.gov", "kenny.shannon@8pa.gov"])
+def test_ground_truth_variants_score_as_one_value(tmp_path: Path, email: str):
+    # setup
+    person = asdict(PIIItem(first_name=("Shannon",), last_name=("Kenny",)))
+    person["email"] = [
+        {
+            "canonical": "kenny.shannon@epa.gov",
+            "variants": ["kenny.shannon@8pa.gov"],
+        }
+    ]
+    ground_truth_path = tmp_path / "ground_truth.json"
+    ground_truth_path.write_text(json.dumps({"document": [person]}))
+    prediction = PIIItem(first_name=("Shannon",), last_name=("Kenny",), email=(email,))
+
+    # operate
+    result = evaluate({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    assert result.true_positive == 3
+    assert result.f_score == 1.0
+
+
+def test_ground_truth_variants_cannot_match_twice(tmp_path: Path):
+    # setup
+    person = asdict(PIIItem(first_name=("Shannon",), last_name=("Kenny",)))
+    person["email"] = [
+        {
+            "canonical": "kenny.shannon@epa.gov",
+            "variants": ["kenny.shannon@8pa.gov"],
+        }
+    ]
+    ground_truth_path = tmp_path / "ground_truth.json"
+    ground_truth_path.write_text(json.dumps({"document": [person]}))
+    prediction = PIIItem(
+        first_name=("Shannon",),
+        last_name=("Kenny",),
+        email=("kenny.shannon@epa.gov", "kenny.shannon@8pa.gov"),
+    )
+
+    # operate
+    result = evaluate({"document": [prediction]}, ground_truth_path=ground_truth_path)
+
+    # check
+    assert (result.true_positive, result.false_positive, result.false_negative) == (3, 1, 0)
+
+
 def test_relaxed_person_matching_preserves_partial_pii_score(tmp_path: Path):
     # setup
     ground_truth_path = _write_ground_truth(

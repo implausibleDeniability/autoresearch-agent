@@ -685,11 +685,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -1057,11 +1055,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -1077,11 +1073,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -1930,11 +1924,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -2196,11 +2188,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -3019,11 +3009,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -3127,7 +3115,12 @@
     },
     {
       "first_name": [
-        "Arnab"
+        {
+          "canonical": "Arnab",
+          "variants": [
+            "Arnie"
+          ]
+        }
       ],
       "middle_name": [],
       "last_name": [
@@ -5056,10 +5049,7 @@
       ],
       "age": [],
       "birthdate": [],
-      "phone": [
-        "+1 (781) 895-9627",
-        "401-9627"
-      ],
+      "phone": [],
       "email": [],
       "social_network_identifier": [],
       "location": [],
@@ -5151,11 +5141,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5605,11 +5593,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5641,11 +5627,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5693,11 +5677,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5729,11 +5711,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5749,11 +5729,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5785,11 +5763,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5814,20 +5790,6 @@
       "social_network_identifier": [],
       "location": [],
       "ssn": []
-    },
-    {
-      "first_name": [
-        "Helen"
-      ],
-      "middle_name": [],
-      "last_name": [],
-      "age": [],
-      "birthdate": [],
-      "phone": [],
-      "email": [],
-      "social_network_identifier": [],
-      "location": [],
-      "ssn": []
     }
   ],
   "trnp0256": [
@@ -5835,11 +5797,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],
@@ -5887,11 +5847,9 @@
       "first_name": [
         "Burcu"
       ],
-      "middle_name": [
-        "Kazazoglu"
-      ],
+      "middle_name": [],
       "last_name": [
-        "Taylor"
+        "Kazazoglu Taylor"
       ],
       "age": [],
       "birthdate": [],

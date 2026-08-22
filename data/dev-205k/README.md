@@ -3,11 +3,12 @@
 This dataset contains the 20 `dev-87k` Industry Documents plus 102 new examples; `dev-87k` remains
 available as a separate, cheaper dataset. Together these 122 documents contain 204,153 `o200k_base`
 tokens and 98,127 whitespace-delimited words,
-including 534 document-scoped people and 1,334 labeled PII values. Forty-six documents are
+including 535 document-scoped people and 1,329 labeled PII values. Forty-five documents are
 negative examples.
 
-`ground_truth.json` maps each document ID to its list of canonical `PIIItem` values. The original
-20 documents and their labels are unchanged; this expansion adds 102 newly annotated documents.
+`ground_truth.json` maps each document ID to its list of people using the
+[ground-truth value format](../../README.md#ground-truth-labels). This expansion adds 102 documents
+to the corrected original 20-document label set.
 
 ## Sampling
 
@@ -37,8 +38,8 @@ No other sampled record was excluded.
 Each source OCR file was checked against its PDF or extracted workbook. All 555 rendered PDF pages
 and workbook print pages were reviewed; an independent local OCR pass was used to surface names
 that the source OCR or layout could obscure. Presentation, grid, and spreadsheet pages were also
-inspected visually. Every added label value was then verified as a literal, case-insensitive source
-substring.
+inspected visually. Every added logical label has at least one accepted transcription verified as a
+literal, case-insensitive source substring.
 
 People are scoped to one document. Supported aliases, nicknames, and spelling variants for a person
 are consolidated, while ambiguous partial names remain separate. Partial names, initials, and named
