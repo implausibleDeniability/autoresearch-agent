@@ -41,7 +41,8 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 uv run python -m src.evaluation.cli --dataset dev-205k
 ```
 
-Each evaluation has a hard three-minute wall-clock limit.
+Solution processing has a three-minute deadline. Use `--timeout SECONDS` for a shorter deadline;
+values above 180 seconds are rejected.
 
 Evaluations process up to 50 documents concurrently by default. Lower the limit to reduce
 simultaneous worker and API load:

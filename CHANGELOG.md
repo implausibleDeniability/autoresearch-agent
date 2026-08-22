@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- Restore the three-minute evaluation limit now that documents run concurrently.
+- Remove the former ten-minute override; `--timeout` now accepts at most 180 seconds.
 
 ## [0.7.0.0] - 2026-08-22
 
