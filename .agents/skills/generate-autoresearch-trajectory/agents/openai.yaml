@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate research trajectory"
+  short_description: "Turn autoresearch results into a polished SVG"
+  default_prompt: "Use $generate-autoresearch-trajectory to generate and preview the current run's research trajectory SVG."
