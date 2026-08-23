@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.evaluation.models import PIIItem
 
 MODEL = "gpt-4o-mini-2024-07-18"
+SEED = 42
 MAX_COMPLETION_TOKENS = 4096
 
 PROMPT = """
@@ -70,6 +71,7 @@ def _extract_people(text: str) -> _People:
         messages=[{"role": "user", "content": PROMPT.format(text=text)}],
         response_format=_People,
         max_completion_tokens=MAX_COMPLETION_TOKENS,
+        seed=SEED,
         temperature=0,
     )
     message = completion.choices[0].message
