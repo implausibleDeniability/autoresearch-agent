@@ -24,7 +24,7 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 - **Evaluator cache:** Treat `.openai-response-cache/` as evaluator-owned. Do not inspect, modify, copy, delete, or commit it.
 - **Protected data:** Never access `data/raw`. You may discover the blind dataset name by listing directories matching `data/test-*`, but access their contents only through the final evaluator or with explicit user permission.
 - **Implementation scope:** Modify and commit only `solution.py`. Use `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and development diagnostic files only as uncommitted working files. Do not modify other repository files.
-- **Diagnostics:** You may preserve diagnostics from multiple development evaluations. Name each file so it can be traced to its evaluation. Never create blind-test diagnostics.
+- **Diagnostics:** Retain one uniquely named diagnostic file per development evaluation. Never create blind-test diagnostics.
 - **Offline checks:** You may run unlimited free checks against synthetic inputs with fake or patched model responses, including temporary scripts outside the repository. They must not use credentials, external services, repository datasets, or evaluation metrics and do not count toward the 40-evaluation limit.
 
 ## Evaluation
