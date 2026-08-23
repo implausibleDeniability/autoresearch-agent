@@ -5,7 +5,7 @@ available as a separate, cheaper dataset. Together these 122 documents contain 2
 tokens and 98,127 whitespace-delimited words,
 including 535 document-scoped people and 1,329 labeled PII values. Forty-five documents are
 negative examples. Sixty-three name components recoverable only from an associated email local-part
-are marked optional under the evaluator contract.
+are marked optional for scoring.
 
 `ground_truth.json` maps each document ID to its list of people using the
 [ground-truth value format](../../README.md#ground-truth-labels). This expansion adds 102 documents

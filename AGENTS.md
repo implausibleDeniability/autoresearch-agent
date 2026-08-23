@@ -22,6 +22,10 @@
 - Never run more than two CPU-heavy processes concurrently on this machine, including processes started by subagents.
 - Before starting CPU-heavy work, count active local and subagent processes. Queue or stop work to keep the total at two or fewer.
 
+# Baseline Consistency
+
+- Changes to evaluator scoring or visible development labels must refresh `baseline-results.tsv` in the same change. Accept rows only from complete, final, fully metered runs.
+
 # Worktree Workflow
 
 - When the user requests a separate worktree, do not make implementation changes in the main workspace.

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.0.0] - 2026-08-23
+
+### Added
+
+- Validate saved baseline shape, provenance, metric arithmetic, and normalized cost offline.
+
+### Changed
+
+- Simplify scored output and diagnostics around the sole current evaluator policy.
+- Upgrade diagnostics and development-result output to schema version 5.
+- Refresh all development baselines with the fixed-seed solution and current optional-name scoring.
+
+### Fixed
+
+- Raise the baseline completion ceiling so fixed-seed long-document evaluations can finish.
+
 ## [0.11.0.0] - 2026-08-23
 
 ### Added
@@ -21,8 +37,8 @@
 
 ### Changed
 
-- Upgrade diagnostics to schema version 4 and scored runs to evaluator contract version 2.
-- Treat historical contract-1 baseline scores as incomparable with new results.
+- Upgrade diagnostics to schema version 4 for the optional-value ledger.
+- Apply optional email-derived-name scoring consistently to new results.
 
 ### Fixed
 

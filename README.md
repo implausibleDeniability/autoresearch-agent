@@ -92,7 +92,7 @@ uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics/
 Use the evaluation number, short commit, and dataset in each filename. The CLI refuses to start if
 the path already exists, while atomically updating that new file with checkpoints during its run.
 
-Each file in the ignored `diagnostics/` directory contains schema-v4 run state, per-document
+Each file in the ignored `diagnostics/` directory contains schema-v5 run state, per-document
 execution and cost, metrics, raw predictions and ground truth, matching ledgers, errors, and
 evaluator-compatible source evidence. Source evidence uses the
 evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
@@ -125,8 +125,7 @@ The top-level shape is:
 
 ```json
 {
-  "schema_version": 4,
-  "evaluator_contract_version": 2,
+  "schema_version": 5,
   "source_matching_policy": {
     "version": 1,
     "normalization": "lower_strip_trailing_period_v1",
@@ -219,9 +218,6 @@ cost, and one quality metric: F-score with recall weighted five times as heavily
 uv run python -m src.evaluation.cli --dataset dev-19k
 ```
 
-Every scored run prints `evaluator_contract_version`. Compare quality metrics only when this value
-matches; contract version 2 introduces optional email-derived names.
-
 Runs should target no more than $1.50 per million source tokens, but only the 8-cent total-cost guard
 is enforced (overridable with `--cents-limit`). Before forwarding a request, the meter reserves its
 maximum possible cost against the limit. Requests wait when their reservation would exceed the
@@ -254,6 +250,23 @@ tokens, observed spend, latency, and safe failure category.
 When metering is incomplete, budget accounting uses the larger of observed spend and the pre-run
 estimate.
 
+### Saved development baseline
+
+`baseline-results.tsv` contains five complete, fixed-seed runs for each visible development dataset.
+Its `commit` column identifies the baseline solution; the repository revision containing the file
+identifies the evaluator and development labels. Compare results only while the evaluator behavior,
+labels, model, and sampling settings remain compatible.
+
+Accept a baseline row only from a complete, final, fully metered run with every document processed.
+Collect every required replacement row before updating the file, and retain existing rows only when
+their evaluator behavior, labels, model, and sampling settings remain compatible. Changes to scoring
+or visible development labels must refresh the affected rows in the same change. Validate the file
+without API calls:
+
+```bash
+uv run pytest tests/test_baseline_results.py
+```
+
 ### Blind final evaluation
 
 Researchers may discover the complete blind dataset name by listing directories matching
@@ -269,9 +282,9 @@ uv run python -m src.evaluation.cli \
   --frozen-commit "$(git rev-parse HEAD)"
 ```
 
-The evaluator checks the commit and `solution.py` before and after the run. It prints only the
-evaluator contract version, aggregate `f_score`, precision, recall, API cost, and duration. This
-final evaluation is outside the 40-run allowance, but its spend counts toward the $0.50 budget.
+The evaluator checks the commit and `solution.py` before and after the run. It prints only aggregate
+`f_score`, precision, recall, API cost, and duration. This final evaluation is outside the 40-run
+allowance, but its spend counts toward the $0.50 budget.
 Success ends the research run. Never tune against the result; changing the solution invalidates it.
 
 ## Data

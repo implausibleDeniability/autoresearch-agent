@@ -33,8 +33,17 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
 
     # check
     result = json.loads(path.read_text())
-    assert result["schema_version"] == 4
-    assert result["evaluator_contract_version"] == 2
+    assert result["schema_version"] == 5
+    assert list(result) == [
+        "schema_version",
+        "source_matching_policy",
+        "dataset",
+        "dataset_document_count",
+        "document_count",
+        "metrics",
+        "field_metrics",
+        "documents",
+    ]
     assert result["source_matching_policy"]["similarity_threshold"] == 0.65
     assert result["source_matching_policy"]["fuzzy_work_budget"] == 50_000_000
     assert result["source_matching_policy"]["candidate_enumeration_budget"] == 200_000

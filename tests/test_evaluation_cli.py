@@ -312,8 +312,8 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
 
     # check
     assert completed.returncode == 0, completed.stderr
+    assert "result_schema_version=5" in completed.stdout
     assert "result_status=complete" in completed.stdout
-    assert "evaluator_contract_version=2" in completed.stdout
     assert "score_is_final=true" in completed.stdout
     assert "f_score=1.000000" in completed.stdout
     assert "precision=1.000000" in completed.stdout
@@ -336,7 +336,39 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     )
     assert "api_cost_usd=0.00000015" in completed.stdout
     assert "cost_usd_per_million_source_tokens=" in completed.stdout
-    assert "diagnostics written: diagnostics.json (1 documents, schema v4)" in completed.stderr
+    fields = [line.partition("=")[0] for line in completed.stdout.splitlines()]
+    assert fields == [
+        "result_schema_version",
+        "result_status",
+        "score_is_final",
+        "termination_category",
+        "evaluation_mode",
+        "cache_hits",
+        "cache_misses",
+        "openai_live_requests",
+        "cache_writes",
+        "cache_write_errors",
+        "cache_errors",
+        "f_score",
+        "precision",
+        "recall",
+        "true_positive",
+        "false_positive",
+        "false_negative",
+        "documents_total",
+        "documents_completed",
+        "documents_failed",
+        "documents_not_attempted",
+        "source_tokens",
+        "completed_source_tokens",
+        "pricing_version",
+        "api_cost_usd",
+        "cost_status",
+        "cost_usd_per_million_source_tokens",
+        "duration_seconds",
+        "document_results_json",
+    ]
+    assert "diagnostics written: diagnostics.json (1 documents, schema v5)" in completed.stderr
     diagnostics_duration = next(
         line.removeprefix("diagnostics_duration_seconds=")
         for line in completed.stderr.splitlines()
@@ -484,6 +516,7 @@ def extract_pii(text):
 
     # check
     assert completed.returncode == 2, completed.stderr
+    assert "result_schema_version=5" in completed.stdout
     assert "result_status=partial" in completed.stdout
     assert "score_is_final=false" in completed.stdout
     assert "documents_completed=2" in completed.stdout
@@ -503,8 +536,7 @@ def extract_pii(text):
     assert document_results[1]["failure_category"] == "solution_error"
     assert "secret document content" not in json.dumps(document_results)
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
-    assert diagnostics["schema_version"] == 4
-    assert diagnostics["evaluator_contract_version"] == 2
+    assert diagnostics["schema_version"] == 5
     assert diagnostics["lifecycle_status"] == "terminal"
     assert diagnostics["result_status"] == "partial"
     assert diagnostics["completed_document_count"] == 2
@@ -750,7 +782,6 @@ def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_pa
     assert completed.returncode == 0, completed.stderr
     fields = [line.partition("=")[0] for line in completed.stdout.splitlines()]
     assert fields == [
-        "evaluator_contract_version",
         "f_score",
         "precision",
         "recall",
