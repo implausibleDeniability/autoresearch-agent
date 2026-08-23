@@ -1,4 +1,5 @@
 import json
+import stat
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
@@ -6,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 from pydantic import BaseModel
 
 from src.cost_metering.accounting import (
@@ -20,6 +21,7 @@ from src.cost_metering.accounting import (
     request_cost_upper_bound,
 )
 from src.cost_metering.proxy import SPENDING_LIMIT_STATUS, MeteringProxy, MeterState
+from src.cost_metering.response_cache import CachedResponse, ResponseCache
 
 
 class _Answer(BaseModel):
@@ -199,6 +201,254 @@ def test_streaming_responses_api_with_crlf_is_metered(upstream_server):
     assert response.status_code == 200
     assert b"response.completed" in content
     assert report.total_usd == Decimal("0.0000165")
+
+
+def test_live_response_is_written_once_and_replayed_without_upstream(tmp_path, upstream_server):
+    cache_directory = tmp_path / "responses"
+    payload = {
+        "model": "gpt-4o-2024-08-06",
+        "messages": [{"role": "user", "content": "answer"}],
+    }
+    with MeteringProxy(
+        api_key="real-key",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        live_response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        )
+        live_outcome = meter.finalize(timeout=5.0)
+
+    request_count = len(upstream_server.requests)
+    with MeteringProxy(
+        evaluation_mode="cached",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        cached_response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        )
+        cached_outcome = meter.finalize(timeout=5.0)
+
+    assert cached_response.status_code == live_response.status_code == 200
+    assert cached_response.headers["content-type"] == live_response.headers["content-type"]
+    assert cached_response.content == live_response.content
+    assert len(upstream_server.requests) == request_count
+    assert live_outcome.live_requests == 1
+    assert live_outcome.cache_writes == 1
+    assert cached_outcome.cache_hits == 1
+    assert cached_outcome.cache_misses == 0
+    assert cached_outcome.live_requests == 0
+    assert cached_outcome.report.total_usd == Decimal()
+
+
+def test_cached_miss_is_not_retried_or_forwarded(tmp_path, upstream_server):
+    with MeteringProxy(
+        evaluation_mode="cached",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=tmp_path / "responses",
+    ) as meter:
+        client = OpenAI(api_key=meter.run_token, base_url=meter.base_url)
+
+        with pytest.raises(BadRequestError, match="response cache miss"):
+            client.chat.completions.create(
+                model="gpt-4o-2024-08-06",
+                messages=[{"role": "user", "content": "answer"}],
+            )
+        outcome = meter.finalize(timeout=5.0)
+
+    assert upstream_server.requests == []
+    assert outcome.cache_hits == 0
+    assert outcome.cache_misses == 1
+    assert outcome.live_requests == 0
+    assert outcome.status == "complete"
+
+
+def test_streaming_response_is_cached_and_replayed_exactly(tmp_path, upstream_server):
+    cache_directory = tmp_path / "responses"
+    payload = {
+        "model": "gpt-4o-2024-08-06",
+        "messages": [{"role": "user", "content": "answer"}],
+        "stream": True,
+    }
+    with MeteringProxy(
+        api_key="real-key",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        with httpx.stream(
+            "POST",
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        ) as response:
+            live_content = b"".join(response.iter_bytes())
+        live_outcome = meter.finalize(timeout=5.0)
+
+    request_count = len(upstream_server.requests)
+    with MeteringProxy(
+        evaluation_mode="cached",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        with httpx.stream(
+            "POST",
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        ) as response:
+            cached_content = b"".join(response.iter_bytes())
+        cached_outcome = meter.finalize(timeout=5.0)
+
+    assert cached_content == live_content
+    assert len(upstream_server.requests) == request_count
+    assert live_outcome.cache_writes == 1
+    assert cached_outcome.cache_hits == 1
+
+
+def test_usage_invalid_success_is_not_cached(tmp_path, upstream_server):
+    cache_directory = tmp_path / "responses"
+    payload = {
+        "model": "gpt-4o-2024-08-06",
+        "messages": [{"role": "user", "content": "answer"}],
+        "metadata": {"omit_usage": True},
+    }
+    with MeteringProxy(
+        api_key="real-key",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        live_response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        )
+        live_outcome = meter.finalize(timeout=5.0)
+
+    with MeteringProxy(
+        evaluation_mode="cached",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        cached_response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        )
+        cached_outcome = meter.finalize(timeout=5.0)
+
+    assert live_response.status_code == 502
+    assert live_outcome.cache_writes == 0
+    assert cached_response.status_code == 400
+    assert cached_outcome.cache_misses == 1
+
+
+def test_malformed_cache_entry_fails_closed_without_upstream(tmp_path, upstream_server):
+    cache_directory = tmp_path / "responses"
+    payload = {"model": "gpt-4o-2024-08-06", "messages": []}
+    with MeteringProxy(
+        api_key="real-key",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        )
+        meter.finalize(timeout=5.0)
+    assert response.status_code == 200
+    entry = next(cache_directory.rglob("*.json"))
+    entry.write_text("malformed")
+    request_count = len(upstream_server.requests)
+
+    with MeteringProxy(
+        evaluation_mode="cached",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_directory,
+    ) as meter:
+        response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json=payload,
+        )
+        outcome = meter.finalize(timeout=5.0)
+
+    assert response.status_code == 400
+    assert response.json()["error"]["type"] == "response_cache_error"
+    assert len(upstream_server.requests) == request_count
+    assert outcome.cache_errors == 1
+    assert outcome.status == "incomplete"
+
+
+def test_cache_write_failure_does_not_invalidate_live_response(tmp_path, upstream_server):
+    cache_path = tmp_path / "not-a-directory"
+    cache_path.write_text("blocked")
+    with MeteringProxy(
+        api_key="real-key",
+        upstream_base_url=upstream_server.base_url,
+        cache_directory=cache_path,
+    ) as meter:
+        response = httpx.post(
+            f"{meter.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {meter.run_token}"},
+            json={"model": "gpt-4o-2024-08-06", "messages": []},
+        )
+        outcome = meter.finalize(timeout=5.0)
+
+    assert response.status_code == 200
+    assert outcome.status == "complete"
+    assert outcome.cache_writes == 0
+    assert outcome.cache_write_errors == 1
+
+
+def test_response_cache_uses_complete_request_identity_and_atomic_owner_only_files(tmp_path):
+    directory = tmp_path / "responses"
+    cache = ResponseCache(directory, upstream_base_url="HTTP://LOCALHOST:80/")
+    path = "/v1/chat/completions"
+    headers = {
+        "idempotency-key": "attempt-1",
+        "openai-beta": "structured-outputs=v1",
+        "openai-organization": "org-1",
+        "openai-project": "project-1",
+    }
+    first = CachedResponse(200, "application/json", b'{"answer":"first"}')
+    replacement = CachedResponse(200, "application/json", b'{"answer":"replacement"}')
+
+    assert cache.put(path=path, body=b'{"b":2,"a":1}', headers=headers, response=first)
+    assert not cache.put(path=path, body=b'{"a":1,"b":2}', headers=headers, response=replacement)
+    assert cache.get(path=path, body=b'{"a":1,"b":2}', headers=headers) == first
+    assert cache.get(path="/v1/responses", body=b'{"a":1,"b":2}', headers=headers) is None
+    assert cache.get(path=path, body=b'{"a":1,"b":3}', headers=headers) is None
+    for header_name in headers:
+        changed = dict(headers)
+        changed[header_name] = "different"
+        assert cache.get(path=path, body=b'{"a":1,"b":2}', headers=changed) is None
+    other_origin = ResponseCache(directory, upstream_base_url="http://localhost:81")
+    assert other_origin.get(path=path, body=b'{"a":1,"b":2}', headers=headers) is None
+
+    concurrent_body = b'{"input":"concurrent"}'
+    responses = [CachedResponse(200, "application/json", str(index).encode()) for index in range(8)]
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        stored = list(
+            executor.map(
+                lambda response: cache.put(
+                    path="/v1/responses",
+                    body=concurrent_body,
+                    headers={},
+                    response=response,
+                ),
+                responses,
+            )
+        )
+    assert stored.count(True) == 1
+    assert cache.get(path="/v1/responses", body=concurrent_body, headers={}) in responses
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o700
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in directory.rglob("*.json"))
 
 
 def test_successful_response_without_usage_invalidates_run(upstream_server):

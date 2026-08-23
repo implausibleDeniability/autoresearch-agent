@@ -16,6 +16,8 @@ LEGACY_FIELDS = (
     "budget_cost_usd",
 )
 CURRENT_FIELDS = LEGACY_FIELDS + ("finding",)
+REPLAY_FIELDS = CURRENT_FIELDS + ("evaluation_mode",)
+EVALUATION_MODES = {"live", "cached"}
 STATUSES = {"keep", "discard", "inconclusive", "crash"}
 DATASETS = {"debug", "dev-19k", "dev-87k", "dev-205k"}
 BLIND_FIELDS = ("f_score", "precision", "recall", "api_cost_usd", "duration_seconds")
@@ -38,6 +40,7 @@ class Experiment:
     dataset: str
     budget_cost_usd: float
     finding: str
+    evaluation_mode: str = "live"
 
 
 @dataclass(frozen=True)
@@ -95,12 +98,16 @@ def read_experiments(path: Path) -> list[Experiment]:
         with path.open(encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle, delimiter="\t", quoting=csv.QUOTE_NONE)
             fields = tuple(reader.fieldnames or ())
-            if fields not in {LEGACY_FIELDS, CURRENT_FIELDS}:
-                raise TrajectoryError(
-                    f"{path}: expected the exact 9-column legacy or 10-column current header"
-                )
+            if fields not in {LEGACY_FIELDS, CURRENT_FIELDS, REPLAY_FIELDS}:
+                raise TrajectoryError(f"{path}: expected the exact 9-, 10-, or 11-column supported header")
             experiments = [
-                _parse_experiment(path, number, row, fields == CURRENT_FIELDS)
+                _parse_experiment(
+                    path,
+                    number,
+                    row,
+                    has_finding=fields in {CURRENT_FIELDS, REPLAY_FIELDS},
+                    has_evaluation_mode=fields == REPLAY_FIELDS,
+                )
                 for number, row in enumerate(reader, start=1)
             ]
     except OSError as error:
@@ -119,6 +126,7 @@ def _parse_experiment(
     number: int,
     row: dict[str | None, str | list[str] | None],
     has_finding: bool,
+    has_evaluation_mode: bool,
 ) -> Experiment:
     if None in row or any(value is None for value in row.values()):
         raise TrajectoryError(f"{path}: row {number}: column count does not match the header")
@@ -138,6 +146,9 @@ def _parse_experiment(
     cost = _parse_number(path, number, "cost", values["cost"], minimum=0)
     budget = _parse_number(path, number, "budget_cost_usd", values["budget_cost_usd"], minimum=0)
     finding = values.get("finding", "")
+    evaluation_mode = values.get("evaluation_mode", "live")
+    if has_evaluation_mode and evaluation_mode not in EVALUATION_MODES:
+        raise TrajectoryError(f"{path}: row {number}: unsupported evaluation_mode")
     if has_finding and values["status"] == "keep" and values["dataset"] == "dev-205k" and not finding:
         raise TrajectoryError(f"{path}: row {number}: accepted dev-205k finding must not be empty")
     return Experiment(
@@ -152,6 +163,7 @@ def _parse_experiment(
         values["dataset"],
         budget,
         finding,
+        evaluation_mode,
     )
 
 

@@ -11,7 +11,7 @@ To start the research:
    - If the instructions define a worktree location, run `git worktree add -b autoresearch/<tag> <path> main` there and enter it without asking.
    - Otherwise, ask whether to run in the current directory or a separate worktree. For a separate worktree, ask for its parent directory and use `git worktree add`.
 4. **Copy local files**: For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored.
-5. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed. Use the 10-column schema in **Logging results** so the final trajectory can be generated without reconstructing findings later.
+5. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed. Use the 11-column schema in **Logging results** so the final trajectory can be generated without reconstructing findings later.
 6. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
 7. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
 8. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
@@ -108,6 +108,8 @@ Record repeated evaluations as separate results. After deciding, give all succes
 
 Use saved baseline results only within the same evaluator contract. Prefer other non-paid evidence when it can resolve uncertainty without another evaluation.
 
+For hardcoded changes that leave OpenAI requests unchanged, add `--cache` to replay exact earlier responses; a miss fails without making a live call. Omit it when requests may change or when measuring model variation. Cached runs count toward 40, and their zero spend is not evidence of solution cost.
+
 ### OCR ambiguity
 
 Source documents may contain conflicting OCR variants of the same PII, with no reliably correct
@@ -132,6 +134,7 @@ After development, commit the final `solution.py` and pass that commit with `--f
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You may list directory names matching `data/test-*` to discover the blind dataset. Do not inspect anything inside those directories except through the final evaluator invocation unless the user explicitly permits it.
 - You may modify and commit only `solution.py` as the experiment implementation.
+- The evaluator may create `.openai-response-cache/`. Do not read, edit, copy, delete, or commit it; owner-only permissions and Git ignore are policy safeguards, not isolation from your user account.
 - You may create or update `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and `diagnostics.json` only for experiment logging and communication. Do not commit these files. `diagnostics.json` contains labeled PII and source context: keep it local, overwrite it on each development run, and do not copy its contents into committed files. Never create blind-test diagnostics. Do not intentionally modify any other repository files.
 
 
@@ -139,29 +142,30 @@ After development, commit the final `solution.py` and pass that commit with `--f
 
 Log development experiments to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions). Report the restricted blind result separately.
 
-Use this 10-column header. The final `finding` column is appended so older nine-column logs remain readable:
+Use this 11-column header. Older nine- and ten-column logs remain readable:
 
 ```
-commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding	evaluation_mode
 ```
 
 1. git commit hash (short, 7 chars)
 2. recall-weighted F-score — use 0.000000 for crashes
 3. precision — use 0.000000 for crashes
 4. recall — use 0.000000 for crashes
-5. USD per million source-document tokens achieved — use 0.000000 for crashes
+5. USD per million source-document tokens spent — use 0.000000 for crashes. Cached zeroes are quality-only and cannot support cost comparisons.
 6. status: `keep`, `discard`, `inconclusive`, or `crash`
 7. short public-safe description of what this experiment tried
 8. dataset: `debug`, `dev-19k`, `dev-87k`, or `dev-205k`
 9. API cost charged to the budget; when metering is incomplete, use the larger of the observed subtotal and the pre-run estimate
 10. short evidence-backed conclusion from the result. Keep both `description` and `finding` safe for a public SVG: never include PII, document excerpts, prompts, completions, or sensitive diagnostics. Every `keep` row on `dev-205k` must have a non-empty finding.
+11. evaluation mode: `live` or `cached`
 
 Example:
 
 ```tsv
-commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding
-a1b2c3d	0.940000	0.960000	0.936000	0.230000	keep	baseline	dev-205k	0.047000	Measured starting point
-d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema	debug	0.000500	Schema failed before scoring
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding	evaluation_mode
+a1b2c3d	0.940000	0.960000	0.936000	0.230000	keep	baseline	dev-205k	0.047000	Measured starting point	live
+d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema	debug	0.000500	Schema failed before scoring	cached
 ```
 
 ## Extra communication bugs and required packages:
@@ -179,11 +183,11 @@ Stop development after 40 evaluations or when only the budget reserved for the f
 1. Look at the git state: the current branch/commit we're on
 2. For the first experiment, evaluate the current `solution.py` on `dev-205k` as the measured baseline and mark the complete result `keep`. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
-4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
-5. Load `.env` and run the evaluator in the same shell invocation: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json > run.log 2>&1`, substituting another allowed dataset when appropriate.
-6. Read the run status before interpreting metrics: `grep -E '^(result_status|score_is_final|termination_category|documents_completed|documents_failed|documents_not_attempted|cost_status|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|document_results_json)=' run.log`.
+4. Check the run and spending limits. For a live run, estimate total and normalized cost, targeting $1.50 per million source tokens.
+5. Run live with `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json > run.log 2>&1`. When exact replay is appropriate, run without credentials: `uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json --cache > run.log 2>&1`. Substitute another development dataset when appropriate.
+6. Read the run status before interpreting metrics: `grep -E '^(result_status|score_is_final|termination_category|evaluation_mode|cache_hits|cache_misses|cache_errors|openai_live_requests|cache_writes|cache_write_errors|documents_completed|documents_failed|documents_not_attempted|cost_status|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|document_results_json)=' run.log`.
 7. Handle the reported status:
-   - `result_status=complete` and `score_is_final=true`: use the normal score and cost fields for the candidate decision.
+   - `result_status=complete` and `score_is_final=true`: use the normal score fields for the candidate decision. Use cost fields only when `evaluation_mode=live`.
    - `result_status=partial` and `score_is_final=false`: count the attempt, inspect the completed-document metrics and diagnostics for hypotheses, but never rank, keep, discard, or promote the candidate from this run. Record it as `crash` with zero score fields and a public-safe failure category. Keep the coverage, failed document ID, source, prompt, completion, token counts, observed cost, and latency only in `diagnostics.json`; keep `research.md` public-safe. Charge the larger of `observed_api_cost_usd` and the pre-run estimate when `cost_status=incomplete`.
    - Missing `result_status`: treat this as an evaluator or protocol crash, inspect the final 50 log lines, and charge the pre-run estimate unless a trustworthy observed subtotal is available.
 8. Before another paid run, inspect `diagnostics.json`. Inventory false negatives and false positives by field and document, inspect the highest-impact documents, and name at least one public-safe error class in the next experiment's hypothesis and `results.tsv` description. Never copy PII or source excerpts into `results.tsv`, and never optimize aggregate metrics without this error inventory.

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0.0] - 2026-08-23
+
+### Added
+
+- Add a worktree-local exact-response replay cache for repeatable development evaluations.
+- Report evaluation mode and cache activity, and preserve mode in experiment logs.
+
+### Changed
+
+- Allow development evaluations to use strict cache-only replay without API credentials or network fallback.
+- Reject cache access for blind, dataset-description, and worker modes.
+
 ## [0.9.0.0] - 2026-08-22
 
 ### Added

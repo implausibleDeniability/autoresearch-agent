@@ -10,6 +10,7 @@ from generate_trajectory import main as generate_main
 from trajectory_data import (
     CURRENT_FIELDS,
     LEGACY_FIELDS,
+    REPLAY_FIELDS,
     Experiment,
     Trajectory,
     TrajectoryError,
@@ -150,6 +151,40 @@ def test_legacy_schema_falls_back_to_description_and_escapes_xml(tmp_path):
     ET.fromstring(svg)
 
 
+def test_replay_schema_preserves_evaluation_mode_and_legacy_defaults_live(tmp_path):
+    replay_results = tmp_path / "replay.tsv"
+    legacy_results = tmp_path / "legacy.tsv"
+    _write_results(
+        replay_results,
+        [_experiment(1, "aaaaaaa", 0.700, status="keep", evaluation_mode="cached")],
+        fields=REPLAY_FIELDS,
+    )
+    _write_results(
+        legacy_results,
+        [_experiment(1, "aaaaaaa", 0.700, status="keep")],
+        fields=LEGACY_FIELDS,
+    )
+
+    replay = read_experiments(replay_results)
+    legacy = read_experiments(legacy_results)
+
+    assert replay[0].evaluation_mode == "cached"
+    assert legacy[0].evaluation_mode == "live"
+
+
+def test_replay_schema_rejects_unsupported_evaluation_mode(tmp_path):
+    results = tmp_path / "results.tsv"
+    experiment = _experiment(1, "aaaaaaa", 0.700, status="keep")
+    values = _row_values(experiment)
+    values["evaluation_mode"] = "sometimes"
+    results.write_text(
+        "\t".join(REPLAY_FIELDS) + "\n" + "\t".join(values[field] for field in REPLAY_FIELDS) + "\n"
+    )
+
+    with pytest.raises(TrajectoryError, match="unsupported evaluation_mode"):
+        read_experiments(results)
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
@@ -180,7 +215,7 @@ def test_reordered_header_and_missing_accepted_state_fail_clearly(tmp_path):
     fields = list(CURRENT_FIELDS)
     fields[0], fields[1] = fields[1], fields[0]
     reordered.write_text("\t".join(fields) + "\n")
-    with pytest.raises(TrajectoryError, match="exact 9-column legacy or 10-column current header"):
+    with pytest.raises(TrajectoryError, match="exact 9-, 10-, or 11-column supported header"):
         read_experiments(reordered)
 
     results = tmp_path / "results.tsv"
@@ -461,6 +496,7 @@ def _experiment(
     status: str,
     dataset: str = "dev-205k",
     description: str | None = None,
+    evaluation_mode: str = "live",
 ) -> Experiment:
     title = description or f"Experiment {number}"
     return Experiment(
@@ -475,6 +511,7 @@ def _experiment(
         dataset,
         0.01,
         f"Finding {number}",
+        evaluation_mode,
     )
 
 
@@ -498,6 +535,7 @@ def _row_values(experiment: Experiment) -> dict[str, str]:
         "dataset": experiment.dataset,
         "budget_cost_usd": f"{experiment.budget_cost_usd:.6f}",
         "finding": experiment.finding,
+        "evaluation_mode": experiment.evaluation_mode,
     }
 
 

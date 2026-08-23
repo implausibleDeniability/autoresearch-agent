@@ -36,3 +36,4 @@ REQUESTS.md
 research.md
 *.log
 diagnostics.json
+.openai-response-cache/

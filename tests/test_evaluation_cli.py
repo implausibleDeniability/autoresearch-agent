@@ -77,6 +77,12 @@ def test_cli_accepts_diagnostics_path():
     assert parsed.diagnostics == Path("diagnostics.json")
 
 
+def test_cli_accepts_exact_response_replay_cache_for_development():
+    parsed = _parse_arguments(("--dataset", "debug", "--cache"))
+
+    assert parsed.cache
+
+
 def test_cli_accepts_dataset_description_mode():
     parsed = _parse_arguments(("--dataset", "dev-205k", "--describe-dataset"))
 
@@ -105,6 +111,9 @@ def test_cli_accepts_dynamic_blind_test_name_with_frozen_commit():
         ("--dataset", "dev-19k", "--frozen-commit", "abc1234"),
         ("--dataset", "dev-19k", "--describe-dataset", "--diagnostics", "diagnostics.json"),
         ("--dataset", "test-private-v2", "--describe-dataset", "--frozen-commit", "abc1234"),
+        ("--dataset", "test-private-v2", "--frozen-commit", "abc1234", "--cache"),
+        ("--dataset", "dev-19k", "--describe-dataset", "--cache"),
+        ("--worker", "--module", "solution", "--cache"),
         ("--dataset", "test-private/ground_truth.json", "--frozen-commit", "abc1234"),
     ],
 )
@@ -352,6 +361,81 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
         if line.startswith("duration_seconds=")
     )
     assert float(duration_seconds) > 0
+
+
+def test_evaluator_cli_replays_cached_response_without_credentials_or_upstream(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    upstream = ThreadingHTTPServer(("127.0.0.1", 0), _CliUpstreamHandler)
+    thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+    thread.start()
+    host, port = upstream.server_address
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["OPENAI_UPSTREAM_BASE_URL"] = f"http://{host}:{port}"
+    environment["PYTHONPATH"] = str(repository)
+
+    live = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+    upstream.shutdown()
+    upstream.server_close()
+    thread.join()
+    environment.pop("OPENAI_API_KEY")
+    cached = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug", "--cache"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    assert live.returncode == 0, live.stderr
+    assert "evaluation_mode=live" in live.stdout
+    assert "openai_live_requests=1" in live.stdout
+    assert "cache_writes=1" in live.stdout
+    assert cached.returncode == 0, cached.stderr
+    assert "evaluation_mode=cached" in cached.stdout
+    assert "cache_hits=1" in cached.stdout
+    assert "cache_misses=0" in cached.stdout
+    assert "openai_live_requests=0" in cached.stdout
+    assert "api_cost_usd=0.00000000" in cached.stdout
+    assert (tmp_path / ".openai-response-cache").is_dir()
+
+
+def test_evaluator_cli_cache_miss_is_partial_without_credentials_or_network(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment.pop("OPENAI_API_KEY", None)
+    environment["OPENAI_UPSTREAM_BASE_URL"] = "http://127.0.0.1:1"
+    environment["PYTHONPATH"] = str(repository)
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug", "--cache"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    assert completed.returncode == 2, completed.stderr
+    assert "result_status=partial" in completed.stdout
+    assert "termination_category=cache_miss" in completed.stdout
+    assert "evaluation_mode=cached" in completed.stdout
+    assert "cache_misses=1" in completed.stdout
+    assert "openai_live_requests=0" in completed.stdout
+    assert not (tmp_path / ".openai-response-cache").exists()
 
 
 def test_evaluator_cli_reports_partial_results_and_continues_after_document_failure(tmp_path: Path):
@@ -674,6 +758,7 @@ def test_blind_test_reports_only_permitted_aggregates_for_frozen_solution(tmp_pa
         "duration_seconds",
     ]
     assert completed.stderr == ""
+    assert not (tmp_path / ".openai-response-cache").exists()
 
 
 def test_blind_test_extracts_documents_concurrently(tmp_path: Path):
