@@ -63,11 +63,11 @@ class Dataset:
     DEBUG = "debug"
     DEV_19K = "dev-19k"
     DEV_87K = "dev-87k"
-    DEV_205K = "dev-205k"
+    DEV_202K = "dev-202k"
 
     @classmethod
     def all(cls) -> Tuple[str, ...]:
-        return cls.DEBUG, cls.DEV_19K, cls.DEV_87K, cls.DEV_205K
+        return cls.DEBUG, cls.DEV_19K, cls.DEV_87K, cls.DEV_202K
 
     @classmethod
     def is_blind_test(cls, name: str) -> bool:

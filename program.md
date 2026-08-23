@@ -43,7 +43,7 @@ All else being equal, simpler is better. A small improvement that adds ugly comp
 You have several datasets on which you can run evaluation:
 - `test-*` - the quality of your solution will be measured on that dataset. You can't read its files, but you can discover the name of the dataset.
 - `debug` - development dataset with two documents that you can use that to cheaply test if your solution doesn't crash.
-- `dev-19k`, `dev-87k`, and `dev-205k` — readable development datasets named by approximate token count. `dev-19k` is a PII-dense subset of `dev-87k`; both smaller datasets have a selected document mix less representative of the blind test. Use them for cheap hypothesis testing, not as sufficient evidence of generalization. `dev-205k` adds a broad random sample and is likely the closest development proxy for the blind distribution; periodically validate promising changes on it and use it for final candidate selection. You may inspect their documents and diagnostics and tune against them.
+- `dev-19k`, `dev-87k`, and `dev-202k` — readable development datasets named by approximate token count. `dev-19k` is a PII-dense subset of `dev-87k`; both smaller datasets have a selected document mix less representative of the blind test. Use them for cheap hypothesis testing, not as sufficient evidence of generalization. `dev-202k` adds a broad random sample and is likely the closest development proxy for the blind distribution; periodically validate promising changes on it and use it for final candidate selection. You may inspect their documents and diagnostics and tune against them.
 
 ### Cost
 Cost is measured in USD per million source-document tokens:
@@ -147,16 +147,16 @@ commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	fi
 5. USD per million source-document tokens spent — use 0.000000 for crashes. Cached zeroes are quality-only and cannot support cost comparisons.
 6. status: `keep`, `discard`, `inconclusive`, or `crash`
 7. short description of what this experiment tried
-8. dataset: `debug`, `dev-19k`, `dev-87k`, or `dev-205k`
+8. dataset: `debug`, `dev-19k`, `dev-87k`, or `dev-202k`
 9. API cost charged to the budget; when metering is incomplete, use the larger of the observed subtotal and the pre-run estimate
-10. short evidence-backed conclusion from the result, including the diagnostic path when useful. Development document IDs and PII may be recorded verbatim. Every `keep` row on `dev-205k` must have a non-empty finding.
+10. short evidence-backed conclusion from the result, including the diagnostic path when useful. Development document IDs and PII may be recorded verbatim. Every `keep` row on `dev-202k` must have a non-empty finding.
 11. evaluation mode: `live` or `cached`
 
 Example:
 
 ```tsv
 commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding	evaluation_mode
-a1b2c3d	0.940000	0.960000	0.936000	0.230000	keep	baseline	dev-205k	0.047000	Measured starting point	live
+a1b2c3d	0.940000	0.960000	0.936000	0.230000	keep	baseline	dev-202k	0.047000	Measured starting point	live
 d4e5f6g	0.000000	0.000000	0.000000	0.000000	crash	invalid structured output schema	debug	0.000500	Schema failed before scoring	cached
 ```
 
@@ -173,7 +173,7 @@ In the file REQUESTS.md write things that the human supervisor should know about
 Stop development after 40 evaluations or when only the budget reserved for the final test remains. Baselines, debug checks, crashes, and reruns count toward 40. The final test does not, but its spend counts toward $0.50.
 
 1. Look at the git state: the current branch/commit we're on
-2. For the first experiment, evaluate the current `solution.py` on `dev-205k` as the measured baseline and mark the complete result `keep`. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
+2. For the first experiment, evaluate the current `solution.py` on `dev-202k` as the measured baseline and mark the complete result `keep`. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. Check the run and spending limits. For a live run, estimate total and normalized cost, targeting $1.50 per million source tokens.
 5. Choose a new path under `diagnostics/` using the evaluation number, short commit, and dataset; never reuse a path. Run live with `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics/001-a1b2c3d-dev-19k.json > run.log 2>&1`. When exact replay is appropriate, run without credentials: `uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics/001-a1b2c3d-dev-19k.json --cache > run.log 2>&1`. Substitute the actual identifiers and dataset.
@@ -186,8 +186,8 @@ Stop development after 40 evaluations or when only the budget reserved for the f
 9. Record the result and its `finding` in `results.tsv`, reference its diagnostic path, then recompute cumulative spend. Do not commit the file during experiments. Every data row is one development experiment number, including debug checks, crashes, discarded candidates, and reruns.
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 11. If a candidate is competitive and uncertainty could change the decision, repeat it within the remaining limits and evaluate the combined evidence.
-12. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-205k`. Only a complete final score can support acceptance; partial results cannot. Cheaper checks may support `discard` or `inconclusive`, but never promotion. Once the decision is made, update successful repetitions consistently as described in **Evaluation confidence**.
-13. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the complete `dev-205k` evidence justifies it; otherwise return to the incumbent without losing the recorded result.
+12. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-202k`. Only a complete final score can support acceptance; partial results cannot. Cheaper checks may support `discard` or `inconclusive`, but never promotion. Once the decision is made, update successful repetitions consistently as described in **Evaluation confidence**.
+13. Mark the candidate `keep`, `discard`, or `inconclusive`. A candidate replaces the incumbent only when the complete `dev-202k` evidence justifies it; otherwise return to the incumbent without losing the recorded result.
 14. When development ends, select the final solution without blind-test evidence. Do not send the final report yet.
 15. Commit `solution.py`, confirm that `git diff --quiet HEAD -- solution.py` succeeds, and save the full `git rev-parse HEAD` output. Do not modify the solution afterward.
 16. If its estimated spend fits the remaining budget, run one evaluation with the discovered blind dataset name and no diagnostics: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1`.

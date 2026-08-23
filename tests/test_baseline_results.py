@@ -23,7 +23,7 @@ FIELDS = [
     "budget_cost_usd",
     "duration_seconds",
 ]
-DATASETS = ("dev-19k", "dev-87k", "dev-205k")
+DATASETS = ("dev-19k", "dev-87k", "dev-202k")
 
 
 def test_saved_baselines_are_complete_and_internally_consistent():

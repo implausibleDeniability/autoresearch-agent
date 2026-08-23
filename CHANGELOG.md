@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.13.0.0] - 2026-08-23
+
+### Changed
+
+- Rename the largest visible development dataset to `dev-202k`, with 121 documents and 201,965
+  source tokens.
+- Refresh its five fixed-seed baseline measurements while retaining compatible smaller-dataset
+  results.
+
 ## [0.12.0.0] - 2026-08-23
 
 ### Added
