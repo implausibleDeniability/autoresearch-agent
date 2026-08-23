@@ -1,0 +1,41 @@
+commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding
+9e6ab19	0.699377	0.820611	0.679305	0.245658	keep	baseline one-pass structured extraction	dev-205k	0.05015190	Large recall gap led by names and email with concentrated misses in dense lists
+b10f7d9	0.000000	0.000000	0.000000	0.000000	crash	gated grounded extraction with correspondence output-cap failure	dev-205k	0.03954795	Partial result improved quality on 121 documents but cannot rank with one failed document
+5eeb831	0.849854	0.891304	0.842022	0.155117	keep	bounded fallback for output-capped correspondence	dev-205k	0.03166755	Representative score improved substantially with all documents complete
+5eeb831	0.979390	1.000000	0.975369	0.201228	keep	incumbent small-set comparator	dev-19k	0.00389295	Short PII-dense documents are near target with four phone misses and one name miss
+5eeb831	0.974108	0.970711	0.974790	0.063704	keep	incumbent long-tail comparator	dev-87k	0.00557115	Selected long-document mix is near target; broad random sample drives the remaining gap
+13a6e30	0.834250	0.924175	0.818325	0.160354	discard	remove names found only inside email addresses	dev-205k	0.03273675	Precision rose but recall loss reduced the representative score
+50d14cd	0.821587	0.911528	0.805687	0.143925	discard	filter explicit organization name records	dev-205k	0.02938275	Small deterministic precision gain did not overcome lower model recall
+d6d5d59	0.968011	0.935484	0.974790	0.086631	discard	compact names-only recovery for dense short documents	dev-87k	0.00757620	Recall held but one negative document gained sixteen false-positive name fields
+41c7cac	0.977622	0.970833	0.978992	0.075280	discard	gate compact dense-name recovery on primary people	dev-87k	0.00658350	Removed the negative-document regression and passed the promotion gate
+41c7cac	0.838376	0.873134	0.831754	0.208070	discard	guarded compact recovery on broad document mix	dev-205k	0.04247820	Recovered dense-list names but added false positives; variance could change the decision
+41c7cac	0.802372	0.805556	0.801738	0.220333	discard	confirmation of guarded compact dense-name recovery	dev-205k	0.04498155	Second broad-sample run confirmed unstable false positives and a lower score
+cc67c65	0.972177	0.956522	0.975369	0.196265	discard	recover every missing literal email as an email-only person	dev-19k	0.00379695	Recall held but placeholder aliases and OCR variants added nine false positives
+4a9e1e1	0.977778	0.990000	0.975369	0.195738	discard	filter placeholder group and substring email variants	dev-19k	0.00378675	Reduced email false positives from nine to two; separator aliases remained
+ef1888f	0.953226	0.875556	0.970443	0.378900	discard	normalize separator-only recovered email aliases	dev-19k	0.00733020	Unrelated name false positives and doubled output cost indicate a variance outlier
+ef1888f	0.843575	0.889731	0.834913	0.151161	discard	filtered literal email recovery on broad document mix	dev-205k	0.03085995	Recovered six email true positives but added six email false positives; overall score was competitive
+ef1888f	0.845048	0.895093	0.835703	0.151902	discard	confirmation of filtered literal email recovery	dev-205k	0.03101115	Email recall improved again but combined representative scores remained below incumbent
+945c2c6	0.991776	1.000000	0.990148	0.197227	discard	preserve fax direct-dial and weekday-labeled phones	dev-19k	0.00381555	Recovered three phone true positives with no false positives and met both targets
+945c2c6	0.985955	1.000000	0.983193	0.062242	discard	preserve labeled secondary phones on long-tail mix	dev-87k	0.00544335	Recovered three phone true positives with no false positives and improved the comparator
+945c2c6	0.844362	0.895004	0.834913	0.149750	discard	preserve labeled secondary phones on broad document mix	dev-205k	0.03057195	Recovered four phone true positives; unrelated model variance left overall score competitive
+945c2c6	0.779315	0.867265	0.763823	0.219203	discard	confirmation of preserving labeled secondary phones	dev-205k	0.04475085	Severe variance outlier erased the field gain and confirmed unstable representative evidence
+98cdbc2	0.979390	1.000000	0.975369	0.196358	discard	fixed seed 42 reproducibility run one	dev-19k	0.00379875	First seeded run exactly reproduced the incumbent small-set score
+98cdbc2	0.983526	1.000000	0.980296	0.208082	discard	fixed seed 42 reproducibility run two	dev-19k	0.00402555	Repeat differed by one phone true positive but remained high precision and close in score
+98cdbc2	0.978215	0.995708	0.974790	0.062311	discard	fixed seed 42 long-tail reproducibility run one	dev-87k	0.00544935	First seeded long-tail run exceeded the incumbent comparator with one email false positive
+98cdbc2	0.975369	1.000000	0.970588	0.062318	discard	fixed seed 42 long-tail reproducibility run two	dev-87k	0.00544995	Repeat stayed close with perfect precision and minor recall variation
+98cdbc2	0.000000	0.000000	0.000000	0.000000	crash	fixed seed 42 representative reproducibility run one	dev-205k	0.03166755	All documents completed but incomplete provider metering made the aggregate score non-final
+98cdbc2	0.836131	0.889456	0.826224	0.159099	discard	fixed seed 42 representative reproducibility run two	dev-205k	0.03248055	Complete confirmation fell below the incumbent and retained dominant name and email omissions
+dfa4191	0.867815	0.895082	0.862559	0.154658	keep	recover authors from dense numbered citation tables	dev-205k	0.03157395	Strict deterministic parsing removed the largest name-recall cluster and set a new representative best
+dfa4191	0.983526	1.000000	0.980296	0.196700	keep	citation-table recovery on PII-dense subset	dev-19k	0.00380535	Strict routing left ordinary documents precise and retained a high subset score
+dfa4191	0.982431	1.000000	0.978992	0.063347	keep	citation-table recovery on long-tail subset	dev-87k	0.00553995	Strict routing preserved perfect precision across the long-tail subset
+ca3183d	0.987654	1.000000	0.985222	0.196886	keep	preserve labeled phones with citation-table incumbent	dev-19k	0.00380895	Recovered one phone true positive with no precision loss and improved the subset score
+ca3183d	0.982431	1.000000	0.978992	0.062208	keep	preserve labeled phones on long-tail subset	dev-87k	0.00544035	Recovered two phone true positives without false positives while unrelated field variance offset the aggregate gain
+ca3183d	0.000000	0.000000	0.000000	0.000000	crash	preserve labeled phones on representative mix	dev-205k	0.03465615	One dense citation document exceeded the output cap inside fallback chunking
+46d589f	0.000000	0.000000	0.000000	0.000000	crash	use smaller chunks for dense fallback responses	dev-205k	0.04000000	Dense fallback completed but its latency caused another document to miss the dataset deadline
+edc27e6	0.869438	0.909925	0.861769	0.134890	keep	route dense citation tables deterministically	dev-205k	0.02753820	Zero-call citation routing removed overflow failures and set a new quality and cost best
+21f3846	0.985222	0.985222	0.985222	0.195893	discard	recover bracketed nonstandard email values	dev-19k	0.00378975	A distribution-list header added three linked false-positive fields and required an organization guard
+61ac158	0.987654	1.000000	0.985222	0.195955	keep	exclude organization addresses from named header recovery	dev-19k	0.00379095	The guard removed all linked false positives and restored perfect precision
+61ac158	0.868966	0.902479	0.862559	0.140315	keep	guarded named-header recovery on representative mix	dev-205k	0.02864580	Recovered eleven email true positives but unrelated field variance left the total score just below the incumbent
+61ac158	0.871237	0.904211	0.864929	0.145367	keep	confirmation of guarded named-header recovery	dev-205k	0.02967720	Repeat set a new representative best and confirmed the material email-recall gain
+61ac158	0.870813	0.914573	0.862559	0.143954	keep	second confirmation of guarded named-header recovery	dev-205k	0.02938860	Third complete result stayed above the prior incumbent and reached the candidate's highest precision
+61ac158	0.868631	0.904643	0.861769	0.141221	keep	final confirmation of guarded named-header recovery	dev-205k	0.02883060	Four-run representative average remained above the prior incumbent with consistent email-recall gains

@@ -12,6 +12,7 @@ from trajectory_data import (
     LEGACY_FIELDS,
     REPLAY_FIELDS,
     Experiment,
+    IncumbentState,
     Trajectory,
     TrajectoryError,
     build_incumbent_states,
@@ -20,12 +21,14 @@ from trajectory_data import (
     read_experiments,
 )
 from trajectory_layout import wrap_text, x_ticks, y_domain
+from trajectory_milestones import layout_milestones
 from trajectory_svg import render_svg
 
 ROOT = Path(__file__).parents[1]
 SKILL = ROOT / ".agents" / "skills" / "generate-autoresearch-trajectory"
 SCRIPT = SKILL / "scripts" / "generate_trajectory.py"
 EXAMPLES = SKILL / "examples"
+FIXTURES = ROOT / "tests" / "fixtures"
 
 
 def test_example_generates_accessible_deterministic_svg(tmp_path):
@@ -71,6 +74,83 @@ def test_example_generates_accessible_deterministic_svg(tmp_path):
     assert root.find(".//*[@data-series='milestone-label']") is not None
     assert root.find(".//*[@data-score='0.848000']") is not None
     assert direct.encode() == first_bytes
+
+
+def test_real_long_milestones_render_complete_without_overlap():
+    trajectory = load_trajectory(
+        FIXTURES / "research_trajectory_long_text.tsv",
+        run_log_path=FIXTURES / "research_trajectory_test_result.txt",
+    )
+
+    layout = layout_milestones(trajectory.milestones, top=164)
+    svg = render_svg(trajectory, heading="PII extraction research trajectory")
+    root = ET.fromstring(svg)
+    milestone_group = root.find(".//*[@data-section='milestones']")
+    visible_text = " ".join(" ".join(milestone_group.itertext()).split())
+    height = float(root.attrib["viewBox"].split()[-1])
+
+    assert all(state.description in visible_text for state in trajectory.milestones)
+    assert all(state.finding in visible_text for state in trajectory.milestones)
+    assert "…" not in visible_text
+    assert all(left.bottom <= right.top for left, right in zip(layout.rows, layout.rows[1:]))
+    assert layout.bottom + 40 <= height
+
+
+def test_milestone_number_and_metadata_share_an_optical_top_edge():
+    trajectory = load_trajectory(FIXTURES / "research_trajectory_long_text.tsv")
+
+    root = ET.fromstring(render_svg(trajectory, heading="Trajectory"))
+    numbers = root.findall(".//*[@data-role='milestone-number']")
+    metadata = root.findall(".//*[@data-role='milestone-meta']")
+
+    assert len(numbers) == len(metadata) == 4
+    for number, meta in zip(numbers, metadata):
+        number_top = float(number.attrib["y"]) - float(number.attrib["font-size"]) * 0.82
+        meta_top = float(meta.attrib["y"]) - float(meta.attrib["font-size"]) * 0.82
+        assert abs(number_top - meta_top) <= 1
+
+
+def test_seven_long_milestones_expand_canvas_without_losing_text():
+    title = "accepted recovery strategy for dense correspondence and citation records"
+    finding = (
+        "Confirmed the representative improvement without unrelated false positives or "
+        "increased evaluation cost"
+    )
+    baseline = IncumbentState(
+        experiment=1,
+        commit="baseline",
+        score=0.700,
+        description="Baseline",
+        finding="Baseline",
+        delta=None,
+    )
+    milestones = tuple(
+        IncumbentState(
+            experiment=index * 6,
+            commit=f"commit{index}",
+            score=0.700 + index * 0.025,
+            description=title,
+            finding=finding,
+            delta=0.025,
+        )
+        for index in range(1, 8)
+    )
+    trajectory = Trajectory(
+        experiment_count=42,
+        states=(baseline, *milestones),
+        milestones=milestones,
+        blind=None,
+    )
+
+    layout = layout_milestones(trajectory.milestones, top=164)
+    root = ET.fromstring(render_svg(trajectory, heading="Seven milestones"))
+    visible_text = " ".join(" ".join(root.find(".//*[@data-section='milestones']").itertext()).split())
+
+    assert float(root.attrib["viewBox"].split()[-1]) > 720
+    assert all(left.bottom <= right.top for left, right in zip(layout.rows, layout.rows[1:]))
+    assert visible_text.count(title) == 7
+    assert visible_text.count(finding) == 7
+    assert "…" not in visible_text
 
 
 def test_incumbent_episodes_preserve_repeats_returns_and_downward_steps():

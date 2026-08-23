@@ -16,6 +16,7 @@ Generate the image only. Never edit README or another documentation file.
    ```
 
    The zero-argument command reads `results.tsv`, uses adjacent `run.log` when present, and writes `research-trajectory.svg`. Use `--results`, `--run-log`, `--no-run-log`, `--output`, or `--title` when the user specifies an override. Use `--help` for the full interface.
-4. Inspect the generated SVG. When the host supports local image previews, show it. Return its absolute path, the generated summary, the selected experiment list, and an explicit statement that README was not changed.
+4. Inspect the SVG at native size and around 800 px wide. Check for clipping, ellipses, overlaps, optical misalignment, uneven row rhythm, and unbalanced margins. Correct and repeat until the image is clean; if correction requires repository edits outside the request, report the issue instead of presenting the image as ready.
+5. When the host supports local image previews, show the result. Return its absolute path, the generated summary, the selected experiment list, and an explicit statement that README was not changed.
 
 The generator is offline and standard-library-only. Do not run evaluations, access project datasets, use the network, or inspect unrecognized `run.log` content.

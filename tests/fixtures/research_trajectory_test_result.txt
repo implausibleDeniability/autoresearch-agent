@@ -1,0 +1,5 @@
+f_score=0.888561
+precision=0.884488
+recall=0.889381
+api_cost_usd=0.01905900
+duration_seconds=25.866845
