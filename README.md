@@ -68,15 +68,19 @@ This free, read-only mode reports the document count and aggregate `o200k_base` 
 distribution. It does not require API credentials, inspect labels, run the solution, or count as an
 evaluation. The evaluator rejects it for every `test-*` dataset.
 
-Write a detailed error inventory during the same evaluation with:
+Create a retained, detailed error inventory during each evaluation with:
 
 ```bash
-uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json
+mkdir -p diagnostics
+uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics/001-a1b2c3d-dev-19k.json
 ```
 
-The ignored `diagnostics.json` file contains schema-v4 run state, per-document execution and cost,
-metrics, raw predictions and ground truth, matching ledgers, errors, and evaluator-compatible source
-evidence. Source evidence uses the
+Use the evaluation number, short commit, and dataset in each filename. The CLI refuses to start if
+the path already exists, while atomically updating that new file with checkpoints during its run.
+
+Each file in the ignored `diagnostics/` directory contains schema-v4 run state, per-document
+execution and cost, metrics, raw predictions and ground truth, matching ledgers, errors, and
+evaluator-compatible source evidence. Source evidence uses the
 evaluator's value normalization and fuzzy threshold, but it does not reproduce person pairing,
 uniqueness, or one-to-one assignment. A zero evidence count means no accepted source span was found,
 not that the evaluator must reject the value.
@@ -95,10 +99,10 @@ remain complete, but the fuzzy count is unavailable; do not interpret a zero fuz
 of evaluator-compatible evidence.
 
 Earlier schema versions use different value or occurrence semantics and must be regenerated.
-Consumers should reject unknown `schema_version` values. The file contains labeled PII and source
-context, is overwritten on each run, has owner-only permissions, and must not be committed. Other
-paths are not ignored automatically. The CLI reports serialization time as
-`diagnostics_duration_seconds`.
+Consumers should reject unknown `schema_version` values. Development diagnostics contain labeled
+PII and source context from public development sources; they need no redaction and may be shared or
+explicitly committed when useful. They are ignored by default because retaining every evaluation can
+consume substantial space. The CLI reports serialization time as `diagnostics_duration_seconds`.
 
 Diagnostics are development-only. The evaluator rejects `--diagnostics` for every dataset whose
 name starts with `test-`.
@@ -138,7 +142,8 @@ writes the terminal state after cost finalization. Each document ends as `comple
 `not_attempted`. Failed and unattempted execution records contain no predictions or ground truth.
 
 Every prediction, ground-truth value, match, neutral value, false positive, and false negative uses
-this shape:
+this shape. A false positive's `person_index` indexes the document's `predictions`; a false
+negative's indexes its `ground_truth`:
 
 ```json
 {
@@ -166,19 +171,25 @@ this shape:
 }
 ```
 
-List false negatives with their evidence counts:
+List false negatives with their document, person, value, and source evidence:
 
 ```bash
-jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | .false_negatives[] | {document_id: $document_id, field: $field, value, source_evidence_count, raw_occurrence_count, normalized_occurrence_count, fuzzy_occurrence_count}' diagnostics.json
+jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | .false_negatives[] | {document_id: $document_id, field: $field, person_index, value, source_value, source_evidence}' diagnostics/001-a1b2c3d-dev-19k.json
 ```
 
 Add `select(.fuzzy_occurrence_count > 0)` or `select(.source_evidence_count == 0)` before the final
 object to isolate fuzzy-supported or absent values.
 
+List false positives the same way:
+
+```bash
+jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | .false_positives[] | {document_id: $document_id, field: $field, person_index, value, source_value, source_evidence}' diagnostics/001-a1b2c3d-dev-19k.json
+```
+
 List optional values that matched or were omitted without affecting metrics:
 
 ```bash
-jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | (.ignored_optional_matches[].ground_truth, .unmatched_optional_values[]) | {document_id: $document_id, field: $field, value}' diagnostics.json
+jq '.documents[] | .document_id as $document_id | .field_results[] | .field as $field | (.ignored_optional_matches[].ground_truth, .unmatched_optional_values[]) | {document_id: $document_id, field: $field, value}' diagnostics/001-a1b2c3d-dev-19k.json
 ```
 
 `uv run pytest` runs the offline suite. `uv run pytest -m live` runs the paid synthetic and visible

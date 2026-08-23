@@ -11,7 +11,7 @@ To start the research:
    - If the instructions define a worktree location, run `git worktree add -b autoresearch/<tag> <path> main` there and enter it without asking.
    - Otherwise, ask whether to run in the current directory or a separate worktree. For a separate worktree, ask for its parent directory and use `git worktree add`.
 4. **Copy local files**: For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored.
-5. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed. Use the 10-column schema in **Logging results** so the final trajectory can be generated without reconstructing findings later.
+5. **Initialize the logs**: Create `results.tsv` with just the header row, `research.md` with a short ranked experiment portfolio, and the ignored `diagnostics/` directory. Use the 10-column schema in **Logging results** and retain one uniquely named diagnostic file per evaluation.
 6. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
 7. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
 8. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
@@ -132,7 +132,7 @@ After development, commit the final `solution.py` and pass that commit with `--f
 - You can NOT access files in `data/raw` in any way. These are archival source data: don't read them and don't write scripts, searches, or Git commands that interact with them.
 - You may list directory names matching `data/test-*` to discover the blind dataset. Do not inspect anything inside those directories except through the final evaluator invocation unless the user explicitly permits it.
 - You may modify and commit only `solution.py` as the experiment implementation.
-- You may create or update `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and `diagnostics.json` only for experiment logging and communication. Do not commit these files. `diagnostics.json` contains labeled PII and source context: keep it local, overwrite it on each development run, and do not copy its contents into committed files. Never create blind-test diagnostics. Do not intentionally modify any other repository files.
+- You may create or update `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and files under `diagnostics/` only for experiment logging and communication. During experiments, commit only `solution.py`; retain the other files locally. Development diagnostics contain public-source PII and context, require no redaction, and may be shared or published separately. Never create blind-test diagnostics. Do not intentionally modify any other repository files.
 
 
 ## Logging results
@@ -151,10 +151,10 @@ commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	fi
 4. recall — use 0.000000 for crashes
 5. USD per million source-document tokens achieved — use 0.000000 for crashes
 6. status: `keep`, `discard`, `inconclusive`, or `crash`
-7. short public-safe description of what this experiment tried
+7. short description of what this experiment tried
 8. dataset: `debug`, `dev-19k`, `dev-87k`, or `dev-205k`
 9. API cost charged to the budget; when metering is incomplete, use the larger of the observed subtotal and the pre-run estimate
-10. short evidence-backed conclusion from the result. Keep both `description` and `finding` safe for a public SVG: never include PII, document excerpts, prompts, completions, or sensitive diagnostics. Every `keep` row on `dev-205k` must have a non-empty finding.
+10. short evidence-backed conclusion from the result, including the diagnostic path when useful. Development document IDs and PII may be recorded verbatim. Every `keep` row on `dev-205k` must have a non-empty finding.
 
 Example:
 
@@ -180,14 +180,14 @@ Stop development after 40 evaluations or when only the budget reserved for the f
 2. For the first experiment, evaluate the current `solution.py` on `dev-205k` as the measured baseline and mark the complete result `keep`. For later experiments, tune `solution.py` with an experimental idea by directly hacking the code.
 3. If `solution.py` changed, git commit.
 4. Check the run and spending limits. Estimate total and normalized cost, targeting $1.50 per million source tokens.
-5. Load `.env` and run the evaluator in the same shell invocation: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics.json > run.log 2>&1`, substituting another allowed dataset when appropriate.
+5. Choose a new path under `diagnostics/` using the evaluation number, short commit, and dataset; never reuse a path. Load `.env` and run the evaluator in the same shell invocation: `set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --diagnostics diagnostics/001-a1b2c3d-dev-19k.json > run.log 2>&1`, substituting the actual identifiers and dataset.
 6. Read the run status before interpreting metrics: `grep -E '^(result_status|score_is_final|termination_category|documents_completed|documents_failed|documents_not_attempted|cost_status|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|document_results_json)=' run.log`.
 7. Handle the reported status:
    - `result_status=complete` and `score_is_final=true`: use the normal score and cost fields for the candidate decision.
-   - `result_status=partial` and `score_is_final=false`: count the attempt, inspect the completed-document metrics and diagnostics for hypotheses, but never rank, keep, discard, or promote the candidate from this run. Record it as `crash` with zero score fields and a public-safe failure category. Keep the coverage, failed document ID, source, prompt, completion, token counts, observed cost, and latency only in `diagnostics.json`; keep `research.md` public-safe. Charge the larger of `observed_api_cost_usd` and the pre-run estimate when `cost_status=incomplete`.
+   - `result_status=partial` and `score_is_final=false`: count the attempt, inspect the completed-document metrics and diagnostics for hypotheses, but never rank, keep, discard, or promote the candidate from this run. Record it as `crash` with zero score fields. Preserve the coverage, failed document ID, source, prompt, completion, token counts, observed cost, and latency in that evaluation's diagnostic file. Charge the larger of `observed_api_cost_usd` and the pre-run estimate when `cost_status=incomplete`.
    - Missing `result_status`: treat this as an evaluator or protocol crash, inspect the final 50 log lines, and charge the pre-run estimate unless a trustworthy observed subtotal is available.
-8. Before another paid run, inspect `diagnostics.json`. Inventory false negatives and false positives by field and document, inspect the highest-impact documents, and name at least one public-safe error class in the next experiment's hypothesis and `results.tsv` description. Never copy PII or source excerpts into `results.tsv`, and never optimize aggregate metrics without this error inventory.
-9. Record the result and its public-safe `finding` in `results.tsv`, then recompute cumulative spend. Do not commit the file. Every data row is one development experiment number, including debug checks, crashes, discarded candidates, and reruns.
+8. Before another paid run, inspect the current diagnostic file. Inventory every false negative and false positive by document ID, field, person index, and exact value; use its source evidence to inspect the highest-impact errors. Record specific examples and the diagnostic path in `research.md`, then name a concrete error class in the next hypothesis. Never optimize aggregate metrics without this inventory.
+9. Record the result and its `finding` in `results.tsv`, reference its diagnostic path, then recompute cumulative spend. Do not commit the file during experiments. Every data row is one development experiment number, including debug checks, crashes, discarded candidates, and reruns.
 10. Keep the baseline. Prefer higher F-score and credible progress toward both quality targets, while using cost as the secondary objective until the solution reaches $1.50 per million source tokens. Once below the cost target, do not accept a meaningful quality regression merely to save more money. Treat runs above the target as useful evidence rather than automatic crashes.
 11. If a candidate is competitive and uncertainty could change the decision, repeat it within the remaining limits and evaluate the combined evidence.
 12. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-205k`. Only a complete final score can support acceptance; partial results cannot. Cheaper checks may support `discard` or `inconclusive`, but never promotion. Once the decision is made, update successful repetitions consistently as described in **Evaluation confidence**.

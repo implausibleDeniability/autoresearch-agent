@@ -35,8 +35,10 @@ def preflight_diagnostics_path(path: Path) -> None:
     parent = path.parent
     if not parent.is_dir():
         raise ValueError(f"diagnostics parent directory does not exist: {parent}")
-    if path.exists() and not path.is_file():
-        raise ValueError(f"diagnostics path is not a file: {path}")
+    if path.exists():
+        if not path.is_file():
+            raise ValueError(f"diagnostics path is not a file: {path}")
+        raise ValueError(f"diagnostics path already exists; choose a new path: {path}")
     with tempfile.NamedTemporaryFile(dir=parent, prefix=f".{path.name}.") as file:
         file.write(b"{}")
         file.flush()
