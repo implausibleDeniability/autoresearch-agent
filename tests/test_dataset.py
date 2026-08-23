@@ -14,7 +14,7 @@ NAME_FIELDS = ("first_name", "middle_name", "last_name")
     (
         ("dev-19k", 74, 203, 9),
         ("dev-87k", 93, 238, 11),
-        ("dev-205k", 535, 1329, 45),
+        ("dev-202k", 461, 1180, 45),
     ),
 )
 def test_visible_dataset_counts_and_consolidates_justin_schwab(
@@ -43,7 +43,7 @@ def test_visible_dataset_counts_and_consolidates_justin_schwab(
     assert set(justin_schwab[0]["email"]) == JUSTIN_EMAILS
 
 
-@pytest.mark.parametrize("dataset", ["dev-19k", "dev-87k", "dev-205k"])
+@pytest.mark.parametrize("dataset", ["dev-19k", "dev-87k", "dev-202k"])
 def test_visible_dataset_contains_corrected_shared_labels(dataset: str):
     ground_truth = json.loads((Path("data") / dataset / "ground_truth.json").read_text())
 
@@ -67,7 +67,7 @@ def test_visible_dataset_contains_corrected_shared_labels(dataset: str):
     assert ground_truth["pzvv0257"][0]["first_name"] == ["Craig"]
 
 
-@pytest.mark.parametrize("dataset", ["dev-87k", "dev-205k"])
+@pytest.mark.parametrize("dataset", ["dev-87k", "dev-202k"])
 def test_extended_dataset_contains_corrected_michael_dourson_labels(dataset: str):
     ground_truth = json.loads((Path("data") / dataset / "ground_truth.json").read_text())
 
@@ -84,7 +84,7 @@ def test_extended_dataset_contains_corrected_michael_dourson_labels(dataset: str
         ("debug", 0),
         ("dev-19k", 0),
         ("dev-87k", 0),
-        ("dev-205k", 63),
+        ("dev-202k", 63),
     ),
 )
 def test_visible_dataset_optional_name_counts_and_invariants(dataset: str, expected_optional_values: int):
@@ -124,14 +124,14 @@ def test_visible_dataset_optional_name_counts_and_invariants(dataset: str, expec
 def test_nested_visible_datasets_keep_shared_ground_truth_identical():
     ground_truth = {
         dataset: json.loads((Path("data") / dataset / "ground_truth.json").read_text())
-        for dataset in ("dev-19k", "dev-87k", "dev-205k")
+        for dataset in ("dev-19k", "dev-87k", "dev-202k")
     }
 
     for document_id, people in ground_truth["dev-19k"].items():
         assert ground_truth["dev-87k"][document_id] == people
-        assert ground_truth["dev-205k"][document_id] == people
+        assert ground_truth["dev-202k"][document_id] == people
     for document_id, people in ground_truth["dev-87k"].items():
-        assert ground_truth["dev-205k"][document_id] == people
+        assert ground_truth["dev-202k"][document_id] == people
 
 
 def _person(ground_truth: dict, *, document: str, first_name: str) -> dict:

@@ -19,7 +19,7 @@ CURRENT_FIELDS = LEGACY_FIELDS + ("finding",)
 REPLAY_FIELDS = CURRENT_FIELDS + ("evaluation_mode",)
 EVALUATION_MODES = {"live", "cached"}
 STATUSES = {"keep", "discard", "inconclusive", "crash"}
-DATASETS = {"debug", "dev-19k", "dev-87k", "dev-205k"}
+DATASETS = {"debug", "dev-19k", "dev-87k", "dev-202k"}
 BLIND_FIELDS = ("f_score", "precision", "recall", "api_cost_usd", "duration_seconds")
 
 
@@ -80,12 +80,12 @@ def load_trajectory(
     states = build_incumbent_states(experiments)
     if not states:
         raise TrajectoryError(
-            f"{results_path}: no accepted dev-205k result; run a complete dev-205k baseline "
+            f"{results_path}: no accepted dev-202k result; run a complete dev-202k baseline "
             "and mark it keep"
         )
     baseline = experiments[0]
-    if baseline.status != "keep" or baseline.dataset != "dev-205k":
-        raise TrajectoryError(f"{results_path}: experiment 1 must be an accepted dev-205k baseline")
+    if baseline.status != "keep" or baseline.dataset != "dev-202k":
+        raise TrajectoryError(f"{results_path}: experiment 1 must be an accepted dev-202k baseline")
     candidates = [state for state in states[1:] if state.delta is not None and state.delta > 0]
     ranked = sorted(candidates, key=lambda state: (-state.delta, state.experiment))[:max_milestones]
     milestones = tuple(sorted(ranked, key=lambda state: state.experiment))
@@ -149,8 +149,8 @@ def _parse_experiment(
     evaluation_mode = values.get("evaluation_mode", "live")
     if has_evaluation_mode and evaluation_mode not in EVALUATION_MODES:
         raise TrajectoryError(f"{path}: row {number}: unsupported evaluation_mode")
-    if has_finding and values["status"] == "keep" and values["dataset"] == "dev-205k" and not finding:
-        raise TrajectoryError(f"{path}: row {number}: accepted dev-205k finding must not be empty")
+    if has_finding and values["status"] == "keep" and values["dataset"] == "dev-202k" and not finding:
+        raise TrajectoryError(f"{path}: row {number}: accepted dev-202k finding must not be empty")
     return Experiment(
         number,
         values["commit"],
@@ -203,7 +203,7 @@ def validate_xml_text(value: str, *, context: str) -> None:
 
 
 def build_incumbent_states(experiments: list[Experiment]) -> list[IncumbentState]:
-    accepted = [row for row in experiments if row.status == "keep" and row.dataset == "dev-205k"]
+    accepted = [row for row in experiments if row.status == "keep" and row.dataset == "dev-202k"]
     episodes: list[list[Experiment]] = []
     for row in accepted:
         if episodes and episodes[-1][-1].commit == row.commit:

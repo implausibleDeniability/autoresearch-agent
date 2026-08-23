@@ -84,7 +84,7 @@ def test_cli_accepts_exact_response_replay_cache_for_development():
 
 
 def test_cli_accepts_dataset_description_mode():
-    parsed = _parse_arguments(("--dataset", "dev-205k", "--describe-dataset"))
+    parsed = _parse_arguments(("--dataset", "dev-202k", "--describe-dataset"))
 
     assert parsed.describe_dataset
 

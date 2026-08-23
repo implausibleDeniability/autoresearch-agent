@@ -273,7 +273,7 @@ def test_replay_schema_rejects_unsupported_evaluation_mode(tmp_path):
         ("cost", "-0.1", "cost must be finite"),
         ("status", "accepted", "unsupported status"),
         ("dataset", "test-hidden", "unsupported dataset"),
-        ("finding", "", "accepted dev-205k finding must not be empty"),
+        ("finding", "", "accepted dev-202k finding must not be empty"),
     ],
 )
 def test_invalid_result_fields_fail_without_echoing_rows(tmp_path, field, value, message):
@@ -300,7 +300,7 @@ def test_reordered_header_and_missing_accepted_state_fail_clearly(tmp_path):
 
     results = tmp_path / "results.tsv"
     _write_results(results, [_experiment(1, "aaaaaaa", 0.700, status="discard")])
-    with pytest.raises(TrajectoryError, match="run a complete dev-205k baseline"):
+    with pytest.raises(TrajectoryError, match="run a complete dev-202k baseline"):
         load_trajectory(results)
 
     late_baseline = tmp_path / "late-baseline.tsv"
@@ -311,7 +311,7 @@ def test_reordered_header_and_missing_accepted_state_fail_clearly(tmp_path):
             _experiment(2, "bbbbbbb", 0.750, status="keep"),
         ],
     )
-    with pytest.raises(TrajectoryError, match="experiment 1 must be an accepted dev-205k baseline"):
+    with pytest.raises(TrajectoryError, match="experiment 1 must be an accepted dev-202k baseline"):
         load_trajectory(late_baseline)
 
 
@@ -574,7 +574,7 @@ def _experiment(
     score: float,
     *,
     status: str,
-    dataset: str = "dev-205k",
+    dataset: str = "dev-202k",
     description: str | None = None,
     evaluation_mode: str = "live",
 ) -> Experiment:

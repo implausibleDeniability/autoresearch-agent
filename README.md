@@ -8,7 +8,7 @@ Inspired by [Karpathy's Autoresearch](https://github.com/karpathy/autoresearch),
 
 ## Method
 
-Development uses the visible `dev-19k`, `dev-87k`, and `dev-205k` datasets. A two-document `debug`
+Development uses the visible `dev-19k`, `dev-87k`, and `dev-202k` datasets. A two-document `debug`
 dataset supports inexpensive pipeline checks. Dataset names beginning with `test-` are reserved for
 a blind final evaluation after development has ended.
 
@@ -38,7 +38,7 @@ Evaluate the solution on one complete dataset split:
 uv run python -m src.evaluation.cli --dataset debug
 uv run python -m src.evaluation.cli --dataset dev-19k
 uv run python -m src.evaluation.cli --dataset dev-87k
-uv run python -m src.evaluation.cli --dataset dev-205k
+uv run python -m src.evaluation.cli --dataset dev-202k
 ```
 
 Live development evaluations save validated OpenAI responses in an ignored, owner-only cache local
@@ -62,20 +62,20 @@ Evaluations process up to 50 documents concurrently by default. Lower the limit 
 simultaneous worker and API load:
 
 ```bash
-uv run python -m src.evaluation.cli --dataset dev-205k --max-concurrent-documents 20
+uv run python -m src.evaluation.cli --dataset dev-202k --max-concurrent-documents 20
 ```
 
 Each concurrent development document uses an isolated metering credential, preserving exact
 per-document API usage, cost, latency, failures, and partial results.
 
 Use `debug` for inexpensive pipeline checks, `dev-19k` for cheap hypothesis tests, and `dev-87k`
-for moderate-cost validation. The larger `dev-205k` is likely more representative for measuring
+for moderate-cost validation. The larger `dev-202k` is likely more representative for measuring
 quality, but costs more to evaluate; use it for generality checks and final measurement.
 
 Inspect a development dataset's scale before planning paid runs:
 
 ```bash
-uv run python -m src.evaluation.cli --dataset dev-205k --describe-dataset
+uv run python -m src.evaluation.cli --dataset dev-202k --describe-dataset
 ```
 
 This free, read-only mode reports the document count and aggregate `o200k_base` source-token
@@ -295,8 +295,8 @@ Success ends the research run. Never tune against the result; changing the solut
   labeled PII values.
 - `data/dev-87k`: 20 complete documents, 87,454 tokens, 49,953 words, 93 labeled people, and 238
   labeled PII values.
-- `data/dev-205k`: 122 complete documents, 204,153 tokens, 98,127 words, 535 labeled people, and
-  1,329 labeled PII values.
+- `data/dev-202k`: 121 complete documents, 201,965 tokens, 97,172 words, 461 labeled people, and
+  1,180 labeled PII values.
 - `data/test-*`: blind final-evaluation data.
 
 `data/raw` must not be exposed to the research agent. The agent may list `data/test-*` directory
