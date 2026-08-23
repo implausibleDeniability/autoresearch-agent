@@ -58,19 +58,13 @@ The evaluator measures API usage outside `solution.py` and prints cost immediate
 
 Target no more than $1.50 per million source tokens—about 2.9 cents on `dev-19k`—and estimate cost before each run. The meter enforces only an 8-cent total limit, overridable with `--cents-limit`, so modest target overruns still return useful results.
 
-### Research trajectory
+### Research strategy
 
-Periodically assess whether the current line of research can plausibly reach the quality targets within the remaining budget. Consider the size and consistency of improvements, the remaining errors, and evidence of a local ceiling.
+Keep several competing research directions alive until evidence clearly favors one. Include materially different mechanisms and hypotheses whose plausible impact matches the remaining quality gap. Without such evidence, a run dominated by variants of one mechanism has not searched broadly enough, even when those variants improve the score.
 
-Incremental experiments are valuable when they generate knowledge or advance a credible path. Do not continue making minor variations merely because they produce small improvements. When the observed trajectory is inadequate, reconsider the problem and broaden the search.
+Refine a direction when the result can materially advance it or decisively test whether it can reach the target. When gains become marginal or no active direction plausibly reaches the target, redirect effort toward new, more ambitious approaches rather than optimizing a local ceiling.
 
-### Search breadth
-
-Explore the solution space rather than only variations of the current implementation. Maintain multiple competing hypotheses, including both refinements and materially different approaches, and choose among them using expected impact, evidence, cost, runtime, and complexity.
-
-No architecture, number of steps, balance of model and non-model methods, library, or technique is preferred in advance. The researcher owns these decisions and may invent, combine, revise, or abandon approaches as evidence develops.
-
-If most completed experiments belong to one narrow family, explicitly justify why continuing that family has higher expected value than exploring alternatives. Before the run ends, record the major directions considered, which were tested, which were deferred, and why.
+No architecture, number of steps, balance of model and non-model methods, library, or technique is preferred in advance. The researcher owns these decisions.
 
 ### External research
 
