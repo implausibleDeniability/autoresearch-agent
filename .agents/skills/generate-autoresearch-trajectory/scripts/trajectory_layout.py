@@ -1,4 +1,5 @@
 import math
+import textwrap
 
 
 def wrap_text(text: str, *, width: int, max_lines: int) -> tuple[str, ...]:
@@ -30,6 +31,17 @@ def wrap_text(text: str, *, width: int, max_lines: int) -> tuple[str, ...]:
     if tail_omitted and not lines[-1].endswith("…"):
         lines[-1] = lines[-1][: max(1, width - 1)].rstrip() + "…"
     return tuple(lines)
+
+
+def wrap_text_complete(text: str, *, width: int) -> tuple[str, ...]:
+    normalized = " ".join(text.split())
+    lines = textwrap.wrap(
+        normalized,
+        width=width,
+        break_long_words=True,
+        break_on_hyphens=False,
+    )
+    return tuple(lines) or ("",)
 
 
 def y_domain(values: list[float]) -> tuple[float, float, tuple[float, ...]]:

@@ -1,3 +1,4 @@
+import math
 import xml.etree.ElementTree as ET
 
 from svg_primitives import (
@@ -14,18 +15,27 @@ from svg_primitives import (
 from trajectory_chart import draw_chart
 from trajectory_data import Trajectory, validate_xml_text
 from trajectory_layout import format_delta, format_percentage, wrap_text
+from trajectory_milestones import draw_milestone_list, layout_milestones
 
 WIDTH = 1200
-HEIGHT = 720
+MIN_HEIGHT = 720
+BASE_CHART_BOTTOM = 570
+CANVAS_BOTTOM_PADDING = 40
+CHART_LIST_OFFSET = 64
 
 
 def render_svg(trajectory: Trajectory, *, heading: str) -> str:
     validate_xml_text(heading, context="title")
+    heading_lines = wrap_text(heading, width=42, max_lines=2)
+    chart_top = 164 + (len(heading_lines) - 1) * 28
+    milestone_layout = layout_milestones(trajectory.milestones, top=chart_top)
+    chart_bottom = max(BASE_CHART_BOTTOM, milestone_layout.bottom - CHART_LIST_OFFSET)
+    height = _canvas_height(milestone_layout.bottom)
     root = ET.Element(
         "svg",
         {
             "xmlns": "http://www.w3.org/2000/svg",
-            "viewBox": f"0 0 {WIDTH} {HEIGHT}",
+            "viewBox": f"0 0 {WIDTH} {height}",
             "role": "img",
             "aria-labelledby": "trajectory-title trajectory-desc",
         },
@@ -34,9 +44,8 @@ def render_svg(trajectory: Trajectory, *, heading: str) -> str:
     title.text = heading
     description = ET.SubElement(root, "desc", {"id": "trajectory-desc"})
     description.text = _accessible_description(trajectory)
-    ET.SubElement(root, "rect", {"width": str(WIDTH), "height": str(HEIGHT), "fill": BACKGROUND})
+    ET.SubElement(root, "rect", {"width": str(WIDTH), "height": str(height), "fill": BACKGROUND})
 
-    heading_lines = wrap_text(heading, width=42, max_lines=2)
     add_multiline(root, 56, 56, heading_lines, size=32, fill=PRIMARY, weight=650, line_height=34)
     subtitle_y = 96 + (len(heading_lines) - 1) * 30
     add_text(
@@ -49,8 +58,6 @@ def render_svg(trajectory: Trajectory, *, heading: str) -> str:
     )
     _draw_summary(root, trajectory)
 
-    chart_top = 164 + (len(heading_lines) - 1) * 28
-    chart_bottom = 570
     chart_left = 88
     development_right = 690 if trajectory.blind else 772
     _draw_legend(root, 64, chart_top - 30, trajectory.blind is not None)
@@ -64,7 +71,7 @@ def render_svg(trajectory: Trajectory, *, heading: str) -> str:
         final_divider=724,
         blind_x=756,
     )
-    _draw_milestone_list(root, trajectory, top=chart_top)
+    draw_milestone_list(root, milestone_layout, top=chart_top)
 
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="unicode", xml_declaration=True, short_empty_elements=True) + "\n"
@@ -114,57 +121,9 @@ def _draw_legend(root: ET.Element, x: float, y: float, has_blind: bool) -> None:
         add_text(root, x + 161, y + 5, "Test dataset", size=14, fill=SECONDARY)
 
 
-def _draw_milestone_list(root: ET.Element, trajectory: Trajectory, *, top: float) -> None:
-    x = 836
-    add_text(
-        root,
-        x,
-        top - 28,
-        "WHAT WORKED",
-        size=15,
-        fill=SECONDARY,
-        weight=650,
-        letter_spacing="1.8",
-    )
-    if not trajectory.milestones:
-        add_text(root, x, top + 28, "No accepted improvement yet", size=16, fill=SECONDARY)
-        return
-    row_height = 72
-    for index, state in enumerate(trajectory.milestones, start=1):
-        row_top = top + (index - 1) * row_height
-        label_baseline = row_top + 18
-        add_text(root, x, label_baseline, f"{index:02d}", size=26, fill=BLUE, weight=650, family=MONO)
-        add_text(
-            root,
-            x + 48,
-            label_baseline,
-            f"EXP {state.experiment:02d}  ·  {format_delta(state.delta or 0)}",
-            size=14,
-            fill=SECONDARY,
-            weight=600,
-            family=MONO,
-        )
-        title_lines = wrap_text(state.description, width=31, max_lines=1)
-        add_multiline(
-            root,
-            x + 48,
-            row_top + 34,
-            title_lines,
-            size=17,
-            fill=PRIMARY,
-            weight=600,
-            line_height=18,
-        )
-        finding_lines = wrap_text(state.finding, width=36, max_lines=2)
-        add_multiline(
-            root,
-            x + 48,
-            row_top + 54,
-            finding_lines,
-            size=15,
-            fill=SECONDARY,
-            line_height=16,
-        )
+def _canvas_height(milestone_bottom: float) -> int:
+    required = milestone_bottom + CANVAS_BOTTOM_PADDING
+    return max(MIN_HEIGHT, math.ceil(required / 8) * 8)
 
 
 def _accessible_description(trajectory: Trajectory) -> str:
