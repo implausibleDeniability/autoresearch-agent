@@ -108,7 +108,7 @@ Record repeated evaluations as separate results. After deciding, give all succes
 
 Use saved baseline results only within the same evaluator contract. Prefer other non-paid evidence when it can resolve uncertainty without another evaluation.
 
-For hardcoded changes that leave OpenAI requests unchanged, add `--cache` to replay exact earlier responses; a miss fails without making a live call. Omit it when requests may change or when measuring model variation. Cached runs count toward 40, and their zero spend is not evidence of solution cost.
+Use `--cache` for paired experiments that should keep OpenAI requests unchanged: exact replay removes model-run variability, so score differences isolate the code change. A miss fails without a live call; omit the flag when measuring model variation or when changed requests need fresh responses. Cached runs count toward 40, and their zero spend is not evidence of solution cost.
 
 ### OCR ambiguity
 
