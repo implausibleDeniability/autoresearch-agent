@@ -1,10 +1,12 @@
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
 from contextlib import chdir
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pytest
+from matplotlib.text import Annotation
+from PIL import Image
 
 from generate_trajectory import main as generate_main
 from trajectory_data import (
@@ -21,8 +23,7 @@ from trajectory_data import (
     read_experiments,
 )
 from trajectory_layout import wrap_text, x_ticks, y_domain
-from trajectory_milestones import layout_milestones
-from trajectory_svg import render_svg
+from trajectory_plot import accessible_description, create_figure, save_plot
 
 ROOT = Path(__file__).parents[1]
 SKILL = ROOT / ".agents" / "skills" / "generate-autoresearch-trajectory"
@@ -31,9 +32,9 @@ EXAMPLES = SKILL / "examples"
 FIXTURES = ROOT / "tests" / "fixtures"
 
 
-def test_example_generates_accessible_deterministic_svg(tmp_path):
+def test_example_generates_accessible_deterministic_png(tmp_path):
     # setup
-    output = tmp_path / "trajectory.svg"
+    output = tmp_path / "trajectory.png"
     command = [
         sys.executable,
         str(SCRIPT),
@@ -49,68 +50,57 @@ def test_example_generates_accessible_deterministic_svg(tmp_path):
     first = subprocess.run(command, check=False, capture_output=True, text=True)
     first_bytes = output.read_bytes()
     second = subprocess.run(command, check=False, capture_output=True, text=True)
-    direct = render_svg(
-        load_trajectory(EXAMPLES / "results.tsv", run_log_path=EXAMPLES / "example-test-result.txt"),
-        heading="PII extraction research trajectory",
-    )
+    trajectory = load_trajectory(EXAMPLES / "results.tsv", run_log_path=EXAMPLES / "example-test-result.txt")
+    direct = tmp_path / "direct.png"
+    save_plot(direct, trajectory=trajectory, heading="PII Autoresearch Progress")
 
     # check
     assert first.returncode == 0
     assert second.returncode == 0
     assert output.read_bytes() == first_bytes
+    assert direct.read_bytes() == first_bytes
     assert "Development experiments: 20" in first.stdout
     assert "Experiment 9 · +2.7 pp · Deterministic email recovery" in first.stdout
-    root = ET.fromstring(first_bytes)
-    assert root.attrib["role"] == "img"
-    assert root.attrib["aria-labelledby"] == "trajectory-title trajectory-desc"
-    assert root.find("{http://www.w3.org/2000/svg}title").text == "PII extraction research trajectory"
-    description = root.find("{http://www.w3.org/2000/svg}desc").text
+    with Image.open(output) as image:
+        assert image.size[0] > 2000
+        assert image.size[1] > 1000
+        assert image.info["Title"] == "PII Autoresearch Progress"
+        description = image.info["Description"]
     assert "finding: Confirmed the email gain on a repeat" in description
-    text = " ".join(root.itertext())
-    assert "WHAT WORKED" in text
-    assert "Test dataset: 84.8%" in text
-    assert "OCR-aware name variants" in text
-    assert root.find(".//*[@data-series='dev-dataset']") is not None
-    assert root.find(".//*[@data-series='milestone-label']") is not None
-    assert root.find(".//*[@data-score='0.848000']") is not None
-    assert direct.encode() == first_bytes
+    assert "Test dataset: 84.8%." in description
 
 
-def test_real_long_milestones_render_complete_without_overlap():
+def test_long_milestones_keep_full_detail_in_png_metadata():
     trajectory = load_trajectory(
         FIXTURES / "research_trajectory_long_text.tsv",
         run_log_path=FIXTURES / "research_trajectory_test_result.txt",
     )
 
-    layout = layout_milestones(trajectory.milestones, top=164)
-    svg = render_svg(trajectory, heading="PII extraction research trajectory")
-    root = ET.fromstring(svg)
-    milestone_group = root.find(".//*[@data-section='milestones']")
-    visible_text = " ".join(" ".join(milestone_group.itertext()).split())
-    height = float(root.attrib["viewBox"].split()[-1])
+    description = accessible_description(trajectory)
 
-    assert all(state.description in visible_text for state in trajectory.milestones)
-    assert all(state.finding in visible_text for state in trajectory.milestones)
-    assert "…" not in visible_text
-    assert all(left.bottom <= right.top for left, right in zip(layout.rows, layout.rows[1:]))
-    assert layout.bottom + 40 <= height
+    assert all(state.description in description for state in trajectory.milestones)
+    assert all(state.finding in description for state in trajectory.milestones)
 
 
-def test_milestone_number_and_metadata_share_an_optical_top_edge():
-    trajectory = load_trajectory(FIXTURES / "research_trajectory_long_text.tsv")
+def test_example_labels_are_inline_and_do_not_overlap():
+    trajectory = load_trajectory(EXAMPLES / "results.tsv")
 
-    root = ET.fromstring(render_svg(trajectory, heading="Trajectory"))
-    numbers = root.findall(".//*[@data-role='milestone-number']")
-    metadata = root.findall(".//*[@data-role='milestone-meta']")
+    figure = create_figure(trajectory, heading="Trajectory")
+    annotations = _experiment_annotations(figure)
 
-    assert len(numbers) == len(metadata) == 4
-    for number, meta in zip(numbers, metadata):
-        number_top = float(number.attrib["y"]) - float(number.attrib["font-size"]) * 0.82
-        meta_top = float(meta.attrib["y"]) - float(meta.attrib["font-size"]) * 0.82
-        assert abs(number_top - meta_top) <= 1
+    assert len(annotations) == len(trajectory.states)
+    assert {annotation.get_text() for annotation in annotations} >= {
+        "baseline",
+        "Deterministic email recovery",
+        "OCR-aware name variants",
+    }
+    assert all(annotation.get_rotation() == 30 for annotation in annotations)
+    assert all(annotation.get_fontsize() == 8 for annotation in annotations)
+    _assert_annotations_do_not_overlap(figure, annotations)
+    plt.close(figure)
 
 
-def test_seven_long_milestones_expand_canvas_without_losing_text():
+def test_seven_dense_milestones_render_without_overlapping_labels():
     title = "accepted recovery strategy for dense correspondence and citation records"
     finding = (
         "Confirmed the representative improvement without unrelated false positives or "
@@ -137,20 +127,21 @@ def test_seven_long_milestones_expand_canvas_without_losing_text():
     )
     trajectory = Trajectory(
         experiment_count=42,
+        representative_results=(),
         states=(baseline, *milestones),
         milestones=milestones,
         blind=None,
     )
 
-    layout = layout_milestones(trajectory.milestones, top=164)
-    root = ET.fromstring(render_svg(trajectory, heading="Seven milestones"))
-    visible_text = " ".join(" ".join(root.find(".//*[@data-section='milestones']").itertext()).split())
+    figure = create_figure(trajectory, heading="Seven milestones")
+    annotations = _experiment_annotations(figure)
+    description = accessible_description(trajectory)
 
-    assert float(root.attrib["viewBox"].split()[-1]) > 720
-    assert all(left.bottom <= right.top for left, right in zip(layout.rows, layout.rows[1:]))
-    assert visible_text.count(title) == 7
-    assert visible_text.count(finding) == 7
-    assert "…" not in visible_text
+    assert len(annotations) == 8
+    assert description.count(title) == 7
+    assert description.count(finding) == 7
+    _assert_annotations_do_not_overlap(figure, annotations)
+    plt.close(figure)
 
 
 def test_incumbent_episodes_preserve_repeats_returns_and_downward_steps():
@@ -171,11 +162,14 @@ def test_incumbent_episodes_preserve_repeats_returns_and_downward_steps():
     assert [state.score for state in states] == pytest.approx([0.710, 0.760, 0.740, 0.800])
     assert [state.delta for state in states[1:]] == pytest.approx([0.050, -0.020, 0.060])
     trajectory = _trajectory_file(experiments)
-    svg = render_svg(trajectory, heading="Trajectory")
-    assert 'data-experiment="6"' in svg
-    assert 'data-score="0.740000"' in svg
-    path = ET.fromstring(svg).find(".//*[@data-series='dev-dataset']")
-    assert path.attrib["d"].endswith("H 772")
+    figure = create_figure(trajectory, heading="Trajectory")
+    axes = figure.axes[0]
+    running_best = next(line for line in axes.lines if line.get_label() == "Running best")
+
+    assert list(running_best.get_xdata()) == [2, 4, 5, 6]
+    assert list(running_best.get_ydata()) == pytest.approx([0.710, 0.760, 0.760, 0.800])
+    assert any(collection.get_label() == "Discarded" for collection in axes.collections)
+    plt.close(figure)
 
 
 def test_baseline_repetitions_group_without_losing_experiment_one_origin(tmp_path):
@@ -191,12 +185,13 @@ def test_baseline_repetitions_group_without_losing_experiment_one_origin(tmp_pat
     )
 
     trajectory = load_trajectory(results)
-    svg = render_svg(trajectory, heading="Repeated baseline")
+    figure = create_figure(trajectory, heading="Repeated baseline")
+    running_best = next(line for line in figure.axes[0].lines if line.get_label() == "Running best")
 
     assert [state.experiment for state in trajectory.states] == [3, 4]
     assert trajectory.states[0].score == pytest.approx(0.710)
-    path = ET.fromstring(svg).find(".//*[@data-series='dev-dataset']")
-    assert path.attrib["d"].startswith("M 88 ")
+    assert list(running_best.get_xdata()) == [2, 3]
+    plt.close(figure)
 
 
 def test_milestones_select_top_seven_then_render_chronologically(tmp_path):
@@ -214,7 +209,7 @@ def test_milestones_select_top_seven_then_render_chronologically(tmp_path):
     assert len(trajectory.milestones) == 7
 
 
-def test_legacy_schema_falls_back_to_description_and_escapes_xml(tmp_path):
+def test_legacy_schema_falls_back_to_description_and_renders_special_characters(tmp_path):
     results = tmp_path / "results.tsv"
     rows = [
         _experiment(1, "aaaaaaa", 0.700, status="keep", description="Base & <start>"),
@@ -223,12 +218,14 @@ def test_legacy_schema_falls_back_to_description_and_escapes_xml(tmp_path):
     _write_results(results, rows, fields=LEGACY_FIELDS)
 
     trajectory = load_trajectory(results)
-    svg = render_svg(trajectory, heading="A & B <research>")
+    figure = create_figure(trajectory, heading="A & B <research>")
 
     assert trajectory.milestones[0].finding == "Names & emails <fixed>"
-    assert "A &amp; B &lt;research&gt;" in svg
-    assert "Names &amp; emails &lt;fixed&gt;" in svg
-    ET.fromstring(svg)
+    assert figure.axes[0].get_title().startswith("A & B <research>")
+    assert "Names & emails <fixed>" in {
+        annotation.get_text() for annotation in _experiment_annotations(figure)
+    }
+    plt.close(figure)
 
 
 def test_replay_schema_preserves_evaluation_mode_and_legacy_defaults_live(tmp_path):
@@ -368,7 +365,7 @@ def test_results_and_title_reject_invalid_xml_text_boundaries(tmp_path):
 
     trajectory = _trajectory_file([_experiment(1, "aaaaaaa", 0.700, status="keep")])
     with pytest.raises(TrajectoryError, match="title contains an illegal XML character"):
-        render_svg(trajectory, heading="Unsafe\x01title")
+        create_figure(trajectory, heading="Unsafe\x01title")
 
 
 def test_cli_reports_missing_explicit_log_and_missing_output_parent(tmp_path):
@@ -387,7 +384,7 @@ def test_cli_reports_missing_explicit_log_and_missing_output_parent(tmp_path):
             "--results",
             str(results),
             "--output",
-            str(tmp_path / "missing" / "result.svg"),
+            str(tmp_path / "missing" / "result.png"),
         ],
         check=False,
         capture_output=True,
@@ -399,21 +396,22 @@ def test_cli_reports_missing_explicit_log_and_missing_output_parent(tmp_path):
     assert "Traceback" not in missing_log.stderr
     assert missing_parent.returncode == 2
     assert "output directory does not exist" in missing_parent.stderr
-    assert not (tmp_path / "missing" / "result.svg").exists()
+    assert not (tmp_path / "missing" / "result.png").exists()
 
 
 def test_direct_cli_defaults_replace_output_and_report_empty_milestones(tmp_path, capsys):
     results = tmp_path / "results.tsv"
     _write_results(results, [_experiment(1, "aaaaaaa", 0.700, status="keep")])
-    output = tmp_path / "research-trajectory.svg"
-    output.write_text("old")
+    output = tmp_path / "research-trajectory.png"
+    output.write_bytes(b"old")
 
     result = generate_main(["--results", str(results), "--title", "Custom title"])
 
     captured = capsys.readouterr()
     assert result == 0
-    assert output.read_text().startswith("<?xml")
-    assert "Custom title" in output.read_text()
+    with Image.open(output) as image:
+        assert image.format == "PNG"
+        assert image.info["Title"] == "Custom title"
     assert "Test dataset: not present" in captured.out
     assert "Selected milestones:\n  none" in captured.out
 
@@ -423,9 +421,9 @@ def test_direct_cli_defaults_replace_output_and_report_empty_milestones(tmp_path
     [
         (["--results", "missing.tsv"], "cannot read missing.tsv"),
         (["--results", "results.tsv", "--run-log", "missing.log"], "explicit run log does not exist"),
-        (["--results", "results.tsv", "--output", "result.png"], "output must use the .svg extension"),
+        (["--results", "results.tsv", "--output", "result.svg"], "output must use the .png extension"),
         (
-            ["--results", "results.tsv", "--output", "missing/result.svg"],
+            ["--results", "results.tsv", "--output", "missing/result.png"],
             "output directory does not exist",
         ),
     ],
@@ -460,7 +458,8 @@ def test_direct_cli_infers_complete_blind_log(tmp_path, capsys):
 
     assert result == 0
     assert "Test dataset: 74.0%" in capsys.readouterr().out
-    assert 'data-score="0.740000"' in (tmp_path / "research-trajectory.svg").read_text()
+    with Image.open(tmp_path / "research-trajectory.png") as image:
+        assert "Test dataset: 74.0%." in image.info["Description"]
 
 
 def test_direct_cli_can_ignore_inferred_blind_log(tmp_path, capsys):
@@ -479,16 +478,17 @@ def test_single_state_without_blind_has_stable_empty_milestone_layout(tmp_path):
     _write_results(results, [_experiment(1, "aaaaaaa", 0.700, status="keep")])
 
     trajectory = load_trajectory(results)
-    svg = render_svg(trajectory, heading="One state")
+    figure = create_figure(trajectory, heading="One state")
+    axes = figure.axes[0]
 
     assert trajectory.milestones == ()
-    assert "No accepted improvement yet" in svg
-    assert "Test dataset" not in svg
-    assert "TEST" not in svg
-    assert 'd="M 88 367 H 772"' in svg
+    assert axes.get_title() == "One state: 1 Experiments, 1 Kept Improvements"
+    assert len(_experiment_annotations(figure)) == 1
+    assert "Test result" not in axes.get_legend_handles_labels()[1]
+    plt.close(figure)
 
 
-def test_clustered_milestones_omit_overlapping_chart_labels():
+def test_clustered_milestones_keep_every_label_inline_without_overlap():
     score = 0.700
     experiments = [_experiment(1, "base000", score, status="keep")]
     for number in range(2, 9):
@@ -497,11 +497,12 @@ def test_clustered_milestones_omit_overlapping_chart_labels():
     for number in range(9, 23):
         experiments.append(_experiment(number, f"discard{number}", score, status="discard"))
 
-    svg = render_svg(_trajectory_file(experiments), heading="Clustered trajectory")
+    figure = create_figure(_trajectory_file(experiments), heading="Clustered trajectory")
+    annotations = _experiment_annotations(figure)
 
-    assert 'data-series="milestone-label"' not in svg
-    assert "EXP 08" in svg
-    assert "07" in svg
+    assert len(annotations) == 8
+    _assert_annotations_do_not_overlap(figure, annotations)
+    plt.close(figure)
 
 
 def test_layout_helpers_bound_ticks_and_truncate_long_unicode():
@@ -619,7 +620,33 @@ def _row_values(experiment: Experiment) -> dict[str, str]:
     }
 
 
+def _experiment_annotations(figure) -> list[Annotation]:
+    return [
+        text for text in figure.axes[0].texts if isinstance(text, Annotation) and text.get_rotation() == 30
+    ]
+
+
+def _assert_annotations_do_not_overlap(figure, annotations: list[Annotation]) -> None:
+    figure.canvas.draw()
+    renderer = figure.canvas.get_renderer()
+    bounds = [annotation.get_window_extent(renderer).expanded(1.01, 1.04) for annotation in annotations]
+    axes = figure.axes[0]
+    obstacles = [
+        text.get_window_extent(renderer).expanded(1.01, 1.04)
+        for text in axes.texts
+        if text not in annotations
+    ]
+    if axes.get_legend() is not None:
+        obstacles.append(axes.get_legend().get_window_extent(renderer))
+    for index, box in enumerate(bounds):
+        assert not any(box.overlaps(other) for other in bounds[index + 1 :])
+        assert not any(box.overlaps(obstacle) for obstacle in obstacles)
+
+
 def _trajectory_file(experiments: list[Experiment]) -> Trajectory:
     states = build_incumbent_states(experiments)
     milestones = tuple(state for state in states[1:] if state.delta and state.delta > 0)
-    return Trajectory(len(experiments), tuple(states), milestones, None)
+    representative_results = tuple(
+        row for row in experiments if row.dataset == "dev-202k" and row.status != "crash"
+    )
+    return Trajectory(len(experiments), representative_results, tuple(states), milestones, None)

@@ -4,11 +4,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-from trajectory_data import TrajectoryError, load_trajectory
+from trajectory_data import Trajectory, TrajectoryError, load_trajectory
 from trajectory_layout import format_delta, format_percentage
-from trajectory_svg import render_svg
+from trajectory_plot import save_plot
 
-DEFAULT_TITLE = "PII extraction research trajectory"
+DEFAULT_TITLE = "PII Autoresearch Progress"
 
 
 def main(arguments: list[str] | None = None) -> int:
@@ -16,13 +16,12 @@ def main(arguments: list[str] | None = None) -> int:
     options = parser.parse_args(arguments)
     results_path = Path(options.results)
     output_path = (
-        Path(options.output) if options.output else results_path.with_name("research-trajectory.svg")
+        Path(options.output) if options.output else results_path.with_name("research-trajectory.png")
     )
     try:
         run_log_path = _resolve_run_log(results_path, options.run_log, options.no_run_log)
         trajectory = load_trajectory(results_path, run_log_path=run_log_path)
-        svg = render_svg(trajectory, heading=options.title)
-        _write_atomic(output_path, svg)
+        _save_atomic_plot(output_path, trajectory=trajectory, heading=options.title)
     except (TrajectoryError, OSError, UnicodeError) as error:
         print(f"trajectory: {error}", file=sys.stderr)
         return 2
@@ -31,7 +30,7 @@ def main(arguments: list[str] | None = None) -> int:
 
 
 def _argument_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate an autoresearch trajectory SVG.")
+    parser = argparse.ArgumentParser(description="Generate an autoresearch trajectory PNG.")
     parser.add_argument("--results", default="results.tsv", help="experiment TSV (default: results.tsv)")
     blind_input = parser.add_mutually_exclusive_group()
     blind_input.add_argument(
@@ -44,8 +43,8 @@ def _argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="ignore any run.log beside results.tsv and render development results only",
     )
-    parser.add_argument("--output", default=None, help="output SVG (default: beside results.tsv)")
-    parser.add_argument("--title", default=DEFAULT_TITLE, help="SVG heading")
+    parser.add_argument("--output", default=None, help="output PNG (default: beside results.tsv)")
+    parser.add_argument("--title", default=DEFAULT_TITLE, help="chart heading")
     return parser
 
 
@@ -63,26 +62,23 @@ def _resolve_run_log(results_path: Path, requested: str | None, ignore: bool) ->
     return inferred if inferred.is_file() else None
 
 
-def _write_atomic(path: Path, svg: str) -> None:
-    if path.suffix.lower() != ".svg":
-        raise TrajectoryError(f"output must use the .svg extension: {path}")
+def _save_atomic_plot(path: Path, *, trajectory: Trajectory, heading: str) -> None:
+    if path.suffix.lower() != ".png":
+        raise TrajectoryError(f"output must use the .png extension: {path}")
     parent = path.parent
     if not parent.is_dir():
         raise TrajectoryError(f"output directory does not exist: {parent}")
     temporary_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            newline="\n",
             dir=parent,
             prefix=f".{path.name}.",
-            suffix=".tmp",
+            suffix=".png",
             delete=False,
         ) as handle:
             temporary_path = Path(handle.name)
-            handle.write(svg)
-            handle.flush()
+        save_plot(temporary_path, trajectory=trajectory, heading=heading)
+        with temporary_path.open("rb") as handle:
             os.fsync(handle.fileno())
         os.replace(temporary_path, path)
     except OSError:
@@ -91,10 +87,11 @@ def _write_atomic(path: Path, svg: str) -> None:
         raise
 
 
-def _print_summary(path: Path, trajectory) -> None:
+def _print_summary(path: Path, trajectory: Trajectory) -> None:
     print(f"Generated: {path.resolve()}")
     print(f"Development experiments: {trajectory.experiment_count}")
-    print(f"Dev dataset points: {len(trajectory.states)}")
+    print(f"Representative Dev results: {len(trajectory.representative_results)}")
+    print(f"Accepted checkpoints: {len(trajectory.states)}")
     blind_status = format_percentage(trajectory.blind.score) if trajectory.blind else "not present"
     print(f"Test dataset: {blind_status}")
     print("Selected milestones:")

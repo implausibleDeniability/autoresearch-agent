@@ -65,6 +65,7 @@ class BlindResult:
 @dataclass(frozen=True)
 class Trajectory:
     experiment_count: int
+    representative_results: tuple[Experiment, ...]
     states: tuple[IncumbentState, ...]
     milestones: tuple[IncumbentState, ...]
     blind: BlindResult | None
@@ -90,7 +91,10 @@ def load_trajectory(
     ranked = sorted(candidates, key=lambda state: (-state.delta, state.experiment))[:max_milestones]
     milestones = tuple(sorted(ranked, key=lambda state: state.experiment))
     blind = read_blind_result(run_log_path) if run_log_path is not None else None
-    return Trajectory(len(experiments), tuple(states), milestones, blind)
+    representative_results = tuple(
+        row for row in experiments if row.dataset == "dev-202k" and row.status != "crash"
+    )
+    return Trajectory(len(experiments), representative_results, tuple(states), milestones, blind)
 
 
 def read_experiments(path: Path) -> list[Experiment]:
