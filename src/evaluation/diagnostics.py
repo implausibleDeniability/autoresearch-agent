@@ -25,8 +25,7 @@ from src.evaluation.source_matching import (
     source_matching_policy,
 )
 
-SCHEMA_VERSION = 4
-EVALUATOR_CONTRACT_VERSION = 2
+SCHEMA_VERSION = 5
 CONTEXT_RADIUS = 60
 MAX_OCCURRENCES_PER_VALUE = 20
 
@@ -84,7 +83,6 @@ def _serialize_trace(
 ) -> Dict[str, object]:
     serialized = {
         "schema_version": SCHEMA_VERSION,
-        "evaluator_contract_version": EVALUATOR_CONTRACT_VERSION,
         "source_matching_policy": source_matching_policy(),
         "dataset": dataset,
         "dataset_document_count": len(texts),

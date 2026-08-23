@@ -7,7 +7,7 @@ from src.evaluation.models import PIIItem
 
 MODEL = "gpt-4o-mini-2024-07-18"
 SEED = 42
-MAX_COMPLETION_TOKENS = 4096
+MAX_COMPLETION_TOKENS = 8192
 
 PROMPT = """
 Extract every real person mentioned in the document and group their personally identifiable
