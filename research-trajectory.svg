@@ -1,53 +1,110 @@
 <?xml version='1.0' encoding='utf-8'?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="trajectory-title trajectory-desc">
-  <title id="trajectory-title">PII extraction research trajectory</title>
-  <desc id="trajectory-desc">Dev dataset trajectory across 20 experiments, from 69.9% to 85.0%. Accepted improvements: experiment 3, bounded fallback for output-capped correspondence, +15.0 pp, finding: Representative score improved substantially with all documents complete.</desc>
-  <rect width="1200" height="720" fill="#0B0F19" />
-  <text x="56" y="56" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="32" font-weight="650">
-    <tspan x="56" dy="0">PII extraction research trajectory</tspan>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 900" role="img" aria-labelledby="trajectory-title trajectory-desc">
+  <title id="trajectory-title">Autoresearch trajectory</title>
+  <desc id="trajectory-desc">Dev dataset trajectory across 25 experiments, from 75.0% to 93.0%. Retained improvements are evenly spaced chronologically. Experiment 5, Fail closed on completion-length exhaustion, +10.4 percentage points. Catch length-limit failures and return an empty extraction instead of accepting partial output. Experiment 7, Repair unpaired surname fields, +1.7 percentage points. Move unpaired middle-name values into the surname field and remove duplicate middle/last values. Experiment 8, Repair compound surname fields, +1.1 percentage points. Join non-suffix middle-name parts with the last name to preserve compound surnames. Experiment 15, Recover explicit header identities, +0.5 percentage points. Parse CN and display-email headers, then merge matching people by surname plus name or email. Experiment 20, Recover cited surnames, +0.6 percentage points. Extract unique surnames from “et al.” citations when they are not already present. Experiment 23, Recover explicit prose identities, +0.6 percentage points. Recover names from bylines, attributions, signatures, and titled salutations without duplicates. Experiment 24, Recover signature street lines, +0.6 percentage points. Find street lines beneath McKinsey signatures and attach them to the nearest named person.</desc>
+  <rect width="1500" height="900" fill="#0B0F19" />
+  <text x="60" y="58" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="34" font-weight="650">Autoresearch trajectory</text>
+  <text x="60" y="94" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="16" font-weight="400">Dev dataset · 25 experiments</text>
+  <text x="1440" y="55" fill="#EDF3FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="28" font-weight="650" text-anchor="end">75.0%  →  93.0%</text>
+  <text x="1440" y="86" fill="#5AA7FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="400" text-anchor="end">+17.9 pp on Dev dataset</text>
+  <line x1="60" y1="142" x2="92" y2="142" stroke="#5AA7FF" stroke-width="3" />
+  <text x="103" y="147" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="400">Dev dataset</text>
+  <line x1="88" y1="790.00" x2="950" y2="790.00" stroke="#273149" stroke-width="1" />
+  <text x="74" y="795.0" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">75.0%</text>
+  <line x1="88" y1="634.50" x2="950" y2="634.50" stroke="#273149" stroke-width="1" />
+  <text x="74" y="639.4999999999999" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">80.0%</text>
+  <line x1="88" y1="479.00" x2="950" y2="479.00" stroke="#273149" stroke-width="1" />
+  <text x="74" y="484.00000000000006" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">85.0%</text>
+  <line x1="88" y1="323.50" x2="950" y2="323.50" stroke="#273149" stroke-width="1" />
+  <text x="74" y="328.49999999999994" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">90.0%</text>
+  <line x1="88" y1="168.00" x2="950" y2="168.00" stroke="#273149" stroke-width="1" />
+  <text x="74" y="173.0000000000001" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">95.0%</text>
+  <text x="24" y="479.0" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400" text-anchor="middle" transform="rotate(-90 24 479.0)">F-score (β² = 5)</text>
+  <path d="M 88.00 788.58 H 141.88 V 464.68 H 195.75 V 450.04 H 249.62 V 396.85 H 303.50 V 363.00 H 357.38 V 357.03 H 411.25 V 345.90 H 465.12 V 338.84 H 519.00 V 323.08 H 572.88 V 317.51 H 626.75 V 308.89 H 680.62 V 308.05 H 734.50 V 300.96 H 788.38 V 282.09 H 842.25 V 267.54 H 896.12 V 248.74 H 950.00 V 230.42" fill="none" stroke="#5AA7FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" data-series="all-retained-improvements" />
+  <g data-section="top-milestone-labels" aria-label="Highlighted experiments">
+    <circle cx="141.88" cy="464.68" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="5" data-score="0.854605" />
+    <text x="141.88" y="450.68" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E5</text>
+    <circle cx="249.62" cy="396.85" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="7" data-score="0.876415" />
+    <text x="249.62" y="382.85" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E7</text>
+    <circle cx="303.50" cy="363.00" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="8" data-score="0.887299" />
+    <text x="303.50" y="349.00" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E8</text>
+    <circle cx="519.00" cy="323.08" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="15" data-score="0.900134" />
+    <text x="519.00" y="309.08" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E15</text>
+    <circle cx="788.38" cy="282.09" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="20" data-score="0.913315" />
+    <text x="788.38" y="268.09" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E20</text>
+    <circle cx="896.12" cy="248.74" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="23" data-score="0.924037" />
+    <text x="896.12" y="234.74" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E23</text>
+    <circle cx="950.00" cy="230.42" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="24" data-score="0.929929" />
+    <text x="950.00" y="216.42" fill="#EDF3FF" stroke="#0B0F19" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">E24</text>
+  </g>
+  <text x="1015" y="119" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="650" letter-spacing="1.8">TOP 7 HYPOTHESES WORKED</text>
+  <text x="1015" y="163" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">01</text>
+  <text x="1070" y="153" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 05  ·  +10.4 pp</text>
+  <text x="1070" y="176" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Fail closed on completion-length exhaustion</tspan>
   </text>
-  <text x="56" y="96" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="400">Dev dataset across 20 experiments</text>
-  <text x="1144" y="55" fill="#EDF3FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="24" font-weight="650" text-anchor="end">69.9%  →  85.0%</text>
-  <text x="1144" y="84" fill="#5AA7FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400" text-anchor="end">+15.0 pp on Dev dataset</text>
-  <line x1="64" y1="134" x2="92" y2="134" stroke="#5AA7FF" stroke-width="3" />
-  <text x="102" y="139" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">Dev dataset</text>
-  <line x1="88" y1="570" x2="772" y2="570" stroke="#273149" stroke-width="1" />
-  <text x="74" y="575" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">65.0%</text>
-  <line x1="88" y1="488.8" x2="772" y2="488.8" stroke="#273149" stroke-width="1" />
-  <text x="74" y="493.8" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">70.0%</text>
-  <line x1="88" y1="407.6" x2="772" y2="407.6" stroke="#273149" stroke-width="1" />
-  <text x="74" y="412.6" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">75.0%</text>
-  <line x1="88" y1="326.4" x2="772" y2="326.4" stroke="#273149" stroke-width="1" />
-  <text x="74" y="331.4" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">80.0%</text>
-  <line x1="88" y1="245.2" x2="772" y2="245.2" stroke="#273149" stroke-width="1" />
-  <text x="74" y="250.2" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">85.0%</text>
-  <line x1="88" y1="164" x2="772" y2="164" stroke="#273149" stroke-width="1" />
-  <text x="74" y="169" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="end">90.0%</text>
-  <line x1="88" y1="570" x2="88" y2="576" stroke="#273149" />
-  <text x="88" y="598" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="middle">1</text>
-  <line x1="232" y1="570" x2="232" y2="576" stroke="#273149" />
-  <text x="232" y="598" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="middle">5</text>
-  <line x1="412" y1="570" x2="412" y2="576" stroke="#273149" />
-  <text x="412" y="598" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="middle">10</text>
-  <line x1="592" y1="570" x2="592" y2="576" stroke="#273149" />
-  <text x="592" y="598" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="middle">15</text>
-  <line x1="772" y1="570" x2="772" y2="576" stroke="#273149" />
-  <text x="772" y="598" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="400" text-anchor="middle">20</text>
-  <text x="430" y="628" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="400" text-anchor="middle">Experiment</text>
-  <text x="24" y="367" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400" text-anchor="middle" transform="rotate(-90 24 367.0)">F-score (β² = 5)</text>
-  <path d="M 88 489.81 H 160 V 245.44 H 772" fill="none" stroke="#5AA7FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" data-series="dev-dataset" />
-  <circle cx="88" cy="489.81" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="1" data-score="0.699377" />
-  <circle cx="160" cy="245.44" r="5" fill="#0B0F19" stroke="#5AA7FF" stroke-width="3" data-experiment="3" data-score="0.849854" />
-  <line x1="160" y1="245.44" x2="160" y2="227.44" stroke="#5AA7FF" stroke-width="1" data-series="milestone-label" />
-  <text x="160" y="232.44" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="700" text-anchor="middle">01</text>
-  <text x="836" y="136" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="650" letter-spacing="1.8">WHAT WORKED</text>
-  <text x="836" y="182" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">01</text>
-  <text x="884" y="182" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="14" font-weight="600">EXP 03  ·  +15.0 pp</text>
-  <text x="884" y="198" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="600">
-    <tspan x="884" dy="0">bounded fallback for…</tspan>
+  <text x="1070" y="202" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Catch length-limit failures and return an empty</tspan>
+    <tspan x="1070" dy="15">extraction instead of accepting partial output</tspan>
   </text>
-  <text x="884" y="218" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="15" font-weight="400">
-    <tspan x="884" dy="0">Representative score improved</tspan>
-    <tspan x="884" dy="16">substantially with all documents…</tspan>
+  <line x1="1015" y1="233" x2="1450" y2="233" stroke="#1A2234" stroke-width="1" />
+  <text x="1015" y="271" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">02</text>
+  <text x="1070" y="261" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 07  ·  +1.7 pp</text>
+  <text x="1070" y="284" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Repair unpaired surname fields</tspan>
+  </text>
+  <text x="1070" y="310" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Move unpaired middle-name values into the surname</tspan>
+    <tspan x="1070" dy="15">field and remove duplicate middle/last values</tspan>
+  </text>
+  <line x1="1015" y1="341" x2="1450" y2="341" stroke="#1A2234" stroke-width="1" />
+  <text x="1015" y="379" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">03</text>
+  <text x="1070" y="369" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 08  ·  +1.1 pp</text>
+  <text x="1070" y="392" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Repair compound surname fields</tspan>
+  </text>
+  <text x="1070" y="418" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Join non-suffix middle-name parts with the last</tspan>
+    <tspan x="1070" dy="15">name to preserve compound surnames</tspan>
+  </text>
+  <line x1="1015" y1="449" x2="1450" y2="449" stroke="#1A2234" stroke-width="1" />
+  <text x="1015" y="487" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">04</text>
+  <text x="1070" y="477" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 15  ·  +0.5 pp</text>
+  <text x="1070" y="500" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Recover explicit header identities</tspan>
+  </text>
+  <text x="1070" y="526" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Parse CN and display-email headers, then merge</tspan>
+    <tspan x="1070" dy="15">matching people by surname plus name or email</tspan>
+  </text>
+  <line x1="1015" y1="557" x2="1450" y2="557" stroke="#1A2234" stroke-width="1" />
+  <text x="1015" y="595" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">05</text>
+  <text x="1070" y="585" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 20  ·  +0.6 pp</text>
+  <text x="1070" y="608" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Recover cited surnames</tspan>
+  </text>
+  <text x="1070" y="634" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Extract unique surnames from “et al.” citations</tspan>
+    <tspan x="1070" dy="15">when they are not already present</tspan>
+  </text>
+  <line x1="1015" y1="665" x2="1450" y2="665" stroke="#1A2234" stroke-width="1" />
+  <text x="1015" y="703" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">06</text>
+  <text x="1070" y="693" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 23  ·  +0.6 pp</text>
+  <text x="1070" y="716" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Recover explicit prose identities</tspan>
+  </text>
+  <text x="1070" y="742" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Recover names from bylines, attributions,</tspan>
+    <tspan x="1070" dy="15">signatures, and titled salutations without duplicates</tspan>
+  </text>
+  <line x1="1015" y1="773" x2="1450" y2="773" stroke="#1A2234" stroke-width="1" />
+  <text x="1015" y="811" fill="#5AA7FF" font-family="IBM Plex Mono, Consolas, monospace" font-size="26" font-weight="650">07</text>
+  <text x="1070" y="801" fill="#AAB6CC" font-family="IBM Plex Mono, Consolas, monospace" font-size="13" font-weight="600">EXP 24  ·  +0.6 pp</text>
+  <text x="1070" y="824" fill="#EDF3FF" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="17" font-weight="650">
+    <tspan x="1070" dy="0">Recover signature street lines</tspan>
+  </text>
+  <text x="1070" y="850" fill="#AAB6CC" font-family="IBM Plex Sans, Segoe UI, sans-serif" font-size="14" font-weight="400">
+    <tspan x="1070" dy="0">Find street lines beneath McKinsey signatures</tspan>
+    <tspan x="1070" dy="15">and attach them to the nearest named person</tspan>
   </text>
 </svg>
