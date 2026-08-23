@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.13.0.1] - 2026-08-23
+
+### Changed
+
+- Refresh the five `dev-202k` baselines after the person-pairing correction. Earlier scores on
+  optional-name documents are not directly comparable.
+
+### Fixed
+
+- Treat optional-only name fields as neutral during exact person matching while keeping absent and
+  required values strict.
+- Reserve exact email-anchored people before same-domain approximate candidates create ambiguity.
+
 ## [0.13.0.0] - 2026-08-23
 
 ### Changed
