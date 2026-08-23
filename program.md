@@ -5,11 +5,16 @@ This is an experiment to have the LLM do its own research on optimizing LLM syst
 ## Setup
 
 To start the research:
-1. **Create an experiment worktree**: `git checkout -b autoresearch/<tag>` from current main. `tag` should indicate day and time: `aug-8-11-52` 
-2. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed. Use the 10-column schema in **Logging results** so the final trajectory can be generated without reconstructing findings later.
-3. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
-4. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
-5. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
+1. **Read workspace rules**: Read the repository and user instructions for worktree location and naming.
+2. **Update `main`**: In the primary repository, check out `main` and pull the latest remote `main`. Stop if the pull fails.
+3. **Create the experiment workspace**: Create `autoresearch/<tag>` from updated `main`, using a filesystem-safe day-and-time tag.
+   - If the instructions define a worktree location, run `git worktree add -b autoresearch/<tag> <path> main` there and enter it without asking.
+   - Otherwise, ask whether to run in the current directory or a separate worktree. For a separate worktree, ask for its parent directory and use `git worktree add`.
+4. **Copy local files**: For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored.
+5. **Initialize the logs**: Create `results.tsv` with just the header row and `research.md` with a short ranked experiment portfolio. Neither file is committed. Use the 10-column schema in **Logging results** so the final trajectory can be generated without reconstructing findings later.
+6. **Read the saved baseline**: Review `baseline-results.tsv` to understand ordinary baseline variation before spending the first run.
+7. **Inspect dataset scale**: Run `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. Use its document and source-token distribution to plan cost and runtime. This read-only command requires no API credentials and does not count as an evaluation.
+8. **Discover the blind dataset name**: List only the directory names matching `data/test-*`. Do not inspect their contents.
 
 ## Experimentation
 
@@ -168,8 +173,6 @@ In the file REQUESTS.md write things that the human supervisor should know about
 - If you otherwise see a way to reduce the cost but you'll need to change the restrictions and do something that's currently not allowed — write in the document, too. I will read it, and maybe approve and change the restrictions.
 
 ## The experiment loop
-
-The experiment runs on a dedicated branch (e.g. `autoresearch/mar5`).
 
 Stop development after 40 evaluations or when only the budget reserved for the final test remains. Baselines, debug checks, crashes, and reruns count toward 40. The final test does not, but its spend counts toward $0.50.
 
