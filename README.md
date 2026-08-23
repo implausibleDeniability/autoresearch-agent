@@ -5,7 +5,7 @@ Can an AI agent improve another AI system's quality by doing the research itself
 Inspired by [Karpathy's Autoresearch](https://github.com/karpathy/autoresearch), it applies an
 autonomous experimentation loop to optimizing an LLM system rather than training a neural network.
 
-<!-- Add a research trajectory chart and verified run summary here. -->
+![PII extraction research trajectory](research-trajectory.svg)
 
 ## How it works
 
