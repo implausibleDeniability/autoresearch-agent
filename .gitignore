@@ -31,6 +31,7 @@ dist/
 *.swp
 *.swo
 
+AGENTS.md
 results.tsv
 REQUESTS.md
 research.md

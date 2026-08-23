@@ -38,8 +38,8 @@ a feedback loop that improves the research process itself.
 You need Python 3.12, [uv](https://docs.astral.sh/uv/), Codex, and an OpenAI API key.
 
 ```bash
-git clone https://github.com/implausibleDeniability/pii-autoresearch.git
-cd pii-autoresearch
+git clone https://github.com/implausibleDeniability/autoresearch-agent.git
+cd autoresearch-agent
 uv sync
 ```
 
