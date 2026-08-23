@@ -9,10 +9,10 @@ This is the technical companion to `program.md`. Follow it for setup, evaluation
 3. Create `autoresearch/<tag>` from updated `main`, using a filesystem-safe day-and-time tag such as `aug-8-11-52`. When the instructions require a worktree, create and enter it with `git worktree add -b autoresearch/<tag> <path> main`. If workspace placement is unspecified, ask before choosing it.
 4. For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored.
 5. Create `results.tsv` with only the header defined below, `research.md` with a short ranked experiment portfolio, and the ignored `diagnostics/` directory. Do not commit these working files.
-6. Read `baseline-results.tsv` only for rough cost and runtime context; its contract-1 scores are not comparable with current-contract scores.
+6. Review `baseline-results.tsv` to understand ordinary baseline variation, cost, and runtime before spending the first evaluation.
 7. Inspect dataset scale with `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. This command is read-only, requires no API credentials, and does not count as an evaluation.
 8. Discover the blind dataset name by listing only directory names matching `data/test-*`. Do not inspect their contents.
-9. Before modifying `solution.py`, evaluate the unchanged solution once on `dev-202k` with a new path under `diagnostics/`, following **Before each development evaluation** and **Run a development evaluation** below. Require a complete result, record it as the baseline `keep`, and note its `evaluator_contract_version` in `research.md`.
+9. Before modifying `solution.py`, evaluate the unchanged solution once on `dev-202k` with a new path under `diagnostics/`, following **Before each development evaluation** and **Run a development evaluation** below. Require a complete result and record it as the current baseline `keep` with fresh diagnostics.
 
 ## Working files
 

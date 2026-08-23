@@ -41,7 +41,7 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 
 **Measure the current baseline.** Before modifying `solution.py`, evaluate the unchanged solution once on `dev-202k` with development diagnostics. Record a complete result as `keep`. Use its score and diagnostics as the starting evidence.
 
-**Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged. Compare quality metrics only when `evaluator_contract_version` matches. The saved baseline results use evaluator contract 1 and are not comparable with current contract 2 scores.
+**Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged.
 
 **Hold sampling settings fixed.** Treat `seed`, `temperature`, and other sampling parameters as experimental controls. Do not vary them to search for a better score. Compare results only when evaluator behavior, labels, model, and sampling settings are compatible.
 
