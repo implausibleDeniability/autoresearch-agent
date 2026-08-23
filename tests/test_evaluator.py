@@ -7,6 +7,13 @@ import pytest
 
 from solution import _has_candidate_content
 from src.evaluation.cli import Dataset, _parse_arguments
+from src.evaluation.matching import (
+    MATCH,
+    _people_match_approximately,
+    _people_match_exactly,
+    compare_values,
+    match_people,
+)
 from src.evaluation.metrics import evaluate, evaluate_trace
 from src.evaluation.models import GroundTruthPIIItem, GroundTruthValue, PIIItem
 
@@ -238,6 +245,168 @@ def test_optional_name_on_separate_person_remains_false_positive(tmp_path: Path)
         1,
         0,
     )
+
+
+def test_optional_only_person_matching_distinguishes_absent_and_optional_fields():
+    email = (GroundTruthValue(canonical="john.doe@example.com"),)
+    optional_name = (GroundTruthValue(canonical="John", optional=True),)
+    prediction = PIIItem(first_name=("Predicted",), email=("john.doe@example.com",))
+
+    assert _people_match_exactly(
+        prediction,
+        GroundTruthPIIItem(first_name=optional_name, email=email),
+    )
+    assert _people_match_exactly(
+        PIIItem(email=("john.doe@example.com",)),
+        GroundTruthPIIItem(first_name=optional_name, email=email),
+    )
+    assert not _people_match_exactly(prediction, GroundTruthPIIItem(email=email))
+
+
+def test_optional_only_person_matching_keeps_required_values_as_exact_anchors():
+    email = (GroundTruthValue(canonical="john.doe@example.com"),)
+    names = (
+        GroundTruthValue(canonical="John"),
+        GroundTruthValue(canonical="Jack"),
+        GroundTruthValue(canonical="Johnny", optional=True),
+    )
+    ground_truth = GroundTruthPIIItem(first_name=names, email=email)
+
+    assert _people_match_exactly(
+        PIIItem(first_name=("John",), email=("john.doe@example.com",)),
+        ground_truth,
+    )
+    assert _people_match_exactly(
+        PIIItem(first_name=("Jack",), email=("john.doe@example.com",)),
+        ground_truth,
+    )
+    assert not _people_match_exactly(
+        PIIItem(first_name=("Johnny",), email=("john.doe@example.com",)),
+        ground_truth,
+    )
+    assert not _people_match_exactly(
+        PIIItem(first_name=("Jane",), email=("john.doe@example.com",)),
+        ground_truth,
+    )
+
+
+def test_optional_only_person_matching_leaves_approximate_fallback_unchanged():
+    email = (GroundTruthValue(canonical="john.doe@example.com"),)
+    optional_name = (GroundTruthValue(canonical="John", optional=True),)
+    fuzzy_prediction = PIIItem(first_name=("Predicted",), email=("john.doe@example.co",))
+
+    assert _people_match_approximately(
+        fuzzy_prediction,
+        GroundTruthPIIItem(first_name=optional_name, email=email),
+    )
+    assert _people_match_approximately(fuzzy_prediction, GroundTruthPIIItem(email=email))
+    assert not _people_match_approximately(
+        PIIItem(first_name=("Jane",), email=("john.doe@example.co",)),
+        GroundTruthPIIItem(
+            first_name=(GroundTruthValue(canonical="John"),),
+            email=email,
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("reverse_predictions", "reverse_ground_truth"),
+    [(False, False), (False, True), (True, False), (True, True)],
+)
+def test_optional_only_person_matching_reserves_exact_email_before_fuzzy_candidates(
+    reverse_predictions: bool,
+    reverse_ground_truth: bool,
+):
+    emails = ("alex.smith@example.com", "alex.smyth@example.com")
+    predictions = [
+        PIIItem(first_name=(("Alex", "Alec")[index],), email=(email,)) for index, email in enumerate(emails)
+    ]
+    ground_truth = [
+        GroundTruthPIIItem(
+            first_name=(GroundTruthValue(canonical=("Alex", "Alec")[index], optional=True),),
+            email=(GroundTruthValue(canonical=email),),
+        )
+        for index, email in enumerate(emails)
+    ]
+    if reverse_predictions:
+        predictions.reverse()
+    if reverse_ground_truth:
+        ground_truth.reverse()
+
+    comparison = compare_values(emails[0], ground_truth=emails[1])
+    matches = match_people(predictions, ground_truth=ground_truth)
+
+    assert comparison.result == MATCH
+    assert not comparison.normalized_exact
+    assert {
+        predictions[prediction_index].email[0]: ground_truth[ground_index].email[0].canonical
+        for prediction_index, ground_index in matches.items()
+    } == {email: email for email in emails}
+
+
+def test_optional_only_person_matching_keeps_duplicate_exact_anchors_ambiguous():
+    predictions = [PIIItem(first_name=(name,), email=("shared@example.com",)) for name in ("Alice", "Bob")]
+    ground_truth = [
+        GroundTruthPIIItem(
+            first_name=(GroundTruthValue(canonical=name, optional=True),),
+            email=(GroundTruthValue(canonical="shared@example.com"),),
+        )
+        for name in ("Alice", "Bob")
+    ]
+
+    assert match_people(predictions, ground_truth=ground_truth) == {}
+
+
+@pytest.mark.parametrize(
+    ("document_id", "ground_indexes", "collision_indexes"),
+    [
+        ("jfkf0256", (2, 4, 5, 6, 7), (2, 4, 5, 7)),
+        ("zldc0256", (0, 2), (0, 2)),
+    ],
+)
+def test_dev_202k_optional_only_people_pair_by_exact_email(
+    document_id: str,
+    ground_indexes: tuple[int, ...],
+    collision_indexes: tuple[int, ...],
+):
+    path = Path(__file__).parents[1] / "data" / "dev-202k" / "ground_truth.json"
+    serialized = json.loads(path.read_text())[document_id]
+    ground_truth = tuple(
+        GroundTruthPIIItem.from_serialized(person, context=document_id) for person in serialized
+    )
+    predictions = [
+        PIIItem(
+            first_name=tuple(value.canonical for value in ground_truth[index].first_name),
+            last_name=tuple(value.canonical for value in ground_truth[index].last_name),
+            email=(ground_truth[index].email[0].canonical,),
+        )
+        for index in ground_indexes
+    ]
+
+    for index in ground_indexes:
+        person = ground_truth[index]
+        assert person.first_name and person.last_name
+        assert all(value.optional for value in person.first_name + person.last_name)
+
+    for index in collision_indexes:
+        person = ground_truth[index]
+        competitors = (
+            value.canonical
+            for competitor_index, competitor in enumerate(ground_truth)
+            if competitor_index != index
+            for value in competitor.email
+        )
+        assert any(
+            comparison.result == MATCH and not comparison.normalized_exact
+            for comparison in (
+                compare_values(person.email[0].canonical, ground_truth=competitor)
+                for competitor in competitors
+            )
+        )
+
+    assert match_people(predictions, ground_truth=ground_truth) == {
+        prediction_index: ground_index for prediction_index, ground_index in enumerate(ground_indexes)
+    }
 
 
 def test_unmatched_person_emits_false_negatives_for_required_values_only(tmp_path: Path):

@@ -214,10 +214,10 @@ def _match_step(
 
 def _people_match_exactly(prediction: PIIItem, ground_truth: GroundTruthPIIItem) -> bool:
     return all(
-        _value_sets_match_exactly(predicted, expected)
+        _person_core_values_match_exactly(predicted, expected)
         for predicted, expected in zip(
             _prediction_core_values(prediction),
-            _ground_truth_core_values(ground_truth),
+            _ground_truth_person_core_values(ground_truth),
         )
     )
 
@@ -237,6 +237,12 @@ def _prediction_core_values(person: PIIItem) -> Tuple[Sequence[str], ...]:
     return person.first_name, person.last_name, person.email
 
 
+def _ground_truth_person_core_values(
+    person: GroundTruthPIIItem,
+) -> Tuple[Sequence[GroundTruthValue], ...]:
+    return person.first_name, person.last_name, person.email
+
+
 def _ground_truth_core_values(
     person: GroundTruthPIIItem,
 ) -> Tuple[Sequence[GroundTruthValue], ...]:
@@ -244,6 +250,15 @@ def _ground_truth_core_values(
         tuple(value for value in values if not value.optional)
         for values in (person.first_name, person.last_name, person.email)
     )
+
+
+def _person_core_values_match_exactly(
+    predictions: Sequence[str], ground_truth: Sequence[GroundTruthValue]
+) -> bool:
+    if ground_truth and all(value.optional for value in ground_truth):
+        return True
+    required = tuple(value for value in ground_truth if not value.optional)
+    return _value_sets_match_exactly(predictions, required)
 
 
 def _value_sets_match_exactly(predictions: Sequence[str], ground_truth: Sequence[GroundTruthValue]) -> bool:
