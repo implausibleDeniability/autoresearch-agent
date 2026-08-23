@@ -6,9 +6,8 @@ tokens and 16,742 words across 120 pages, including 375 labeled people and 985 l
 values. No-person documents, short iMessage exports, dense material, and emails with large
 recipient lists are included intentionally rather than filtered out for labeling difficulty.
 
-`ground_truth.json` maps each document ID to its document-scoped list of people using the
-[ground-truth value format](../../README.md#ground-truth-labels). `texts/` contains the corresponding
-UCSF OCR text with line endings normalized to LF and trailing whitespace removed.
+`ground_truth.json` maps each document ID to its document-scoped list of people. `texts/` contains
+the corresponding UCSF OCR text with line endings normalized to LF and trailing whitespace removed.
 The source PDFs are not included.
 
 ## Sources

@@ -5,5 +5,4 @@ validation. Together they contain 87,454 `o200k_base` tokens and 49,953 words, i
 people and 238 labeled PII values. Eleven documents are negative examples. There is no separate test
 split yet.
 
-`ground_truth.json` maps each document ID to its document-scoped list of people using the
-[ground-truth value format](../../README.md#ground-truth-labels).
+`ground_truth.json` maps each document ID to its document-scoped list of people.
