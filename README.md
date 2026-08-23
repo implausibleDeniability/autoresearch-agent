@@ -41,6 +41,20 @@ uv run python -m src.evaluation.cli --dataset dev-87k
 uv run python -m src.evaluation.cli --dataset dev-205k
 ```
 
+Live development evaluations save validated OpenAI responses in an ignored, owner-only cache local
+to the current worktree. Replay an identical effective request without credentials or network access:
+
+```bash
+uv run python -m src.evaluation.cli --dataset dev-19k --cache
+```
+
+`--cache` is strict: a miss fails without calling OpenAI. Use it for model-independent changes when
+repeatability matters; omit it when requests may change or when measuring model variation. Cached
+runs report zero new API spend and cannot support model-cost comparisons. The evaluator reports the
+mode, hits, misses, live requests, and writes. Parallel worktrees use separate caches; concurrent
+evaluations in one worktree share its write-once entries. The evaluator rejects cache access for
+every `test-*` dataset.
+
 Solution processing has a three-minute deadline. Use `--timeout SECONDS` for a shorter deadline;
 values above 180 seconds are rejected.
 
@@ -231,10 +245,11 @@ Development allows 40 evaluations. Reserve enough of the $0.50 cumulative API bu
 test. Charge a crash without an observed cost at its pre-run estimate.
 
 Development output includes `result_status=complete|partial`, `score_is_final=true|false`, coverage,
-a termination category, and `cost_status=complete|incomplete`. Complete runs exit 0 and use the normal
-metric keys. Partial runs exit 2 and use `partial_*` metrics over completed documents only. These
-metrics guide diagnosis but are never final scores. `document_results_json` reports each document's
-status, source and API tokens, observed spend, latency, and safe failure category.
+a termination category, `evaluation_mode=live|cached`, cache counters, and
+`cost_status=complete|incomplete`. Complete runs exit 0 and use the normal metric keys. Partial runs
+exit 2 and use `partial_*` metrics over completed documents only. These metrics guide diagnosis but
+are never final scores. `document_results_json` reports each document's status, source and API
+tokens, observed spend, latency, and safe failure category.
 
 When metering is incomplete, budget accounting uses the larger of observed spend and the pre-run
 estimate.

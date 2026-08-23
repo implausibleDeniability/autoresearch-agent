@@ -3,19 +3,22 @@ import threading
 import time
 from decimal import Decimal
 from http.server import ThreadingHTTPServer
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Mapping, Optional
 
 import httpx
 
 from .accounting import (
     CostReport,
     CostStatus,
+    EvaluationMode,
     MeteringError,
     MeteringOutcome,
     ModelUsage,
     SpendingLimitExceededError,
 )
 from .http import MeterHandler
+from .response_cache import CacheEntryError, CachedResponse, ResponseCache
 
 DEFAULT_SPENDING_LIMIT_USD = Decimal("0.08")
 SPENDING_LIMIT_STATUS = 429
@@ -25,16 +28,21 @@ class MeterState:
     def __init__(
         self,
         *,
-        api_key: str,
+        api_key: Optional[str],
         run_token: str,
         upstream_base_url: str,
         spending_limit_usd: Decimal = DEFAULT_SPENDING_LIMIT_USD,
+        evaluation_mode: EvaluationMode = "live",
+        response_cache: Optional[ResponseCache] = None,
     ) -> None:
         _validate_spending_limit(spending_limit_usd)
-        self.api_key = api_key
+        _validate_evaluation_mode(evaluation_mode)
+        self.api_key = api_key or ""
         self.run_token = run_token
         self.upstream_base_url = upstream_base_url
-        self.client = httpx.Client(timeout=300.0)
+        self.evaluation_mode = evaluation_mode
+        self.client = httpx.Client(timeout=300.0) if evaluation_mode == "live" else None
+        self._response_cache = response_cache
         self._condition = threading.Condition()
         self._run_token = run_token
         self._run_tokens = {run_token}
@@ -49,6 +57,12 @@ class MeterState:
         self._usages_by_token: Dict[str, List[ModelUsage]] = {run_token: []}
         self._errors: List[str] = []
         self._errors_by_token: Dict[str, List[str]] = {run_token: []}
+        self._cache_hits = 0
+        self._cache_misses = 0
+        self._live_requests = 0
+        self._cache_writes = 0
+        self._cache_write_errors = 0
+        self._cache_errors = 0
         self._final_outcome: Optional[MeteringOutcome] = None
 
     def issue_token(self) -> str:
@@ -116,6 +130,57 @@ class MeterState:
             self._errors_by_token[run_token].append(error)
             self._condition.notify_all()
 
+    def get_cached_response(
+        self,
+        *,
+        path: str,
+        body: bytes,
+        headers: Mapping[str, str],
+    ) -> Optional[CachedResponse]:
+        if self.evaluation_mode != "cached" or self._response_cache is None:
+            raise RuntimeError("response cache lookup is not enabled")
+        try:
+            response = self._response_cache.get(path=path, body=body, headers=headers)
+        except CacheEntryError:
+            with self._condition:
+                self._cache_errors += 1
+            raise
+        with self._condition:
+            if response is None:
+                self._cache_misses += 1
+            else:
+                self._cache_hits += 1
+        return response
+
+    def record_live_request(self) -> None:
+        with self._condition:
+            self._live_requests += 1
+
+    def store_cached_response(
+        self,
+        *,
+        path: str,
+        body: bytes,
+        headers: Mapping[str, str],
+        response: CachedResponse,
+    ) -> None:
+        if self._response_cache is None:
+            return
+        try:
+            stored = self._response_cache.put(
+                path=path,
+                body=body,
+                headers=headers,
+                response=response,
+            )
+        except (OSError, TypeError, ValueError):
+            with self._condition:
+                self._cache_write_errors += 1
+            return
+        if stored:
+            with self._condition:
+                self._cache_writes += 1
+
     def seal_and_report(self, *, timeout: float) -> CostReport:
         outcome = self.finalize(timeout=timeout)
         self._raise_for_outcome(outcome)
@@ -144,6 +209,7 @@ class MeterState:
                 status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
                 errors=tuple(errors),
                 active_request_count=active_requests,
+                **self._cache_outcome_fields(),
             )
 
     def finalize(self, *, timeout: float) -> MeteringOutcome:
@@ -179,7 +245,19 @@ class MeterState:
             status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
             errors=tuple(errors),
             active_request_count=active_request_count,
+            **self._cache_outcome_fields(),
         )
+
+    def _cache_outcome_fields(self) -> dict[str, object]:
+        return {
+            "evaluation_mode": self.evaluation_mode,
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "live_requests": self._live_requests,
+            "cache_writes": self._cache_writes,
+            "cache_write_errors": self._cache_write_errors,
+            "cache_errors": self._cache_errors,
+        }
 
     def stop_accepting(self) -> None:
         with self._condition:
@@ -187,7 +265,8 @@ class MeterState:
             self._condition.notify_all()
 
     def close(self) -> None:
-        self.client.close()
+        if self.client is not None:
+            self.client.close()
 
     def _raise_for_outcome(self, outcome: MeteringOutcome) -> None:
         spending_error = next(
@@ -209,16 +288,30 @@ class MeteringProxy:
     def __init__(
         self,
         *,
-        api_key: str,
+        api_key: Optional[str] = None,
         upstream_base_url: str = "https://api.openai.com",
         spending_limit_usd: Decimal = DEFAULT_SPENDING_LIMIT_USD,
+        evaluation_mode: EvaluationMode = "live",
+        cache_directory: Optional[Path] = None,
     ) -> None:
-        _validate_api_key(api_key)
+        _validate_evaluation_mode(evaluation_mode)
+        if evaluation_mode == "live":
+            _validate_api_key(api_key)
+        elif cache_directory is None:
+            raise ValueError("cache_directory is required in cached evaluation mode")
+        normalized_upstream_base_url = upstream_base_url.rstrip("/")
+        response_cache = (
+            ResponseCache(cache_directory, upstream_base_url=normalized_upstream_base_url)
+            if cache_directory is not None
+            else None
+        )
         self._state = MeterState(
             api_key=api_key,
             run_token=secrets.token_urlsafe(32),
-            upstream_base_url=upstream_base_url.rstrip("/"),
+            upstream_base_url=normalized_upstream_base_url,
             spending_limit_usd=spending_limit_usd,
+            evaluation_mode=evaluation_mode,
+            response_cache=response_cache,
         )
         self._server = _MeterServer(("127.0.0.1", 0), MeterHandler)
         self._server.state = self._state
@@ -282,9 +375,14 @@ class MeteringProxy:
         self.close()
 
 
-def _validate_api_key(api_key: str) -> None:
-    if not api_key.strip():
+def _validate_api_key(api_key: Optional[str]) -> None:
+    if api_key is None or not api_key.strip():
         raise ValueError("api_key must not be empty")
+
+
+def _validate_evaluation_mode(evaluation_mode: str) -> None:
+    if evaluation_mode not in {"live", "cached"}:
+        raise ValueError(f"unsupported evaluation_mode {evaluation_mode!r}")
 
 
 def _validate_spending_limit(spending_limit_usd: Decimal) -> None:

@@ -24,6 +24,7 @@ class CostStatus:
 
 
 CostStatusValue = Literal["pending", "complete", "incomplete"]
+EvaluationMode = Literal["live", "cached"]
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,13 @@ class MeteringOutcome:
     status: CostStatusValue
     errors: Tuple[str, ...] = ()
     active_request_count: int = 0
+    evaluation_mode: EvaluationMode = "live"
+    cache_hits: int = 0
+    cache_misses: int = 0
+    live_requests: int = 0
+    cache_writes: int = 0
+    cache_write_errors: int = 0
+    cache_errors: int = 0
 
 
 class StreamUsageParser:

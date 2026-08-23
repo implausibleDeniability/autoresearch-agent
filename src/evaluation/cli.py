@@ -47,6 +47,7 @@ MAX_TIMEOUT_SECONDS = 180.0
 USD_PER_CENT = Decimal("0.01")
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
 UPSTREAM_BASE_URL_ENVIRONMENT = "OPENAI_UPSTREAM_BASE_URL"
+RESPONSE_CACHE_DIRECTORY_NAME = ".openai-response-cache"
 SENSITIVE_CHILD_ENVIRONMENT = {
     "AZURE_OPENAI_API_KEY",
     "OPENAI_ADMIN_KEY",
@@ -181,11 +182,13 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     texts = _load_texts(arguments.dataset)
     document_tokens = _count_document_tokens(texts)
     source_tokens = sum(document_tokens.values())
-    api_key = _required_environment("OPENAI_API_KEY")
+    api_key = None if arguments.cache else _required_environment("OPENAI_API_KEY")
     upstream_base_url = os.environ.get(UPSTREAM_BASE_URL_ENVIRONMENT, DEFAULT_UPSTREAM_BASE_URL)
     run_id = uuid.uuid4().hex
     started_at = EvaluationRun.timestamp()
     if Dataset.is_blind_test(arguments.dataset):
+        if api_key is None:
+            raise RuntimeError("blind evaluation requires an OpenAI API key")
         return _evaluate_blind_dataset(
             arguments,
             texts=texts,
@@ -204,7 +207,11 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         texts=texts,
         source_tokens=source_tokens,
         documents=documents,
-        cost=MeteringOutcome(CostReport(()), CostStatus.PENDING),
+        cost=MeteringOutcome(
+            CostReport(()),
+            CostStatus.PENDING,
+            evaluation_mode="cached" if arguments.cache else "live",
+        ),
         lifecycle_status=LifecycleStatus.RUNNING,
         termination_category="none",
         started_at=started_at,
@@ -215,6 +222,8 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         api_key=api_key,
         upstream_base_url=upstream_base_url,
         spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
+        evaluation_mode="cached" if arguments.cache else "live",
+        cache_directory=Path.cwd() / RESPONSE_CACHE_DIRECTORY_NAME,
     ) as meter:
 
         def checkpoint(completed, outcome):
@@ -245,7 +254,11 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             max_concurrent_documents=arguments.max_concurrent_documents,
         )
         cost = meter.finalize(timeout=max(deadline - time.monotonic(), 0.0))
-    if termination_category == "none" and cost.status == CostStatus.INCOMPLETE:
+    if arguments.cache and cost.cache_errors:
+        termination_category = "cache_error"
+    elif arguments.cache and cost.cache_misses:
+        termination_category = "cache_miss"
+    elif termination_category == "none" and cost.status == CostStatus.INCOMPLETE:
         termination_category = "metering_incomplete"
     if termination_category == "none" and any(
         document.status == DocumentStatus.FAILED for document in documents
@@ -538,6 +551,13 @@ def _print_development_result(run: EvaluationRun, *, duration_seconds: float) ->
     print(f"result_status={status}")
     print(f"score_is_final={'true' if status == ResultStatus.COMPLETE else 'false'}")
     print(f"termination_category={run.termination_category}")
+    print(f"evaluation_mode={run.cost.evaluation_mode}")
+    print(f"cache_hits={run.cost.cache_hits}")
+    print(f"cache_misses={run.cost.cache_misses}")
+    print(f"openai_live_requests={run.cost.live_requests}")
+    print(f"cache_writes={run.cost.cache_writes}")
+    print(f"cache_write_errors={run.cost.cache_write_errors}")
+    print(f"cache_errors={run.cost.cache_errors}")
     prefix = "" if status == ResultStatus.COMPLETE else "partial_"
     print(f"{prefix}f_score={metrics.f_score:.6f}")
     print(f"{prefix}precision={metrics.precision:.6f}")
@@ -607,6 +627,11 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         default=DEFAULT_SPENDING_LIMIT_USD / USD_PER_CENT,
         help="absolute API spending limit in cents (default: 8)",
     )
+    parser.add_argument(
+        "--cache",
+        action="store_true",
+        help="replay cached responses only; fail on a miss without calling OpenAI",
+    )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)
     parsed = parser.parse_args(arguments)
@@ -621,11 +646,17 @@ def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.Argument
         parser.error("--dataset is required")
     if parsed.describe_dataset and parsed.diagnostics:
         parser.error("--describe-dataset cannot be combined with --diagnostics")
+    if parsed.cache and parsed.worker:
+        parser.error("--cache is not allowed with --worker")
+    if parsed.cache and parsed.describe_dataset:
+        parser.error("--cache is not allowed with --describe-dataset")
     if parsed.dataset and Dataset.is_blind_test(parsed.dataset):
         if parsed.describe_dataset:
             parser.error("--describe-dataset is not allowed with blind test datasets")
         if parsed.diagnostics:
             parser.error("--diagnostics is not allowed with blind test datasets")
+        if parsed.cache:
+            parser.error("--cache is not allowed with blind test datasets")
         if not parsed.frozen_commit:
             parser.error("test-* datasets require --frozen-commit")
     elif parsed.frozen_commit:
@@ -669,8 +700,9 @@ def _git_output(*arguments: str) -> str:
         check=False,
     )
     if completed.returncode:
+        message = completed.stderr.strip()
         raise RuntimeError(
-            f"git {' '.join(arguments)} failed with exit code {completed.returncode}: {completed.stderr.strip()}"
+            f"git {' '.join(arguments)} failed with exit code {completed.returncode}: {message}"
         )
     return completed.stdout.strip()
 
