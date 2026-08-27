@@ -32,10 +32,6 @@ improvement. It uses document-paired linearized testing to make comparisons more
 requiring fewer model runs, then applies conservative rules to decide when to continue, stop, or
 leave a result inconclusive.
 
-Every decision is tied to exact code, data, evaluator, and model-response evidence. This keeps the
-research auditable, prevents mismatched or partial runs from becoming false wins, and reduces API
-spend without sacrificing statistical discipline.
-
 ## Framework self-improvement
 
 You can improve the autoresearch framework using feedback from the research agent. The agent records
