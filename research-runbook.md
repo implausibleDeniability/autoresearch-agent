@@ -21,9 +21,10 @@ This is the technical companion to `program.md`. Follow it for setup, evaluation
 | `research.md` | Ranked hypothesis portfolio and external research findings |
 | `REQUESTS.md` | Information and requests for the human supervisor |
 | `run.log` | Output from the latest evaluation |
-| `diagnostics/<evaluation>-<commit>-<dataset>-seed<seed>.json` | Diagnostics from development evaluations |
+| `diagnostics/<bank>/<evaluation>-<commit>-<dataset>-seed<seed>.json` | Rich development diagnostics |
+| `diagnostics/<bank>/<evaluation>-<commit>-<dataset>-seed<seed>.evidence.json` | PII-free comparison evidence written automatically |
 
-Use a new path for every development evaluation, named `diagnostics/<evaluation>-<commit>-<dataset>-seed<seed>.json`. The evaluator rejects existing paths. Never request diagnostics for a blind dataset.
+Keep each exact incumbent or candidate panel in its own directory. Use a new diagnostic path for every development evaluation; the evaluator derives and preflights its `.evidence.json` sidecar. Never request diagnostics for a blind dataset.
 
 ## Development evaluation protocol
 
@@ -54,7 +55,9 @@ Set `--max-concurrent-documents` for document work and `--max-upstream-requests`
 
 The evaluator passes `--seed N` to `solution.py` as `EVALUATION_SEED=N`. The reference solution includes it in every OpenAI request, so the cache stores one response per exact request and seed. Prompt, model, schema, or request changes miss and fill normally.
 
-Use seeds `0` through `4` for the baseline and every `dev-202k` candidate considered for promotion. Pair candidate and baseline results by seed without additions, omissions, or substitutions. Filling the baseline panel lets downstream-only candidates replay the same five response sets. If more seeds are needed, add incremental values starting from `5` without replacing the fixed panel.
+Use seeds `0` through `2` for the incumbent control bank. A response-changing candidate starts at seed `0`; run seed `1` and then seed `2` only when `pii-compare` recommends the next fixed seed. The comparator always matches the candidate prefix to the same incumbent seeds while requiring the complete three-seed control bank. Never pool different candidate commits or add targeted repeats.
+
+For a change strictly downstream of model responses, `--change-type fixed-replay` permits a formal look after seed `0`. When distinct cached banks already exist, it also accepts the fixed prefixes `0,1` and `0,1,2`. Every paired seed must use `--cache`, replay every request, and have identical document-scoped request and response receipts across arms. Banks must be distinct across seeds; rerunning one bank adds no evidence. A caller's classification alone cannot activate this exception, and do not make paid calls solely to create more replay banks.
 
 ### Cost accounting and evaluator behavior
 
@@ -98,13 +101,13 @@ uv run pii-eval --dataset dev-202k --execution-mode threaded \
   --max-inflight-liability-cents 100 --fresh --preflight --output-format json
 
 # Normal development evaluation: replay hits and fill misses
-set -a; source .env; set +a; uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/001-a1b2c3d-dev-19k-seed0.json --cache-fill > run.log 2>&1
+set -a; source .env; set +a; uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/candidate/001-a1b2c3d-dev-19k-seed0.json --cache-fill > run.log 2>&1
 
 # Fresh response-variability experiment; record the reason in research.md first
-set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/002-a1b2c3d-dev-19k-seed0.json --fresh > run.log 2>&1
+set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/candidate/002-a1b2c3d-dev-19k-seed0.json --fresh > run.log 2>&1
 
 # Strict response replay with no OpenAI call
-uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/003-a1b2c3d-dev-19k-seed0.json --cache > run.log 2>&1
+uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/candidate/003-a1b2c3d-dev-19k-seed0.json --cache > run.log 2>&1
 
 # Threaded live evaluation with bounded one-dollar in-flight liability
 set -a; source .env; set +a; uv run pii-eval --dataset dev-202k --seed 0 \
@@ -150,7 +153,7 @@ On `SIGINT`, threaded mode stops admission, terminates its process group, waits 
 
 ## Initial baseline
 
-Before modifying `solution.py`, evaluate the unchanged solution on `dev-202k` with seeds `0` through `4`. Follow the development evaluation protocol and use a new diagnostic path for each run. Require five complete, final results and record them as the current baseline `keep` panel.
+Before modifying `solution.py`, evaluate the unchanged solution on `dev-202k` with seeds `0` through `2`. Follow the development evaluation protocol and store the three runs in one incumbent bank directory. Require three complete, final results and record them as the current baseline `keep` panel.
 
 Use `--cache-fill` for this panel. Restored hits are valid baseline evidence; only misses require live requests. Do not use `--fresh` merely to refresh a compatible cached baseline.
 
@@ -186,15 +189,57 @@ The columns are:
 
 Record every development evaluation, including repetitions and crashes, as a separate row. Row order determines the experiment number. After deciding, assign the same status to successful repetitions of the same commit, dataset, and seed panel. Recompute cumulative spend after each evaluation. Report the blind result separately.
 
-## Candidate decisions
+## Paired comparison decisions
 
-Commit every changed candidate before evaluating it and record its seven-character commit hash.
+Commit every changed candidate before evaluating it. Comparison evidence binds every run to the full commit, immutable solution snapshot, scoring contract, dataset, and response bank; filenames are not provenance.
 
-A complete result on a smaller development dataset may justify `discard` or `inconclusive`, but never `keep`. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-202k` with the baseline seed panel `0` through `4`. Compare the paired per-seed results and their medians. Require five complete, final results; partial results cannot support promotion.
+A complete result on a smaller development dataset may justify `discard` or `inconclusive`, but never `keep`. Start a response-changing `dev-202k` candidate at seed `0`, then run:
+
+```bash
+uv run pii-compare \
+  --incumbent diagnostics/incumbent-bank \
+  --candidate diagnostics/candidate-bank
+```
+
+JSON is the authoritative agent interface. Exit `0` means valid evidence and any scientific outcome; `2` means invalid evidence or usage; `1` means an internal failure. `run_again` names the next fixed seed. `stop_for_futility` is an early heuristic, not a formal rejection. At seed three, promotion requires one-sided `p < 0.05`; a gain of at least 1 percentage point is promotion-eligible, while a gain from 0.3 to 1 point requires mechanistic review. Formal rejection occurs only when the one-sided 80% upper confidence bound is below +0.3 points. Otherwise postpone the result as inconclusive.
+
+For a strict downstream replay, compare the same fixed seed prefix in each arm with `--change-type fixed-replay`. One paired bank is sufficient; use additional distinct cached banks when available. If receipt identity or provenance fails, treat the result as response-changing or regenerate exact evidence; never override the gate.
+
+### Migration and recovery
+
+Diagnostics created before comparison-evidence schema v1 are unsupported because they lack immutable provenance and response receipts. Do not backfill or infer those fields from filenames. Generate a new incumbent panel and evaluate candidates under the same evaluator, dataset, runtime, and scoring contract.
+
+On the first qualifying real three-seed bank, record both the legacy score summary and the comparator decision in `research.md` before making that bank the control. This shadow record checks the operational migration without weakening the comparator's locked decision. It is required once; it does not authorize extra targeted runs.
+
+Common failures are recoverable without changing thresholds:
+
+| Error code or outcome | Recovery |
+| --- | --- |
+| `invalid_usage` | Run `pii-compare --help`; provide exactly one directory or exact-file form per arm. |
+| `unreadable_evidence` | Use regular, complete `.evidence.json` files; reject symlinks, FIFOs, malformed JSON, and oversized files. |
+| `mixed_commits` or `mixed_solution_snapshots` | Split banks by exact candidate commit. |
+| `mixed_scoring_contract`, `mixed_dataset`, or `mixed_runtime` | Re-evaluate both arms under one environment. |
+| `fixed_replay_mismatch` | Treat the change as response-changing or regenerate a strict identical replay. |
+| `stop_for_futility` | Restore the incumbent; this is an early heuristic stop, not a formal rejection. |
+| `inconclusive` | Preserve and postpone the candidate; do not add targeted repeats. |
+| `internal_error` | Rerun with `--debug`, preserve the evidence, and report the local traceback. |
+
+**Accept:** Promote the exact candidate commit. All candidate runs become its initial response bank. Before using it as the control for another AI-changing hypothesis, obtain at least three complete runs total. Three baseline runs cost only about a 5% sensitivity loss versus five.
+
+**Reject:** Restore the incumbent. Preserve the result and diagnostics, but do not combine its runs with later candidates.
+
+**Inconclusive/postponed:** Preserve the commit and evidence, but do not promote it. Revisit only when:
+
+- a related hypothesis provides stronger mechanistic evidence;
+- several compatible changes can produce a larger expected effect;
+- evaluation variance has fallen;
+- or the change has separate strategic value.
+
+Any modification to the candidate between repetitions creates a **new hypothesis**. Its results cannot be pooled with the previous version.
 
 If cost could change a candidate decision and no comparable saved run exists, leave the cost conclusion inconclusive. Missing cost evidence does not justify a fresh run.
 
-When a candidate does not replace the incumbent, return to the incumbent without deleting its recorded evaluations.
+When a candidate does not replace the incumbent, return to the incumbent without deleting its recorded evaluations. The comparator never modifies Git state or launches another evaluation.
 
 ## Final evaluation
 

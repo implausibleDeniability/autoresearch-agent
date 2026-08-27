@@ -39,15 +39,17 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 
 ### Evaluation confidence
 
-**Measure the current baseline.** Before modifying `solution.py`, establish a complete `dev-202k` baseline panel on seeds `0` through `4` with development diagnostics. Record it as `keep` and use its scores and diagnostics as the starting evidence.
+**Measure the current baseline.** Before modifying `solution.py`, establish a complete `dev-202k` baseline panel on seeds `0` through `2` with development diagnostics and comparison-evidence sidecars. Record it as `keep` and use it as the starting control bank.
+
+For the first qualifying real panel produced after adopting comparison-evidence schema v1, record the legacy score summary and the new comparator decision in `research.md` before making that panel the control. This one-time shadow check does not authorize extra targeted runs.
 
 **Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged.
 
-**Use paired evidence for promotion.** Compare a candidate with the baseline on the same seeds `0` through `4` before promoting it. Do not add, omit, substitute, or cherry-pick seeds; keep other sampling controls fixed.
+**Use paired evidence for promotion.** Use `pii-compare` on full 121-document `dev-202k` evidence. It compares arithmetic mean score changes by fixed seed and estimates uncertainty from document-paired linearized differences. Do not add, omit, substitute, or cherry-pick seeds.
 
 **Choose hypotheses before evaluation modes.** Cache availability must not affect research priority. Reuse exact responses to isolate downstream-only changes. Use fresh responses only when the hypothesis measures model-response variability. Blind evaluations are always live.
 
-**Spend only to resolve decision-relevant uncertainty.** Prefer saved results and other free evidence. One run may be enough to reject a clearly inferior candidate; repeat competitive candidates when uncertainty could change the decision. Allow `inconclusive` results and judge repetitions together rather than selecting the best run.
+**Spend only to resolve decision-relevant uncertainty.** One run may screen any hypothesis. For a response-changing candidate, evaluate seed `0`, then follow the comparator's `run_candidate_seed` action through seed `2` only while the candidate remains viable. Do not run targeted repeats. A downstream-only change may use the one-run fixed-replay exception when strict-cache receipts are identical across arms. If more distinct cached seed banks already exist, compare their fixed prefix too; repeated execution of one bank adds no evidence.
 
 **Use only final scores for candidate decisions.** Partial evaluations may inform diagnosis but cannot justify keeping, discarding, ranking, or promoting a candidate.
 
@@ -89,7 +91,7 @@ If a lower-ranked experiment is selected, briefly record why it became the best 
 2. Implement one meaningful experiment in `solution.py` and commit the exact candidate.
 3. Check the remaining evaluation and spending budgets, then evaluate by following `research-runbook.md`. Use smaller development datasets for cheap hypothesis testing.
 4. Interpret the run status before using its metrics and inspect the diagnostics. Partial results are diagnostic-only.
-5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, complete the runbook's paired `dev-202k` promotion protocol for that exact commit.
+5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, complete the runbook's paired `dev-202k` comparison protocol for that exact commit.
 6. Record every evaluation and its status, update the incumbent and hypothesis portfolio, and continue.
 
 ## Communication with the supervisor

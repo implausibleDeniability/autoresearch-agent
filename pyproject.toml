@@ -11,12 +11,16 @@ dependencies = [
     "tiktoken>=0.7.0",
 ]
 
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
 [project.scripts]
+pii-compare = "src.evaluation.compare_cli:entrypoint"
 pii-eval = "src.evaluation.cli:main"
 
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+[tool.uv]
+package = true
 
 [tool.setuptools.packages.find]
 where = ["."]

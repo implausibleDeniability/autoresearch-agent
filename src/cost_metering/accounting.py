@@ -137,6 +137,15 @@ class CostReport:
 
 
 @dataclass(frozen=True)
+class RequestReceipt:
+    document_ordinal: int
+    request_ordinal: int
+    request_key: str
+    response_content_sha256: str
+    replayed: bool
+
+
+@dataclass(frozen=True)
 class MeteringOutcome:
     report: CostReport
     status: CostStatusValue
@@ -155,6 +164,7 @@ class MeteringOutcome:
     peak_reserved_api_cost_usd: Decimal = Decimal()
     peak_active_upstream_requests: int = 0
     reservation_wait_seconds: float = 0.0
+    request_receipts: Tuple[RequestReceipt, ...] = ()
 
     @property
     def cost_is_final(self) -> bool:

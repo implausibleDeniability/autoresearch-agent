@@ -508,6 +508,16 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     assert float(diagnostics_duration) >= 0
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
     assert diagnostics["schema_version"] == 8
+    evidence_path = tmp_path / "diagnostics.evidence.json"
+    evidence = json.loads(evidence_path.read_text())
+    assert evidence["schema_version"] == 1
+    assert evidence["artifact_kind"] == "pii_comparison_evidence"
+    assert evidence["run"]["result_status"] == "complete"
+    assert evidence["metrics"]["documents"][0]["counts"]["true_positive"] == 1
+    assert evidence["requests"]["receipt_count"] == 1
+    assert evidence["provenance"]["promotion_capable"] is False
+    assert "John" not in evidence_path.read_text()
+    assert stat.S_IMODE(evidence_path.stat().st_mode) == 0o600
     assert diagnostics["cost_is_comparable"] is True
     assert diagnostics["evaluation_mode"] == "cache-fill"
     assert diagnostics["evaluation_seed"] == 0
@@ -895,8 +905,58 @@ def extract_pii(text):
     assert [result["document_id"] for result in results] == list(documents)
 
 
+def test_development_workers_keep_importing_the_owner_only_solution_snapshot(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    (text_directory / "second.txt").write_text("Jane")
+    ground_truth = {
+        "doc": [{"first_name": ["John"]}],
+        "second": [{"first_name": ["Jane"]}],
+    }
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""from pathlib import Path
+
+from src.evaluation.models import PIIItem
+
+
+def extract_pii(text):
+    if text == "John":
+        Path("solution.py").write_text("raise RuntimeError('workspace mutation')")
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--diagnostics",
+            "diagnostics.json",
+            "--max-concurrent-documents",
+            "1",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    evidence = json.loads((tmp_path / "diagnostics.evidence.json").read_text())
+    assert evidence["run"]["coverage"]["completed"] == 2
+    assert evidence["provenance"]["solution_matches_snapshot_end"] is False
+    assert evidence["provenance"]["promotion_capable"] is False
+    assert "solution_changed_during_run" in evidence["provenance"]["invalidation_reasons"]
+
+
 def test_threaded_evaluation_uses_one_worker_and_preserves_document_order(tmp_path: Path):
-    # setup
     _write_cli_fixture(tmp_path)
     text_directory = tmp_path / "data" / "debug" / "texts"
     documents = {"doc": "John", "fourth": "Dave", "second": "Jane", "third": "Alex"}
@@ -921,8 +981,6 @@ def extract_pii(text):
     repository = Path(__file__).parents[1]
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(repository)
-
-    # operate
     completed = subprocess.run(
         [
             sys.executable,
@@ -945,7 +1003,6 @@ def extract_pii(text):
         check=False,
     )
 
-    # check
     assert completed.returncode == 0, completed.stderr
     assert "execution_mode=threaded" in completed.stdout
     assert "usage_attribution_status=unavailable" in completed.stdout
@@ -962,7 +1019,6 @@ def extract_pii(text):
 
 
 def test_threaded_evaluation_reaches_one_hundred_fifty_active_tasks(tmp_path: Path):
-    # setup
     text_directory = tmp_path / "data" / "debug" / "texts"
     text_directory.mkdir(parents=True)
     documents = {f"doc-{index:03d}": f"Person {index}" for index in range(150)}
@@ -984,8 +1040,6 @@ def extract_pii(text):
     repository = Path(__file__).parents[1]
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(repository)
-
-    # operate
     completed = subprocess.run(
         [
             sys.executable,
@@ -1008,14 +1062,12 @@ def extract_pii(text):
         check=False,
     )
 
-    # check
     assert completed.returncode == 0, completed.stderr
     assert "documents_completed=150" in completed.stdout
     assert "documents_failed=0" in completed.stdout
 
 
 def test_threaded_health_ramp_stops_admission_after_early_failure(tmp_path: Path):
-    # setup
     text_directory = tmp_path / "data" / "debug" / "texts"
     text_directory.mkdir(parents=True)
     documents = {f"doc-{index:03d}": "FAIL" if index == 0 else f"Person {index}" for index in range(40)}
@@ -1036,8 +1088,6 @@ def extract_pii(text):
     repository = Path(__file__).parents[1]
     environment = dict(os.environ)
     environment["PYTHONPATH"] = str(repository)
-
-    # operate
     completed = subprocess.run(
         [
             sys.executable,
@@ -1058,7 +1108,6 @@ def extract_pii(text):
         check=False,
     )
 
-    # check
     assert completed.returncode == 2, completed.stderr
     assert "documents_failed=1" in completed.stdout
     assert "documents_not_attempted=8" in completed.stdout
@@ -1124,6 +1173,11 @@ def extract_pii(text):
         "not_attempted": 0,
     }
     assert diagnostics["document_results"][0]["failure_category"] == "dataset_deadline"
+    evidence = json.loads((tmp_path / "diagnostics.evidence.json").read_text())
+    assert evidence["run"]["result_status"] == "partial"
+    assert evidence["requests"]["status"] == "incomplete"
+    assert evidence["requests"]["request_plan_fingerprint"] is None
+    assert evidence["requests"]["response_bank_fingerprint"] is None
 
 
 def test_dataset_description_requires_no_credentials_or_api_call(tmp_path: Path):

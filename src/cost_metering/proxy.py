@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 import threading
 import time
@@ -16,10 +17,11 @@ from .accounting import (
     MeteringError,
     MeteringOutcome,
     ModelUsage,
+    RequestReceipt,
     SpendingLimitExceededError,
 )
 from .http import MeterHandler
-from .response_cache import CacheEntryError, CachedResponse, ResponseCache
+from .response_cache import CacheEntryError, CachedResponse, ResponseCache, canonical_request_key
 
 DEFAULT_SPENDING_LIMIT_USD = Decimal("0.08")
 DEFAULT_INFLIGHT_LIABILITY_LIMIT_USD = Decimal("0.08")
@@ -63,6 +65,8 @@ class MeterState:
         self._condition = threading.Condition()
         self._run_token = run_token
         self._run_tokens = {run_token}
+        self._document_ordinals = {run_token: -1}
+        self._next_request_ordinals = {run_token: 0}
         self._accepting = True
         self._limit_exceeded = False
         self._spending_limit_usd = spending_limit_usd
@@ -82,6 +86,8 @@ class MeterState:
         self._usages_by_token: Dict[str, List[ModelUsage]] = {run_token: []}
         self._errors: List[str] = []
         self._errors_by_token: Dict[str, List[str]] = {run_token: []}
+        self._request_receipts: List[RequestReceipt] = []
+        self._receipts_by_token: Dict[str, List[RequestReceipt]] = {run_token: []}
         self._cache_hits = 0
         self._cache_misses = 0
         self._live_requests = 0
@@ -92,14 +98,52 @@ class MeterState:
         self._cache_fill_failures: set[str] = set()
         self._final_outcome: Optional[MeteringOutcome] = None
 
-    def issue_token(self) -> str:
+    def issue_token(self, *, document_ordinal: int = -1) -> str:
+        if document_ordinal < -1:
+            raise ValueError("document_ordinal must be at least -1")
         with self._condition:
             run_token = secrets.token_urlsafe(32)
             self._run_tokens.add(run_token)
+            self._document_ordinals[run_token] = document_ordinal
+            self._next_request_ordinals[run_token] = 0
             self._active_requests_by_token[run_token] = 0
             self._usages_by_token[run_token] = []
             self._errors_by_token[run_token] = []
+            self._receipts_by_token[run_token] = []
             return run_token
+
+    def next_request_ordinal(self, run_token: str) -> int:
+        with self._condition:
+            request_ordinal = self._next_request_ordinals[run_token]
+            self._next_request_ordinals[run_token] += 1
+            return request_ordinal
+
+    def record_request_receipt(
+        self,
+        run_token: str,
+        *,
+        request_ordinal: int,
+        path: str,
+        body: bytes,
+        headers: Mapping[str, str],
+        response_content: bytes,
+        replayed: bool,
+    ) -> None:
+        receipt = RequestReceipt(
+            document_ordinal=self._document_ordinals[run_token],
+            request_ordinal=request_ordinal,
+            request_key=canonical_request_key(
+                upstream_base_url=self.upstream_base_url,
+                path=path,
+                body=body,
+                headers=headers,
+            ),
+            response_content_sha256=hashlib.sha256(response_content).hexdigest(),
+            replayed=replayed,
+        )
+        with self._condition:
+            self._request_receipts.append(receipt)
+            self._receipts_by_token[run_token].append(receipt)
 
     def resolve_run_token(self, authorization: Optional[str]) -> Optional[str]:
         if not authorization or not authorization.startswith("Bearer "):
@@ -337,6 +381,7 @@ class MeterState:
                 status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
                 errors=tuple(errors),
                 active_request_count=active_requests,
+                request_receipts=tuple(self._receipts_by_token[run_token]),
                 **self._cache_outcome_fields(),
             )
 
@@ -375,6 +420,12 @@ class MeterState:
             status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
             errors=tuple(errors),
             active_request_count=active_request_count,
+            request_receipts=tuple(
+                sorted(
+                    self._request_receipts,
+                    key=lambda receipt: (receipt.document_ordinal, receipt.request_ordinal),
+                )
+            ),
             **self._cache_outcome_fields(),
         )
 
@@ -515,8 +566,8 @@ class MeteringProxy:
     def checkpoint(self, *, timeout: float) -> MeteringOutcome:
         return self._state.checkpoint(timeout=timeout)
 
-    def issue_token(self) -> str:
-        return self._state.issue_token()
+    def issue_token(self, *, document_ordinal: int = -1) -> str:
+        return self._state.issue_token(document_ordinal=document_ordinal)
 
     def progress(self) -> MeteringOutcome:
         return self._state.progress()

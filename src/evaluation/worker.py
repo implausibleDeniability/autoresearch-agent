@@ -153,7 +153,7 @@ def _document_tasks(
             document_id=document_id,
             text=text,
             source_tokens=source_tokens[document_id],
-            run_token=meter.issue_token(),
+            run_token=meter.issue_token(document_ordinal=ordinal),
         )
 
 

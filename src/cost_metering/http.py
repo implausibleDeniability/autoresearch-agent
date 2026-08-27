@@ -48,6 +48,20 @@ class MeterStateProtocol(Protocol):
 
     def reserve_request_spending(self, reservation_usd: Decimal) -> int: ...
 
+    def next_request_ordinal(self, run_token: str) -> int: ...
+
+    def record_request_receipt(
+        self,
+        run_token: str,
+        *,
+        request_ordinal: int,
+        path: str,
+        body: bytes,
+        headers: Mapping[str, str],
+        response_content: bytes,
+        replayed: bool,
+    ) -> None: ...
+
     def finish_request(
         self,
         *,
@@ -131,14 +145,19 @@ class MeterHandler(BaseHTTPRequestHandler):
         if rejection_status:
             self._send_json(rejection_status, payload={"error": "metering request rejected"})
             return
+        request_ordinal = state.next_request_ordinal(run_token)
         self._observed_usage = None
         error = ""
+        completed_response: Optional[CachedResponse] = None
+        replayed = False
         cache_fill_key: Optional[str] = None
         cache_fill_succeeded = False
         upstream_started = False
         try:
             if state.evaluation_mode is EvaluationMode.CACHE:
-                if not self._replay_cache_only(state, path=path, body=body):
+                completed_response = self._replay_cache_only(state, path=path, body=body)
+                replayed = completed_response is not None
+                if completed_response is None:
                     error = "strict response cache miss"
             elif state.evaluation_mode is EvaluationMode.CACHE_FILL:
                 cached_response, cache_fill_key = state.claim_cache_fill(
@@ -147,6 +166,8 @@ class MeterHandler(BaseHTTPRequestHandler):
                     headers=self.headers,
                 )
                 if cached_response is not None:
+                    completed_response = cached_response
+                    replayed = True
                     self._send_cached_response(cached_response)
                 elif state.client is None:
                     error = "cache-fill found a miss but OPENAI_API_KEY is unavailable"
@@ -174,6 +195,7 @@ class MeterHandler(BaseHTTPRequestHandler):
                             state.record_live_request()
                             forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
                             self._observed_usage = forwarded.usage
+                            completed_response = forwarded.cached_response
                             if forwarded.cached_response is None:
                                 error = "cache-fill live response was not successful and cacheable"
                             elif state.store_cached_response(
@@ -197,6 +219,7 @@ class MeterHandler(BaseHTTPRequestHandler):
                     state.record_live_request()
                     forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
                     self._observed_usage = forwarded.usage
+                    completed_response = forwarded.cached_response
         except CacheFillFailedError:
             error = "a previous cache-fill attempt for this exact request failed"
             if not self._response_started:
@@ -229,6 +252,16 @@ class MeterHandler(BaseHTTPRequestHandler):
                 state.finish_upstream_request()
             if cache_fill_key is not None:
                 state.finish_cache_fill(cache_fill_key, succeeded=cache_fill_succeeded)
+            if completed_response is not None:
+                state.record_request_receipt(
+                    run_token,
+                    request_ordinal=request_ordinal,
+                    path=path,
+                    body=body,
+                    headers=self.headers,
+                    response_content=completed_response.content,
+                    replayed=replayed,
+                )
             state.finish_request(
                 usage=self._observed_usage,
                 error=error,
@@ -242,7 +275,9 @@ class MeterHandler(BaseHTTPRequestHandler):
         body, is_stream = prepare_request(path, self._read_body())
         return path, body, is_stream
 
-    def _replay_cache_only(self, state: MeterStateProtocol, *, path: str, body: bytes) -> bool:
+    def _replay_cache_only(
+        self, state: MeterStateProtocol, *, path: str, body: bytes
+    ) -> Optional[CachedResponse]:
         response = state.get_cached_response(path=path, body=body, headers=self.headers)
         if response is None:
             self._send_openai_error(
@@ -254,9 +289,9 @@ class MeterHandler(BaseHTTPRequestHandler):
                 ),
                 error_type="response_cache_miss",
             )
-            return False
+            return None
         self._send_cached_response(response)
-        return True
+        return response
 
     def _send_cached_response(self, response: CachedResponse) -> None:
         self.send_response(response.status_code)

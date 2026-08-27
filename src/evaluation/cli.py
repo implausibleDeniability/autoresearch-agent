@@ -30,6 +30,7 @@ from src.evaluation.diagnostics import (
     serialize_document_execution,
     write_diagnostics,
 )
+from src.evaluation.evidence import EVIDENCE_SCHEMA_VERSION, evidence_path_for, write_evidence
 from src.evaluation.metrics import EntityMetrics, evaluate_completed_trace
 from src.evaluation.execution import (
     AdmissionStrategy,
@@ -43,6 +44,12 @@ from src.evaluation.execution import (
     MAX_SETTLEMENT_GRACE_SECONDS,
 )
 from src.evaluation.models import PIIItem
+from src.evaluation.provenance import (
+    EvidenceContext,
+    FinalProvenance,
+    capture_evidence_context,
+    snapshot_environment,
+)
 from src.evaluation.run_results import (
     DocumentExecution,
     DocumentStatus,
@@ -190,6 +197,7 @@ def _preflight_evaluation(arguments: argparse.Namespace, *, blind_test: bool) ->
         _validate_frozen_solution(arguments.frozen_commit)
     if arguments.diagnostics:
         preflight_diagnostics_path(arguments.diagnostics)
+        preflight_diagnostics_path(evidence_path_for(arguments.diagnostics))
 
 
 def _evaluate_with_blind_boundary(
@@ -243,16 +251,20 @@ def _write_development_diagnostics(
         arguments.diagnostics,
         trace=run.trace,
         texts=run.texts,
-        dataset=arguments.dataset,
+        dataset=run.dataset,
         run=run,
     )
-    duration_seconds = time.monotonic() - started_at
     print(
         f"diagnostics written: {arguments.diagnostics} "
         f"({len(run.trace.documents)} documents, schema v{SCHEMA_VERSION})",
         file=sys.stderr,
     )
-    print(f"diagnostics_duration_seconds={duration_seconds:.3f}", file=sys.stderr)
+    print(f"diagnostics_duration_seconds={time.monotonic() - started_at:.3f}", file=sys.stderr)
+    evidence_path = evidence_path_for(arguments.diagnostics)
+    print(
+        f"comparison evidence written: {evidence_path} (schema v{EVIDENCE_SCHEMA_VERSION})",
+        file=sys.stderr,
+    )
 
 
 def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
@@ -283,6 +295,38 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             started_at=started_at,
             max_concurrent_documents=arguments.max_concurrent_documents,
         )
+    with capture_evidence_context(
+        run_id=run_id,
+        dataset=arguments.dataset,
+        upstream_base_url=upstream_base_url,
+    ) as evidence_context:
+        return _evaluate_development_dataset(
+            arguments,
+            texts=texts,
+            document_tokens=document_tokens,
+            source_tokens=source_tokens,
+            api_key=api_key,
+            upstream_base_url=upstream_base_url,
+            run_id=run_id,
+            started_at=started_at,
+            evaluation_mode=evaluation_mode,
+            evidence_context=evidence_context,
+        )
+
+
+def _evaluate_development_dataset(
+    arguments: argparse.Namespace,
+    *,
+    texts: Mapping[str, str],
+    document_tokens: Mapping[str, int],
+    source_tokens: int,
+    api_key: str | None,
+    upstream_base_url: str,
+    run_id: str,
+    started_at: str,
+    evaluation_mode: EvaluationMode,
+    evidence_context: EvidenceContext,
+) -> EvaluationRun:
     documents = _not_attempted_documents(texts, document_tokens=document_tokens)
     evaluation_seed = _development_evaluation_seed(arguments)
     initial = _make_run(
@@ -302,7 +346,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         evaluation_seed=evaluation_seed,
         started_at=started_at,
     )
-    _checkpoint_diagnostics(initial, arguments=arguments)
+    _checkpoint_diagnostics(initial, arguments=arguments, evidence_context=evidence_context)
     deadline = time.monotonic() + arguments.timeout
     with MeteringProxy(
         api_key=api_key,
@@ -337,16 +381,24 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
                 cost=outcome,
                 updated_at=EvaluationRun.timestamp(),
             )
-            _checkpoint_diagnostics(running, arguments=arguments)
+            _checkpoint_diagnostics(
+                running,
+                arguments=arguments,
+                evidence_context=evidence_context,
+            )
             materialized_count = len(completed)
             last_materialized_at = now
 
         documents, termination_category = run_solution_documents(
             texts,
-            module=SOLUTION_MODULE,
+            module=evidence_context.solution_module,
             meter=meter,
             deadline=deadline,
-            environment=_solution_environment(meter, evaluation_seed=evaluation_seed),
+            environment=_solution_environment(
+                meter,
+                evaluation_seed=evaluation_seed,
+                evidence_context=evidence_context,
+            ),
             source_tokens=document_tokens,
             on_checkpoint=checkpoint,
             max_concurrent_documents=arguments.max_concurrent_documents,
@@ -388,6 +440,14 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         evaluation_seed=evaluation_seed,
         started_at=started_at,
     )
+    final_provenance = evidence_context.finalize()
+    if arguments.diagnostics:
+        write_evidence(
+            evidence_path_for(arguments.diagnostics),
+            run=run,
+            context=evidence_context,
+            provenance=final_provenance,
+        )
     return run
 
 
@@ -474,7 +534,13 @@ def _make_run(
     )
 
 
-def _checkpoint_diagnostics(run: EvaluationRun, *, arguments: argparse.Namespace) -> None:
+def _checkpoint_diagnostics(
+    run: EvaluationRun,
+    *,
+    arguments: argparse.Namespace,
+    evidence_context: EvidenceContext,
+    provenance: FinalProvenance | None = None,
+) -> None:
     if not arguments.diagnostics:
         return
     write_diagnostics(
@@ -483,6 +549,12 @@ def _checkpoint_diagnostics(run: EvaluationRun, *, arguments: argparse.Namespace
         texts=run.texts,
         dataset=run.dataset,
         run=run,
+    )
+    write_evidence(
+        evidence_path_for(arguments.diagnostics),
+        run=run,
+        context=evidence_context,
+        provenance=provenance,
     )
 
 
@@ -629,6 +701,7 @@ def _solution_environment(
     meter: MeteringProxy,
     *,
     evaluation_seed: int | None = None,
+    evidence_context: EvidenceContext | None = None,
     source: Mapping[str, str] = os.environ,
 ) -> Dict[str, str]:
     environment = {key: value for key, value in source.items() if key not in SENSITIVE_CHILD_ENVIRONMENT}
@@ -636,6 +709,8 @@ def _solution_environment(
     environment["OPENAI_BASE_URL"] = meter.base_url
     if evaluation_seed is not None:
         environment[EVALUATION_SEED_ENVIRONMENT] = str(evaluation_seed)
+    if evidence_context is not None:
+        environment = snapshot_environment(evidence_context, environment)
     return environment
 
 

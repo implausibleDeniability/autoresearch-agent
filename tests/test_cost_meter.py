@@ -206,12 +206,17 @@ def test_streaming_responses_api_with_crlf_is_metered(upstream_server):
             json={"model": "gpt-4o-mini-2024-07-18", "input": "answer", "stream": True},
         ) as response:
             content = b"".join(response.iter_bytes())
-        report = meter.seal_and_report()
+        outcome = meter.finalize(timeout=5.0)
 
     # check
     assert response.status_code == 200
     assert b"response.completed" in content
-    assert report.total_usd == Decimal("0.0000165")
+    assert outcome.report.total_usd == Decimal("0.0000165")
+    assert len(outcome.request_receipts) == 1
+    assert outcome.request_receipts[0].request_ordinal == 0
+    assert outcome.request_receipts[0].replayed is False
+    assert len(outcome.request_receipts[0].request_key) == 64
+    assert len(outcome.request_receipts[0].response_content_sha256) == 64
 
 
 def test_cache_fill_response_is_written_once_and_replayed_without_upstream(tmp_path, upstream_server):
@@ -256,6 +261,42 @@ def test_cache_fill_response_is_written_once_and_replayed_without_upstream(tmp_p
     assert cached_outcome.cache_misses == 0
     assert cached_outcome.live_requests == 0
     assert cached_outcome.report.total_usd == Decimal()
+    assert len(live_outcome.request_receipts) == len(cached_outcome.request_receipts) == 1
+    live_receipt = live_outcome.request_receipts[0]
+    cached_receipt = cached_outcome.request_receipts[0]
+    assert live_receipt.request_key == cached_receipt.request_key
+    assert live_receipt.response_content_sha256 == cached_receipt.response_content_sha256
+    assert live_receipt.replayed is False
+    assert cached_receipt.replayed is True
+
+
+def test_receipts_preserve_document_and_request_order_under_concurrency(upstream_server):
+    with MeteringProxy(api_key="real-key", upstream_base_url=upstream_server.base_url) as meter:
+        first_token = meter.issue_token(document_ordinal=8)
+        second_token = meter.issue_token(document_ordinal=3)
+
+        def request(token, label, delay):
+            return httpx.post(
+                f"{meter.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "model": "gpt-4o-2024-08-06",
+                    "messages": [{"role": "user", "content": label}],
+                    "metadata": {"delay_seconds": delay},
+                },
+            )
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(request, first_token, "first", 0.1),
+                executor.submit(request, first_token, "second", 0.0),
+                executor.submit(request, second_token, "third", 0.0),
+            ]
+            assert all(future.result().status_code == 200 for future in futures)
+        outcome = meter.finalize(timeout=5.0)
+
+    identities = [(receipt.document_ordinal, receipt.request_ordinal) for receipt in outcome.request_receipts]
+    assert identities == [(3, 0), (8, 0), (8, 1)]
 
 
 def test_cache_fill_hit_replays_without_credentials_or_live_call(tmp_path, upstream_server):
