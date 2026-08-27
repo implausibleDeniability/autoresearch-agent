@@ -2,10 +2,11 @@ import hashlib
 import secrets
 import threading
 import time
+from dataclasses import replace
 from decimal import Decimal
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from typing import Dict, List, Mapping, Optional
+from typing import Callable, Dict, List, Mapping, Optional
 
 import httpx
 
@@ -29,6 +30,8 @@ DEFAULT_PROXY_INFLIGHT_LIABILITY_LIMIT_USD = Decimal("1.00")
 DEFAULT_MAX_UPSTREAM_REQUESTS = 150
 HANDLER_HEADROOM = 16
 SPENDING_LIMIT_STATUS = 429
+MAX_RETAINED_REQUEST_BYTES = 50_000_000
+MAX_RETAINED_RESPONSE_BYTES = 200_000_000
 
 
 class MeterState:
@@ -80,6 +83,8 @@ class MeterState:
         self._reservation_wait_seconds = 0.0
         self._active_requests = 0
         self._active_upstream_requests = 0
+        self._retained_request_bytes = 0
+        self._retained_response_bytes = 0
         self._peak_active_upstream_requests = 0
         self._active_requests_by_token = {run_token: 0}
         self._usages: List[ModelUsage] = []
@@ -171,6 +176,9 @@ class MeterState:
                 f"${self._max_inflight_liability_usd:.8f}"
             )
             return SPENDING_LIMIT_STATUS
+        if self._unknown_liability_usd + reservation_usd > self._max_inflight_liability_usd:
+            self._record_liability_error("unknown billing liability leaves insufficient in-flight capacity")
+            return SPENDING_LIMIT_STATUS
         started_at = time.monotonic()
         while self._must_wait_for_liability(reservation_usd):
             remaining = self._admission_remaining_seconds()
@@ -179,6 +187,9 @@ class MeterState:
                 return SPENDING_LIMIT_STATUS
             self._condition.wait(remaining)
         self._reservation_wait_seconds += time.monotonic() - started_at
+        if self._unknown_liability_usd + reservation_usd > self._max_inflight_liability_usd:
+            self._record_liability_error("unknown billing liability leaves insufficient in-flight capacity")
+            return SPENDING_LIMIT_STATUS
         if not self._accepting:
             return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
         self._reserved_spending_usd += reservation_usd
@@ -189,7 +200,7 @@ class MeterState:
         return 0
 
     def _must_wait_for_liability(self, reservation_usd: Decimal) -> bool:
-        projected = self._reserved_spending_usd + reservation_usd
+        projected = self._unknown_liability_usd + self._reserved_spending_usd + reservation_usd
         return (
             self._accepting
             and reservation_usd > 0
@@ -254,6 +265,42 @@ class MeterState:
             )
             return True
 
+    def acquire_request_bytes(self, size: int) -> bool:
+        return self._acquire_payload_bytes(size, response=False)
+
+    def acquire_response_bytes(self, size: int) -> bool:
+        return self._acquire_payload_bytes(size, response=True)
+
+    def _acquire_payload_bytes(self, size: int, *, response: bool) -> bool:
+        limit = MAX_RETAINED_RESPONSE_BYTES if response else MAX_RETAINED_REQUEST_BYTES
+        with self._condition:
+            if size > limit:
+                return False
+            retained = self._retained_response_bytes if response else self._retained_request_bytes
+            while self._accepting and retained + size > limit:
+                remaining = self._admission_remaining_seconds()
+                if remaining == 0:
+                    return False
+                self._condition.wait(remaining)
+                retained = self._retained_response_bytes if response else self._retained_request_bytes
+            if not self._accepting:
+                return False
+            if response:
+                self._retained_response_bytes += size
+            else:
+                self._retained_request_bytes += size
+            return True
+
+    def release_request_bytes(self, size: int) -> None:
+        with self._condition:
+            self._retained_request_bytes -= size
+            self._condition.notify_all()
+
+    def release_response_bytes(self, size: int) -> None:
+        with self._condition:
+            self._retained_response_bytes -= size
+            self._condition.notify_all()
+
     def finish_upstream_request(self) -> None:
         with self._condition:
             self._active_upstream_requests -= 1
@@ -271,11 +318,17 @@ class MeterState:
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> Optional[CachedResponse]:
         if not self.evaluation_mode.reads_cache or self._response_cache is None:
             raise RuntimeError("response cache lookup is not enabled")
         try:
-            response = self._response_cache.get(path=path, body=body, headers=headers)
+            response = self._response_cache.get(
+                path=path,
+                body=body,
+                headers=headers,
+                before_read=before_read,
+            )
         except CacheEntryError:
             with self._condition:
                 self._cache_errors += 1
@@ -293,15 +346,26 @@ class MeterState:
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> tuple[Optional[CachedResponse], Optional[str]]:
         if self.evaluation_mode is not EvaluationMode.CACHE_FILL or self._response_cache is None:
             raise RuntimeError("response cache fill is not enabled")
         request_key = self._response_cache.request_key(path=path, body=body, headers=headers)
         with self._condition:
             while request_key in self._cache_fills_in_progress:
-                self._condition.wait()
+                if not self._accepting:
+                    raise MeteringError("cache-fill wait stopped during evaluator shutdown")
+                remaining = self._admission_remaining_seconds()
+                if remaining == 0:
+                    raise MeteringError("cache-fill wait exceeded the evaluation deadline")
+                self._condition.wait(remaining)
             try:
-                response = self._response_cache.get(path=path, body=body, headers=headers)
+                response = self._response_cache.get(
+                    path=path,
+                    body=body,
+                    headers=headers,
+                    before_read=before_read,
+                )
             except CacheEntryError:
                 self._cache_errors += 1
                 raise
@@ -381,7 +445,7 @@ class MeterState:
                 status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
                 errors=tuple(errors),
                 active_request_count=active_requests,
-                request_receipts=tuple(self._receipts_by_token[run_token]),
+                request_receipts=_canonical_request_receipts(self._receipts_by_token[run_token]),
                 **self._cache_outcome_fields(),
             )
 
@@ -420,12 +484,7 @@ class MeterState:
             status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
             errors=tuple(errors),
             active_request_count=active_request_count,
-            request_receipts=tuple(
-                sorted(
-                    self._request_receipts,
-                    key=lambda receipt: (receipt.document_ordinal, receipt.request_ordinal),
-                )
-            ),
+            request_receipts=_canonical_request_receipts(self._request_receipts),
             **self._cache_outcome_fields(),
         )
 
@@ -479,7 +538,9 @@ class _MeterServer(ThreadingHTTPServer):
         super().__init__(server_address, handler)
 
     def process_request(self, request, client_address) -> None:
-        self._handler_slots.acquire()
+        if not self._handler_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
         try:
             super().process_request(request, client_address)
         except Exception:
@@ -613,3 +674,20 @@ def _normalize_evaluation_mode(evaluation_mode: EvaluationMode | str) -> Evaluat
 def _validate_spending_limit(spending_limit_usd: Decimal) -> None:
     if spending_limit_usd <= 0:
         raise ValueError(f"spending_limit_usd must be positive, got {spending_limit_usd}")
+
+
+def _canonical_request_receipts(receipts: List[RequestReceipt]) -> tuple[RequestReceipt, ...]:
+    attributed = sorted(
+        (receipt for receipt in receipts if receipt.document_ordinal >= 0),
+        key=lambda receipt: (receipt.document_ordinal, receipt.request_ordinal),
+    )
+    aggregate = sorted(
+        (receipt for receipt in receipts if receipt.document_ordinal < 0),
+        key=lambda receipt: (
+            receipt.request_key,
+            receipt.response_content_sha256,
+            receipt.replayed,
+        ),
+    )
+    aggregate = [replace(receipt, request_ordinal=index) for index, receipt in enumerate(aggregate)]
+    return tuple((*aggregate, *attributed))

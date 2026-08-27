@@ -566,7 +566,9 @@ def _parse_requests(
         receipts.append(
             EvidenceReceipt(
                 document_ordinal=_integer(
-                    item.get("document_ordinal"), f"$.requests.receipts[{index}].document_ordinal"
+                    item.get("document_ordinal"),
+                    f"$.requests.receipts[{index}].document_ordinal",
+                    minimum=-1,
                 ),
                 request_ordinal=_integer(
                     item.get("request_ordinal"), f"$.requests.receipts[{index}].request_ordinal"
@@ -586,6 +588,12 @@ def _parse_requests(
     _expect(
         all(item.document_ordinal < EXPECTED_DOCUMENT_COUNT for item in receipts),
         "document ordinal below 121",
+        "$.requests.receipts",
+    )
+    _expect(
+        not any(item.document_ordinal == -1 for item in receipts)
+        or all(item.document_ordinal == -1 for item in receipts),
+        "uniform aggregate or document receipt attribution",
         "$.requests.receipts",
     )
     ordinals_by_document: Dict[int, list[int]] = {}
@@ -729,9 +737,9 @@ def _enum(value: object, allowed: set[str], json_path: str) -> str:
     return parsed
 
 
-def _integer(value: object, json_path: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_INTEGER:
-        raise _InvalidField(json_path, f"non-negative integer no greater than {MAX_INTEGER}")
+def _integer(value: object, json_path: str, *, minimum: int = 0) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= MAX_INTEGER:
+        raise _InvalidField(json_path, f"integer from {minimum} through {MAX_INTEGER}")
     return value
 
 

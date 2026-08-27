@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from decimal import Decimal
 from http.server import BaseHTTPRequestHandler
-from typing import Dict, Mapping, Optional, Protocol, cast
+from typing import Callable, Dict, Mapping, Optional, Protocol, cast
 from urllib.parse import urlsplit
 
 import httpx
@@ -10,13 +10,14 @@ import httpx
 from .accounting import (
     CacheFillFailedError,
     EvaluationMode,
+    MeteringError,
     ModelUsage,
     StreamUsageParser,
     parse_response_usage,
     prepare_request,
     request_cost_upper_bound,
 )
-from .response_cache import CacheEntryError, CachedResponse
+from .response_cache import CacheEntryError, CachedResponse, MAX_CACHE_ENTRY_WORKING_SET_BYTES
 
 UPSTREAM_HEADER_BLOCKLIST = {
     "authorization",
@@ -33,6 +34,7 @@ UPSTREAM_HEADER_BLOCKLIST = {
 }
 DOWNSTREAM_HEADER_BLOCKLIST = UPSTREAM_HEADER_BLOCKLIST | {"content-encoding"}
 MAX_REQUEST_BODY_BYTES = 10_000_000
+MAX_RESPONSE_BODY_BYTES = 10_000_000
 REQUEST_READ_TIMEOUT_SECONDS = 30.0
 
 
@@ -76,6 +78,14 @@ class MeterStateProtocol(Protocol):
 
     def finish_upstream_request(self) -> None: ...
 
+    def acquire_request_bytes(self, size: int) -> bool: ...
+
+    def release_request_bytes(self, size: int) -> None: ...
+
+    def acquire_response_bytes(self, size: int) -> bool: ...
+
+    def release_response_bytes(self, size: int) -> None: ...
+
     def record_error(self, run_token: str, *, error: str) -> None: ...
 
     def get_cached_response(
@@ -84,6 +94,7 @@ class MeterStateProtocol(Protocol):
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> Optional[CachedResponse]: ...
 
     def claim_cache_fill(
@@ -92,6 +103,7 @@ class MeterStateProtocol(Protocol):
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> tuple[Optional[CachedResponse], Optional[str]]: ...
 
     def finish_cache_fill(self, request_key: str, *, succeeded: bool) -> None: ...
@@ -123,6 +135,8 @@ class MeterHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         self._response_started = False
+        self._retained_request_bytes = 0
+        self._retained_response_bytes = 0
         state = cast(MeterServerProtocol, self.server).state
         authorization = self.headers.get("Authorization")
         run_token = state.resolve_run_token(authorization)
@@ -139,11 +153,17 @@ class MeterHandler(BaseHTTPRequestHandler):
         except Exception as caught_error:
             error = f"metering failed for {self.path}: {caught_error}"
             state.record_error(run_token, error=error)
-            self._send_json(502, payload={"error": error})
+            try:
+                self._send_json(502, payload={"error": error})
+            finally:
+                self._release_payload_bytes(state)
             return
         rejection_status = state.begin_request(authorization, reservation_usd=reservation_usd)
         if rejection_status:
-            self._send_json(rejection_status, payload={"error": "metering request rejected"})
+            try:
+                self._send_json(rejection_status, payload={"error": "metering request rejected"})
+            finally:
+                self._release_payload_bytes(state)
             return
         request_ordinal = state.next_request_ordinal(run_token)
         self._observed_usage = None
@@ -164,6 +184,7 @@ class MeterHandler(BaseHTTPRequestHandler):
                     path=path,
                     body=body,
                     headers=self.headers,
+                    before_read=lambda: self._retain_response_bytes(state, MAX_CACHE_ENTRY_WORKING_SET_BYTES),
                 )
                 if cached_response is not None:
                     completed_response = cached_response
@@ -262,13 +283,16 @@ class MeterHandler(BaseHTTPRequestHandler):
                     response_content=completed_response.content,
                     replayed=replayed,
                 )
-            state.finish_request(
-                usage=self._observed_usage,
-                error=error,
-                run_token=run_token,
-                reservation_usd=reservation_usd,
-                upstream_started=upstream_started,
-            )
+            try:
+                state.finish_request(
+                    usage=self._observed_usage,
+                    error=error,
+                    run_token=run_token,
+                    reservation_usd=reservation_usd,
+                    upstream_started=upstream_started,
+                )
+            finally:
+                self._release_payload_bytes(state)
 
     def _prepare_request(self) -> tuple[str, bytes, bool]:
         path = urlsplit(self.path).path
@@ -278,7 +302,12 @@ class MeterHandler(BaseHTTPRequestHandler):
     def _replay_cache_only(
         self, state: MeterStateProtocol, *, path: str, body: bytes
     ) -> Optional[CachedResponse]:
-        response = state.get_cached_response(path=path, body=body, headers=self.headers)
+        response = state.get_cached_response(
+            path=path,
+            body=body,
+            headers=self.headers,
+            before_read=lambda: self._retain_response_bytes(state, MAX_CACHE_ENTRY_WORKING_SET_BYTES),
+        )
         if response is None:
             self._send_openai_error(
                 400,
@@ -310,23 +339,32 @@ class MeterHandler(BaseHTTPRequestHandler):
         url = f"{state.upstream_base_url}{path}"
         with state.client.stream("POST", url, content=body, headers=headers) as response:
             if is_stream:
-                return self._relay_stream(response, path=path)
-            return self._relay_response(response, path=path)
+                return self._relay_stream(state, response, path=path)
+            return self._relay_response(state, response, path=path)
 
-    def _relay_response(self, response: httpx.Response, *, path: str) -> _ForwardedResponse:
-        content = response.read()
+    def _relay_response(
+        self, state: MeterStateProtocol, response: httpx.Response, *, path: str
+    ) -> _ForwardedResponse:
+        self._retain_response_bytes(state, self._live_response_reservation(state))
+        content = self._bounded_response_content(state, response)
         usage = parse_response_usage(path, content) if response.is_success else None
         self._observed_usage = usage
         self._send_response(response, content=content)
         cached_response = _cached_response(response, content=content) if usage is not None else None
         return _ForwardedResponse(usage=usage, cached_response=cached_response)
 
-    def _relay_stream(self, response: httpx.Response, *, path: str) -> _ForwardedResponse:
+    def _relay_stream(
+        self, state: MeterStateProtocol, response: httpx.Response, *, path: str
+    ) -> _ForwardedResponse:
+        self._retain_response_bytes(state, self._live_response_reservation(state))
         self._start_chunked_response(response)
         parser = StreamUsageParser(path=path)
         content = bytearray()
         client_connected = True
         for chunk in response.iter_bytes():
+            if len(content) + len(chunk) > MAX_RESPONSE_BODY_BYTES:
+                self.close_connection = True
+                raise ValueError(f"upstream response exceeded {MAX_RESPONSE_BODY_BYTES} bytes")
             content.extend(chunk)
             parser.feed(chunk)
             if client_connected:
@@ -337,13 +375,46 @@ class MeterHandler(BaseHTTPRequestHandler):
         return _ForwardedResponse(usage=usage, cached_response=cached_response)
 
     def _read_body(self) -> bytes:
+        state = cast(MeterServerProtocol, self.server).state
         content_length = int(self.headers.get("Content-Length", "0"))
         if content_length <= 0:
             raise ValueError(f"request body is empty for {self.path}")
         if content_length > MAX_REQUEST_BODY_BYTES:
             raise ValueError(f"request body is {content_length} bytes; maximum is {MAX_REQUEST_BODY_BYTES}")
+        if not state.acquire_request_bytes(content_length):
+            raise ValueError("aggregate request-body capacity is unavailable")
+        self._retained_request_bytes = content_length
         self.connection.settimeout(REQUEST_READ_TIMEOUT_SECONDS)
-        return self.rfile.read(content_length)
+        content = self.rfile.read(content_length)
+        if len(content) != content_length:
+            raise ValueError("request body ended before Content-Length bytes were received")
+        return content
+
+    def _release_payload_bytes(self, state: MeterStateProtocol) -> None:
+        if self._retained_request_bytes:
+            state.release_request_bytes(self._retained_request_bytes)
+            self._retained_request_bytes = 0
+        if self._retained_response_bytes:
+            state.release_response_bytes(self._retained_response_bytes)
+            self._retained_response_bytes = 0
+
+    def _bounded_response_content(self, state: MeterStateProtocol, response: httpx.Response) -> bytes:
+        content = bytearray()
+        for chunk in response.iter_bytes():
+            if len(content) + len(chunk) > MAX_RESPONSE_BODY_BYTES:
+                raise ValueError(f"upstream response exceeded {MAX_RESPONSE_BODY_BYTES} bytes")
+            content.extend(chunk)
+        return bytes(content)
+
+    def _retain_response_bytes(self, state: MeterStateProtocol, size: int) -> None:
+        if not state.acquire_response_bytes(size):
+            raise MeteringError("aggregate response-body capacity is unavailable")
+        self._retained_response_bytes += size
+
+    def _live_response_reservation(self, state: MeterStateProtocol) -> int:
+        if state.evaluation_mode is EvaluationMode.CACHE_FILL:
+            return MAX_CACHE_ENTRY_WORKING_SET_BYTES
+        return MAX_RESPONSE_BODY_BYTES
 
     def _send_response(self, response: httpx.Response, *, content: bytes) -> None:
         self.send_response(response.status_code)

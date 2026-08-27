@@ -6,6 +6,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -20,6 +21,7 @@ from src.cost_metering.accounting import (
     MeteringError,
     MeteringOutcome,
     ModelUsage,
+    RequestReceipt,
     SpendingLimitExceededError,
     StreamUsageParser,
     cost_is_comparable,
@@ -27,13 +29,40 @@ from src.cost_metering.accounting import (
     prepare_request,
     request_cost_upper_bound,
 )
-from src.cost_metering.proxy import SPENDING_LIMIT_STATUS, MeteringProxy, MeterState
-from src.cost_metering.http import MAX_REQUEST_BODY_BYTES
-from src.cost_metering.response_cache import CachedResponse, ResponseCache
+from src.cost_metering.proxy import (
+    MAX_RETAINED_REQUEST_BYTES,
+    MAX_RETAINED_RESPONSE_BYTES,
+    SPENDING_LIMIT_STATUS,
+    MeteringProxy,
+    MeterState,
+    _MeterServer,
+    _canonical_request_receipts,
+)
+from src.cost_metering.http import MAX_REQUEST_BODY_BYTES, MAX_RESPONSE_BODY_BYTES, MeterHandler
+from src.cost_metering.response_cache import (
+    MAX_SERIALIZED_CACHE_ENTRY_BYTES,
+    CacheEntryError,
+    CachedResponse,
+    ResponseCache,
+)
 
 
 class _Answer(BaseModel):
     answer: str
+
+
+def test_aggregate_receipts_are_canonical_across_thread_arrival_order():
+    first = RequestReceipt(-1, 7, "b" * 64, "2" * 64, True)
+    second = RequestReceipt(-1, 3, "a" * 64, "1" * 64, True)
+
+    forward = _canonical_request_receipts([first, second])
+    reverse = _canonical_request_receipts([second, first])
+
+    assert forward == reverse
+    assert [(receipt.request_key, receipt.request_ordinal) for receipt in forward] == [
+        ("a" * 64, 0),
+        ("b" * 64, 1),
+    ]
 
 
 class _UpstreamServer(ThreadingHTTPServer):
@@ -983,6 +1012,318 @@ def test_zero_cost_cache_lookup_is_admitted_while_live_spending_is_reserved():
     outcome = state.finalize(timeout=1.0)
     state.close()
     assert outcome.status == "complete"
+
+
+def test_liability_wait_expires_at_admission_deadline():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        max_inflight_liability_usd=Decimal("0.01"),
+        admission_deadline=time.monotonic() + 0.03,
+    )
+    assert state.begin_request("Bearer run-token", reservation_usd=Decimal("0.01")) == 0
+
+    rejected = state.begin_request("Bearer run-token", reservation_usd=Decimal("0.01"))
+
+    state.finish_request(usage=None, reservation_usd=Decimal("0.01"))
+    outcome = state.finalize(timeout=1.0)
+    state.close()
+    assert rejected == SPENDING_LIMIT_STATUS
+    assert any("waited past the evaluation deadline" in error for error in outcome.errors)
+
+
+def test_stopping_meter_wakes_liability_waiter():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        max_inflight_liability_usd=Decimal("0.01"),
+    )
+    assert state.begin_request("Bearer run-token", reservation_usd=Decimal("0.01")) == 0
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        waiter = executor.submit(
+            state.begin_request,
+            "Bearer run-token",
+            reservation_usd=Decimal("0.01"),
+        )
+        time.sleep(0.01)
+        state.stop_accepting()
+        rejected = waiter.result(timeout=1.0)
+
+    state.finish_request(usage=None, reservation_usd=Decimal("0.01"))
+    state.close()
+    assert rejected == 503
+
+
+def test_upstream_slot_wait_honors_deadline_and_shutdown():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        admission_deadline=time.monotonic() + 0.03,
+        max_upstream_requests=1,
+    )
+    assert state.begin_upstream_request() is True
+    assert state.begin_upstream_request() is False
+    state.finish_upstream_request()
+    state.stop_accepting()
+    assert state.begin_upstream_request() is False
+    state.close()
+
+
+def test_unknown_billing_liability_cannot_reuse_capacity():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        max_inflight_liability_usd=Decimal("0.01"),
+    )
+    assert state.begin_request("Bearer run-token", reservation_usd=Decimal("0.006")) == 0
+    state.finish_request(
+        usage=None,
+        reservation_usd=Decimal("0.006"),
+        upstream_started=True,
+    )
+
+    rejected = state.begin_request("Bearer run-token", reservation_usd=Decimal("0.005"))
+    outcome = state.finalize(timeout=1.0)
+    state.close()
+
+    assert rejected == SPENDING_LIMIT_STATUS
+    assert outcome.unknown_api_cost_liability_usd == Decimal("0.006")
+    assert outcome.maximum_api_cost_exposure_usd <= Decimal("0.01")
+
+
+def test_liability_waiter_rechecks_unknown_capacity_after_wakeup():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        max_inflight_liability_usd=Decimal("0.08"),
+    )
+    assert state.begin_request("Bearer run-token", reservation_usd=Decimal("0.06")) == 0
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        waiter = executor.submit(
+            state.begin_request,
+            "Bearer run-token",
+            reservation_usd=Decimal("0.06"),
+        )
+        time.sleep(0.01)
+        state.finish_request(
+            usage=None,
+            reservation_usd=Decimal("0.06"),
+            upstream_started=True,
+        )
+        rejected = waiter.result(timeout=1.0)
+
+    outcome = state.finalize(timeout=1.0)
+    state.close()
+    assert rejected == SPENDING_LIMIT_STATUS
+    assert outcome.maximum_api_cost_exposure_usd == Decimal("0.06")
+
+
+def test_aggregate_request_body_capacity_is_bounded_and_released():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        admission_deadline=time.monotonic() + 0.03,
+    )
+    first = MAX_RETAINED_REQUEST_BYTES - 1
+    assert state.acquire_request_bytes(first) is True
+    assert state.acquire_response_bytes(2) is True
+    assert state.acquire_request_bytes(2) is False
+    state.release_request_bytes(first)
+    state.release_response_bytes(2)
+    state.close()
+
+
+def test_aggregate_response_capacity_is_independent_and_bounded():
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        admission_deadline=time.monotonic() + 0.03,
+    )
+    assert state.acquire_request_bytes(MAX_RETAINED_REQUEST_BYTES) is True
+    assert state.acquire_response_bytes(MAX_RETAINED_RESPONSE_BYTES - 1) is True
+    assert state.acquire_response_bytes(2) is False
+    state.release_request_bytes(MAX_RETAINED_REQUEST_BYTES)
+    state.release_response_bytes(MAX_RETAINED_RESPONSE_BYTES - 1)
+    state.close()
+
+
+def test_upstream_response_body_is_bounded():
+    response = httpx.Response(200, content=b"x" * (MAX_RESPONSE_BODY_BYTES + 1))
+    handler = MeterHandler.__new__(MeterHandler)
+    handler._retained_response_bytes = 0
+    state = SimpleNamespace(
+        acquire_response_bytes=lambda _size: True,
+        evaluation_mode=EvaluationMode.FRESH,
+    )
+
+    with pytest.raises(ValueError, match="upstream response exceeded"):
+        handler._bounded_response_content(state, response)
+
+
+def test_streaming_upstream_response_body_is_bounded():
+    response = httpx.Response(200, content=b"x" * (MAX_RESPONSE_BODY_BYTES + 1))
+    handler = MeterHandler.__new__(MeterHandler)
+    handler._start_chunked_response = lambda _response: None
+    handler._retained_response_bytes = 0
+    state = SimpleNamespace(
+        acquire_response_bytes=lambda _size: True,
+        evaluation_mode=EvaluationMode.FRESH,
+    )
+
+    with pytest.raises(ValueError, match="upstream response exceeded"):
+        handler._relay_stream(state, response, path="/v1/responses")
+
+    assert handler.close_connection is True
+
+
+def test_response_cache_rejects_oversized_serialized_entry_before_reading(tmp_path):
+    cache = ResponseCache(tmp_path, upstream_base_url="https://api.example.test")
+    body = b'{"model":"gpt-4o-mini-2024-07-18","input":"answer"}'
+    path = cache._entry_path(path="/v1/responses", body=body, headers={})
+    path.parent.mkdir(parents=True)
+    with path.open("wb") as handle:
+        handle.truncate(MAX_SERIALIZED_CACHE_ENTRY_BYTES + 1)
+
+    with pytest.raises(CacheEntryError, match="malformed"):
+        cache.get(path="/v1/responses", body=body, headers={})
+
+
+def test_response_cache_reserves_capacity_before_reading_and_decoding(tmp_path):
+    cache = ResponseCache(tmp_path, upstream_base_url="https://api.example.test")
+    body = b'{"model":"gpt-4o-mini-2024-07-18","input":"answer"}'
+    response = CachedResponse(200, "application/json", b'{"answer":"ok"}')
+    assert cache.put(path="/v1/responses", body=body, headers={}, response=response) is True
+    reservations = []
+
+    def reject_capacity():
+        reservations.append("before-read")
+        raise ValueError("capacity unavailable")
+
+    with pytest.raises(CacheEntryError, match="malformed"):
+        cache.get(
+            path="/v1/responses",
+            body=body,
+            headers={},
+            before_read=reject_capacity,
+        )
+
+    assert reservations == ["before-read"]
+
+
+def test_cache_capacity_exhaustion_is_not_reported_as_cache_corruption(tmp_path):
+    cache = ResponseCache(tmp_path, upstream_base_url="https://api.example.test")
+    body = b'{"model":"gpt-4o-mini-2024-07-18","input":"answer"}'
+    response = CachedResponse(200, "application/json", b'{"answer":"ok"}')
+    assert cache.put(path="/v1/responses", body=body, headers={}, response=response) is True
+    state = MeterState(
+        api_key=None,
+        run_token="run-token",
+        upstream_base_url="https://api.example.test",
+        evaluation_mode=EvaluationMode.CACHE,
+        response_cache=cache,
+        admission_deadline=time.monotonic() + 0.03,
+    )
+    assert state.acquire_response_bytes(MAX_RETAINED_RESPONSE_BYTES) is True
+
+    def reserve_or_raise():
+        if not state.acquire_response_bytes(1):
+            raise MeteringError("aggregate response-body capacity is unavailable")
+
+    with pytest.raises(MeteringError, match="capacity is unavailable"):
+        state.get_cached_response(
+            path="/v1/responses",
+            body=body,
+            headers={},
+            before_read=reserve_or_raise,
+        )
+
+    assert state.progress().cache_errors == 0
+    state.release_response_bytes(MAX_RETAINED_RESPONSE_BYTES)
+    state.close()
+
+
+def test_saturated_handler_pool_rejects_without_blocking_server_loop():
+    server = _MeterServer.__new__(_MeterServer)
+    server._handler_slots = threading.BoundedSemaphore(1)
+    server._handler_slots.acquire()
+    rejected = []
+    server.shutdown_request = rejected.append
+    request = object()
+
+    server.process_request(request, ("127.0.0.1", 1))
+
+    assert rejected == [request]
+    server._handler_slots.release()
+
+
+def test_handler_slot_is_released_when_delegation_raises(monkeypatch):
+    server = _MeterServer.__new__(_MeterServer)
+    server._handler_slots = threading.BoundedSemaphore(1)
+
+    def fail_to_delegate(_server, _request, _client_address):
+        raise RuntimeError("cannot delegate")
+
+    monkeypatch.setattr(ThreadingHTTPServer, "process_request", fail_to_delegate)
+
+    with pytest.raises(RuntimeError, match="cannot delegate"):
+        server.process_request(object(), ("127.0.0.1", 1))
+
+    assert server._handler_slots.acquire(blocking=False) is True
+    server._handler_slots.release()
+
+
+def test_cache_fill_follower_wait_honors_deadline(tmp_path):
+    cache = ResponseCache(tmp_path, upstream_base_url="https://api.example.test")
+    state = MeterState(
+        api_key="real-key",
+        run_token="run-token",
+        upstream_base_url="https://api.example.test",
+        evaluation_mode=EvaluationMode.CACHE_FILL,
+        response_cache=cache,
+        admission_deadline=time.monotonic() + 0.03,
+    )
+    body = json.dumps({"model": "gpt-4o-mini-2024-07-18", "input": "answer"}).encode()
+    _, request_key = state.claim_cache_fill(path="/v1/responses", body=body, headers={})
+
+    with pytest.raises(MeteringError, match="exceeded the evaluation deadline"):
+        state.claim_cache_fill(path="/v1/responses", body=body, headers={})
+
+    state.finish_cache_fill(request_key, succeeded=False)
+    state.close()
+
+
+def test_cache_fill_follower_wakes_during_shutdown(tmp_path):
+    cache = ResponseCache(tmp_path, upstream_base_url="https://api.example.test")
+    state = MeterState(
+        api_key="real-key",
+        run_token="run-token",
+        upstream_base_url="https://api.example.test",
+        evaluation_mode=EvaluationMode.CACHE_FILL,
+        response_cache=cache,
+    )
+    body = json.dumps({"model": "gpt-4o-mini-2024-07-18", "input": "answer"}).encode()
+    _, request_key = state.claim_cache_fill(path="/v1/responses", body=body, headers={})
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        follower = executor.submit(
+            state.claim_cache_fill,
+            path="/v1/responses",
+            body=body,
+            headers={},
+        )
+        time.sleep(0.01)
+        state.stop_accepting()
+        with pytest.raises(MeteringError, match="shutdown"):
+            follower.result(timeout=1.0)
+
+    state.finish_cache_fill(request_key, succeeded=False)
+    state.close()
 
 
 def test_observed_spending_over_limit_rejects_retries_and_fails_run():

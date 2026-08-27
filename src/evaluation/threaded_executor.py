@@ -13,6 +13,7 @@ from src.cost_metering.proxy import MeteringProxy
 from src.evaluation.execution import AdmissionStrategyValue
 from src.evaluation.run_results import DocumentExecution, DocumentStatus, UsageAttributionStatus
 from src.evaluation.worker_frames import (
+    MAX_AGGREGATE_PREDICTIONS,
     MAX_AGGREGATE_RESULT_BYTES,
     PARENT_PID_ENVIRONMENT,
     PROTOCOL_VERSION,
@@ -58,21 +59,31 @@ def run_threaded_solution_documents(
     sender_errors: List[str] = []
     sender = _start_sender(process, tasks=tasks, run_id=run_id, errors=sender_errors)
     try:
-        termination, worker_done = _drain_frames(
-            result_fd,
-            run_id=run_id,
-            tasks=tasks,
-            states=states,
-            documents=documents,
-            meter=meter,
-            deadline=deadline,
-            on_checkpoint=on_checkpoint,
-        )
-    except KeyboardInterrupt:
-        termination, worker_done = "interrupted", False
-    _stop_worker(process, deadline=deadline)
-    sender.join(timeout=PROCESS_GRACE_SECONDS)
-    _close_worker_resources(result_fd=result_fd, logs=logs)
+        try:
+            termination, worker_done = _drain_frames(
+                result_fd,
+                run_id=run_id,
+                tasks=tasks,
+                states=states,
+                documents=documents,
+                meter=meter,
+                deadline=deadline,
+                on_checkpoint=on_checkpoint,
+            )
+        except KeyboardInterrupt:
+            termination, worker_done = "interrupted", False
+    finally:
+        try:
+            if sender.is_alive():
+                _terminate_process_group(process)
+            sender.join(timeout=PROCESS_GRACE_SECONDS)
+            _stop_worker(
+                process,
+                deadline=deadline,
+                close_input=not sender.is_alive(),
+            )
+        finally:
+            _close_worker_resources(result_fd=result_fd, logs=logs)
     termination = _final_termination(
         termination,
         worker_done=worker_done,
@@ -229,6 +240,7 @@ def _drain_frames(
     task_by_ordinal = {task.ordinal: task for task in tasks}
     buffer = b""
     aggregate_bytes = 0
+    aggregate_predictions = 0
     worker_done = False
     try:
         while not worker_done:
@@ -252,6 +264,10 @@ def _drain_frames(
                     latency_seconds=float(frame["result"].get("latency_seconds", 0.0)),
                 )
                 documents[task.ordinal] = document
+                aggregate_predictions = _updated_aggregate_predictions(
+                    aggregate_predictions,
+                    document=document,
+                )
                 on_checkpoint(tuple(documents[index] for index in sorted(documents)), meter.progress())
             worker_done = frame_type == FrameType.WORKER_DONE
     except TimeoutError:
@@ -268,6 +284,17 @@ def _updated_aggregate_bytes(current: int, *, frame: Mapping[str, object]) -> in
     if updated > MAX_AGGREGATE_RESULT_BYTES:
         raise WorkerProtocolError(
             f"worker results exceeded aggregate limit {MAX_AGGREGATE_RESULT_BYTES} bytes"
+        )
+    return updated
+
+
+def _updated_aggregate_predictions(current: int, *, document: DocumentExecution) -> int:
+    from src.evaluation.worker import WorkerProtocolError
+
+    updated = current + len(document.predictions)
+    if updated > MAX_AGGREGATE_PREDICTIONS:
+        raise WorkerProtocolError(
+            f"worker predictions exceeded aggregate limit {MAX_AGGREGATE_PREDICTIONS} people"
         )
     return updated
 
@@ -359,8 +386,13 @@ def _unfinished_document(task: ThreadedTask, *, state: str, termination: str) ->
     )
 
 
-def _stop_worker(process: subprocess.Popen, *, deadline: float) -> None:
-    if process.stdin is not None and not process.stdin.closed:
+def _stop_worker(
+    process: subprocess.Popen,
+    *,
+    deadline: float,
+    close_input: bool = True,
+) -> None:
+    if close_input and process.stdin is not None and not process.stdin.closed:
         try:
             process.stdin.close()
         except BrokenPipeError:

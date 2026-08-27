@@ -49,7 +49,11 @@ For `--fresh`, record in `research.md` why the hypothesis requires fresh respons
 
 Isolated remains the default. Threaded mode preserves the model request, seed, cache key, result order, deadline, and process-group kill boundary. Its default admission ramp is 32, 96, then the requested concurrency; an early document failure stops further admission. `--admission-strategy immediate` skips the ramp and is an advanced override.
 
+Blind evaluations use threaded mode and reject an explicit isolated override. They still enforce the configured document, upstream-request, settled-spend, and in-flight-liability limits.
+
 Set `--max-concurrent-documents` for document work and `--max-upstream-requests` for simultaneous OpenAI calls. Both accept at most 150. Run `--preflight --output-format json` first to validate the dataset, topology, limits, and diagnostics path without credentials or API calls.
+
+To roll back the topology, rerun development evaluation with `--execution-mode isolated`; cache identity is unchanged. If the candidate source is faulty in both modes, restore the prior candidate commit instead of weakening evaluator safeguards.
 
 ### Paired seed panels
 
@@ -57,7 +61,7 @@ The evaluator passes `--seed N` to `solution.py` as `EVALUATION_SEED=N`. The ref
 
 Use seeds `0` through `2` for the incumbent control bank. A response-changing candidate starts at seed `0`; run seed `1` and then seed `2` only when `pii-compare` recommends the next fixed seed. The comparator always matches the candidate prefix to the same incumbent seeds while requiring the complete three-seed control bank. Never pool different candidate commits or add targeted repeats.
 
-For a change strictly downstream of model responses, `--change-type fixed-replay` permits a formal look after seed `0`. When distinct cached banks already exist, it also accepts the fixed prefixes `0,1` and `0,1,2`. Every paired seed must use `--cache`, replay every request, and have identical document-scoped request and response receipts across arms. Banks must be distinct across seeds; rerunning one bank adds no evidence. A caller's classification alone cannot activate this exception, and do not make paid calls solely to create more replay banks.
+For a change strictly downstream of model responses, `--change-type fixed-replay` permits a formal look after seed `0`. When distinct cached banks already exist, it also accepts the fixed prefixes `0,1` and `0,1,2`. Every paired seed must use `--cache`, replay every request, and have identical canonical request and response receipts across arms. Isolated receipts are document-scoped; threaded receipts use deterministic aggregate ordering because per-document attribution is unavailable. Banks must be distinct across seeds; rerunning one bank adds no evidence. A caller's classification alone cannot activate this exception, and do not make paid calls solely to create more replay banks.
 
 ### Cost accounting and evaluator behavior
 
@@ -75,7 +79,7 @@ The evaluator supports Chat Completions and Responses with the allowed models, i
 
 The default eight-cent settled-spend limit stops new requests after observed spend exceeds the limit. `--settled-spend-limit-cents` sets it; `--cents-limit` remains a deprecated alias.
 
-In-flight liability is separate. Each admitted request reserves its maximum possible cost until usage settles. `--max-inflight-liability-cents` bounds concurrent reservations and unknown billing exposure; requests wait when admitting them would exceed it. Increase this limit only when the resulting exposure fits the total research budget. `maximum_api_cost_exposure_usd` reports observed spend plus outstanding and unknown liability.
+In-flight liability is separate. Each admitted request reserves its maximum possible cost until usage settles. `--max-inflight-liability-cents` bounds concurrent reservations plus unknown billing exposure; unresolved liability permanently consumes capacity for that run. Increase this limit only when the resulting exposure fits the total research budget. `maximum_api_cost_exposure_usd` reports observed spend plus outstanding and unknown liability.
 
 #### Cost finality
 

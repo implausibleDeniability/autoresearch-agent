@@ -82,4 +82,5 @@ uv run pii-eval --dataset dev-202k --seed 0 --execution-mode threaded \
 
 The default `isolated` mode launches one killable process per document. `threaded` imports the
 solution once in one killable process, then processes documents concurrently. Use threaded mode
-only when the solution and its dependencies are thread-safe.
+only when the solution and its dependencies are thread-safe. Blind evaluations use the fixed
+threaded topology; their liability and upstream-concurrency flags remain enforced.

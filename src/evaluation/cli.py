@@ -358,16 +358,19 @@ def _evaluate_development_dataset(
         admission_deadline=deadline,
         max_upstream_requests=arguments.max_upstream_requests,
     ) as meter:
-        journaled_count = 0
+        journaled_ordinals = set()
         materialized_count = 0
         last_materialized_at = time.monotonic()
 
         def checkpoint(completed, outcome):
-            nonlocal journaled_count, materialized_count, last_materialized_at
+            nonlocal materialized_count, last_materialized_at
             if not arguments.diagnostics:
                 return
-            append_document_journal(arguments.diagnostics, completed[journaled_count:])
-            journaled_count = len(completed)
+            newly_settled = tuple(
+                document for document in completed if document.ordinal not in journaled_ordinals
+            )
+            append_document_journal(arguments.diagnostics, newly_settled)
+            journaled_ordinals.update(document.ordinal for document in newly_settled)
             now = time.monotonic()
             materialization_due = (
                 len(completed) - materialized_count >= 10 or now - last_materialized_at >= 1.0
@@ -463,33 +466,44 @@ def _evaluate_blind_dataset(
     started_at: str,
     max_concurrent_documents: int,
 ) -> EvaluationRun:
-    predictions, report = _run_metered_solution(
-        texts,
+    deadline = time.monotonic() + arguments.timeout
+    with MeteringProxy(
         api_key=api_key,
         upstream_base_url=upstream_base_url,
         spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
-        timeout=arguments.timeout,
-        max_concurrent_documents=max_concurrent_documents,
-    )
-    documents = tuple(
-        DocumentExecution(
-            ordinal=ordinal,
-            document_id=document_id,
-            status=DocumentStatus.COMPLETED,
-            source_tokens=document_tokens[document_id],
-            predictions=tuple(predictions[document_id]),
+        max_inflight_liability_usd=arguments.max_inflight_liability_cents * USD_PER_CENT,
+        admission_deadline=deadline,
+        max_upstream_requests=arguments.max_upstream_requests,
+    ) as meter:
+        documents, termination_category = run_solution_documents(
+            texts,
+            module=SOLUTION_MODULE,
+            meter=meter,
+            deadline=deadline,
+            environment=_solution_environment(meter),
+            source_tokens=document_tokens,
+            on_checkpoint=lambda _documents, _outcome: None,
+            max_concurrent_documents=max_concurrent_documents,
+            execution_mode=ExecutionMode.THREADED,
+            admission_strategy=arguments.admission_strategy,
+            run_id=run_id,
         )
-        for ordinal, document_id in enumerate(texts)
-    )
+        cost = meter.finalize(timeout=arguments.settlement_grace_seconds)
+    if termination_category == "none" and cost.status == CostStatus.INCOMPLETE:
+        termination_category = "metering_incomplete"
+    if termination_category == "none" and any(
+        document.status == DocumentStatus.FAILED for document in documents
+    ):
+        termination_category = "document_failures"
     return _make_run(
         run_id=run_id,
         dataset=arguments.dataset,
         texts=texts,
         source_tokens=source_tokens,
         documents=documents,
-        cost=MeteringOutcome(report, CostStatus.COMPLETE),
+        cost=cost,
         lifecycle_status=LifecycleStatus.TERMINAL,
-        termination_category="none",
+        termination_category=termination_category,
         execution_mode=ExecutionMode.THREADED,
         evaluation_seed=None,
         started_at=started_at,
@@ -577,34 +591,6 @@ def _merge_document_ledger(
 ) -> Tuple[DocumentExecution, ...]:
     completed_by_ordinal = {document.ordinal: document for document in completed}
     return tuple(completed_by_ordinal.get(document.ordinal, document) for document in initial)
-
-
-def _run_metered_solution(
-    texts: Mapping[str, str],
-    *,
-    api_key: str,
-    upstream_base_url: str,
-    spending_limit_usd: Decimal,
-    timeout: float,
-    max_concurrent_documents: int,
-) -> Tuple[Dict[str, List[PIIItem]], CostReport]:
-    with MeteringProxy(
-        api_key=api_key,
-        upstream_base_url=upstream_base_url,
-        spending_limit_usd=spending_limit_usd,
-    ) as meter:
-        try:
-            predictions = _run_batch_solution(
-                texts,
-                module=SOLUTION_MODULE,
-                meter=meter,
-                timeout=timeout,
-                max_concurrent_documents=max_concurrent_documents,
-            )
-        except Exception:
-            meter.seal_and_report()
-            raise
-        return predictions, meter.seal_and_report()
 
 
 def _load_texts(dataset: str) -> Dict[str, str]:
@@ -843,7 +829,7 @@ def _print_blind_test_result(
 
 def _print_payload(payload: Mapping[str, object], *, output_format: str) -> None:
     if output_format == "json":
-        print(json.dumps(payload, separators=(",", ":")))
+        print(json.dumps(payload, separators=(",", ":")), flush=True)
         return
     for key, value in payload.items():
         if isinstance(value, bool):
@@ -853,6 +839,7 @@ def _print_payload(payload: Mapping[str, object], *, output_format: str) -> None
         elif isinstance(value, (dict, list)):
             value = json.dumps(value, separators=(",", ":"))
         print(f"{key}={value}")
+    sys.stdout.flush()
 
 
 def _decimal_text(value: Decimal, *, places: int) -> str:
@@ -930,7 +917,7 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     parser.add_argument(
         "--execution-mode",
         choices=ExecutionMode.all(),
-        default=DEFAULT_EXECUTION_MODE,
+        default=None,
         help=f"solution isolation topology (default: {DEFAULT_EXECUTION_MODE})",
     )
     parser.add_argument(
@@ -1022,6 +1009,10 @@ def _resolve_argument_defaults(parsed: argparse.Namespace, *, parser: argparse.A
     parsed.settled_spend_limit_cents = parsed.settled_spend_limit_cents or parsed.cents_limit or default_cents
     parsed.cents_limit = parsed.settled_spend_limit_cents
     parsed.max_upstream_requests = parsed.max_upstream_requests or parsed.max_concurrent_documents
+    if parsed.execution_mode is None:
+        parsed.execution_mode = (
+            ExecutionMode.THREADED if Dataset.is_blind_test(parsed.dataset or "") else DEFAULT_EXECUTION_MODE
+        )
     if parsed.diagnostics_dir:
         if not parsed.diagnostics_dir.is_dir():
             parser.error(f"--diagnostics-dir does not exist: {parsed.diagnostics_dir}")
@@ -1038,6 +1029,8 @@ def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.Argument
         parser.error("--threaded-worker requires --worker-run-id")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
+    if Dataset.is_blind_test(parsed.dataset or "") and parsed.execution_mode != ExecutionMode.THREADED:
+        parser.error("blind evaluations require --execution-mode threaded")
     if parsed.max_concurrent_documents > MAX_CONCURRENT_DOCUMENTS:
         parser.error(f"--max-concurrent-documents must be at most {MAX_CONCURRENT_DOCUMENTS}")
     if parsed.max_upstream_requests > MAX_CONCURRENT_DOCUMENTS:

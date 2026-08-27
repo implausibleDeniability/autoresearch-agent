@@ -5,7 +5,7 @@ import signal
 import sys
 import threading
 import time
-from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from concurrent.futures import ALL_COMPLETED, FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from typing import Callable, Dict, Iterator, Sequence, Tuple
 
 from src.evaluation.execution import AdmissionStrategy, AdmissionStrategyValue, RAMP_STAGES
@@ -86,7 +86,10 @@ def _execute_tasks(
             active, pending=pending, executor=executor, limit=limit, extract_pii=extract_pii, writer=writer
         )
         while active:
-            completed, _ = wait(active, return_when=FIRST_COMPLETED)
+            return_when = (
+                FIRST_COMPLETED if admission_strategy == AdmissionStrategy.IMMEDIATE else ALL_COMPLETED
+            )
+            completed, _ = wait(active, return_when=return_when)
             healthy = True
             for future in completed:
                 active.pop(future)

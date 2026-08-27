@@ -122,6 +122,57 @@ def test_evidence_rejects_noncontiguous_request_ordinals(tmp_path):
     assert caught.value.issues[0].json_path == "$.requests.receipts"
 
 
+def test_threaded_aggregate_receipts_load_with_canonical_request_ordinals(tmp_path):
+    payload = make_evidence(arm="incumbent", seed=0)
+    receipts = payload["requests"]["receipts"]
+    for request_ordinal, receipt in enumerate(receipts):
+        receipt["document_ordinal"] = -1
+        receipt["request_ordinal"] = request_ordinal
+    plan = [
+        {
+            "document_ordinal": receipt["document_ordinal"],
+            "request_ordinal": receipt["request_ordinal"],
+            "request_key": receipt["request_key"],
+        }
+        for receipt in receipts
+    ]
+    payload["requests"]["request_plan_fingerprint"] = canonical_fingerprint(plan)
+    payload["requests"]["response_bank_fingerprint"] = canonical_fingerprint(receipts)
+    rewrite_fingerprint(payload)
+    path = tmp_path / "threaded.evidence.json"
+    path.write_text(json.dumps(payload))
+
+    record = load_evidence_files((path,), arm="incumbent")[0]
+
+    assert {receipt.document_ordinal for receipt in record.receipts} == {-1}
+    assert [receipt.request_ordinal for receipt in record.receipts] == list(range(121))
+
+
+def test_evidence_rejects_mixed_aggregate_and_document_receipts(tmp_path):
+    payload = make_evidence(arm="incumbent", seed=0)
+    payload["requests"]["receipts"][0]["document_ordinal"] = -1
+    receipts = payload["requests"]["receipts"]
+    receipts.sort(key=lambda receipt: (receipt["document_ordinal"], receipt["request_ordinal"]))
+    plan = [
+        {
+            "document_ordinal": receipt["document_ordinal"],
+            "request_ordinal": receipt["request_ordinal"],
+            "request_key": receipt["request_key"],
+        }
+        for receipt in receipts
+    ]
+    payload["requests"]["request_plan_fingerprint"] = canonical_fingerprint(plan)
+    payload["requests"]["response_bank_fingerprint"] = canonical_fingerprint(receipts)
+    rewrite_fingerprint(payload)
+    path = tmp_path / "mixed.evidence.json"
+    path.write_text(json.dumps(payload))
+
+    with pytest.raises(EvidenceValidationError) as caught:
+        load_evidence_files((path,), arm="incumbent")
+
+    assert caught.value.issues[0].json_path == "$.requests.receipts"
+
+
 def test_evidence_rejects_document_counts_that_disagree_with_document_fields(tmp_path):
     payload = make_evidence(arm="incumbent", seed=0)
     payload["metrics"]["documents"][0]["counts"]["true_positive"] += 1

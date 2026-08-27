@@ -22,6 +22,11 @@ from src.evaluation.execution import (
 )
 from src.evaluation.models import PIIItem
 from src.evaluation.run_results import DocumentExecution, DocumentStatus, UsageAttributionStatus
+from src.evaluation.worker_frames import (
+    MAX_PII_VALUE_LENGTH,
+    MAX_PREDICTIONS_PER_DOCUMENT,
+    MAX_VALUES_PER_FIELD,
+)
 
 RESULT_FD_ENVIRONMENT = "EVALUATION_RESULT_FD"
 MAX_RESULT_BYTES = 10_000_000
@@ -392,10 +397,30 @@ def _parse_document_record(
 def _deserialize_predictions(serialized: object) -> Tuple[PIIItem, ...]:
     if not isinstance(serialized, list):
         raise WorkerProtocolError("worker predictions must be a list")
-    try:
-        return tuple(
-            PIIItem(**{field: tuple(values) for field, values in person.items()}) for person in serialized
+    if len(serialized) > MAX_PREDICTIONS_PER_DOCUMENT:
+        raise WorkerProtocolError(
+            f"worker predictions exceeded {MAX_PREDICTIONS_PER_DOCUMENT} people per document"
         )
+    try:
+        predictions = []
+        for person in serialized:
+            fields = {}
+            for field, values in person.items():
+                if not isinstance(values, (list, tuple)):
+                    raise TypeError
+                if len(values) > MAX_VALUES_PER_FIELD:
+                    raise WorkerProtocolError(
+                        f"worker prediction field exceeded {MAX_VALUES_PER_FIELD} values"
+                    )
+                if any(not isinstance(value, str) for value in values):
+                    raise TypeError
+                if any(len(value) > MAX_PII_VALUE_LENGTH for value in values):
+                    raise WorkerProtocolError(
+                        f"worker prediction value exceeded {MAX_PII_VALUE_LENGTH} characters"
+                    )
+                fields[field] = tuple(values)
+            predictions.append(PIIItem(**fields))
+        return tuple(predictions)
     except (AttributeError, TypeError) as error:
         raise WorkerProtocolError("worker predictions do not match the PII schema") from error
 

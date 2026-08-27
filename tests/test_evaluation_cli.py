@@ -73,6 +73,15 @@ def test_cli_exposes_threaded_execution_and_split_cost_limits():
     assert parsed.admission_strategy == AdmissionStrategy.IMMEDIATE
 
 
+def test_blind_cli_defaults_to_fixed_threaded_topology_and_rejects_isolated_override():
+    blind = ("--dataset", "test-private-v2", "--frozen-commit", "abc1234")
+    parsed = _parse_arguments(blind)
+
+    assert parsed.execution_mode == ExecutionMode.THREADED
+    with pytest.raises(SystemExit):
+        _parse_arguments((*blind, "--execution-mode", ExecutionMode.ISOLATED))
+
+
 @pytest.mark.parametrize("option", ["--max-concurrent-documents", "--max-upstream-requests"])
 def test_cli_rejects_concurrency_above_hard_limit(option):
     with pytest.raises(SystemExit):
@@ -111,6 +120,19 @@ def test_cli_accepts_diagnostics_path():
     parsed = _parse_arguments(("--dataset", "debug", "--diagnostics", "diagnostics.json"))
 
     assert parsed.diagnostics == Path("diagnostics.json")
+
+
+def test_cli_diagnostics_directory_requires_existing_directory_and_uses_unique_names(tmp_path):
+    missing = tmp_path / "missing"
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", "debug", "--diagnostics-dir", str(missing)))
+
+    first = _parse_arguments(("--dataset", "debug", "--diagnostics-dir", str(tmp_path)))
+    second = _parse_arguments(("--dataset", "debug", "--diagnostics-dir", str(tmp_path)))
+
+    assert first.diagnostics.parent == second.diagnostics.parent == tmp_path
+    assert first.diagnostics.name.startswith("debug-")
+    assert first.diagnostics != second.diagnostics
 
 
 def test_cli_defaults_to_seed_zero_and_accepts_an_explicit_seed():
@@ -965,17 +987,15 @@ def test_threaded_evaluation_uses_one_worker_and_preserves_document_order(tmp_pa
     ground_truth = {document_id: [{"first_name": [text]}] for document_id, text in documents.items()}
     (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
     (tmp_path / "solution.py").write_text("""import os
-import threading
+import time
 from pathlib import Path
 
 from src.evaluation.models import PIIItem
 
-barrier = threading.Barrier(4)
-
 
 def extract_pii(text):
     Path(f"worker-pid-{os.getpid()}").touch()
-    barrier.wait(timeout=2.0)
+    time.sleep({"John": 0.3, "Dave": 0.0, "Jane": 0.2, "Alex": 0.1}[text])
     return [PIIItem(first_name=(text,))]
 """)
     repository = Path(__file__).parents[1]
@@ -994,6 +1014,8 @@ def extract_pii(text):
             "immediate",
             "--max-concurrent-documents",
             "4",
+            "--diagnostics",
+            "threaded.json",
         ],
         cwd=tmp_path,
         env=environment,
@@ -1016,6 +1038,75 @@ def extract_pii(text):
     )
     assert [result["document_id"] for result in results] == list(documents)
     assert {result["usage_attribution_status"] for result in results} == {"unavailable"}
+    journal = [
+        json.loads(line) for line in (tmp_path / "threaded.json.journal.jsonl").read_text().splitlines()
+    ]
+    assert [record["document"]["ordinal"] for record in journal] == [1, 3, 2, 0]
+
+
+def test_non_reentrant_solution_succeeds_isolated_and_fails_truthfully_threaded(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    (text_directory / "second.txt").write_text("Jane")
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(
+        json.dumps(
+            {
+                "doc": [{"first_name": ["John"]}],
+                "second": [{"first_name": ["Jane"]}],
+            }
+        )
+    )
+    (tmp_path / "solution.py").write_text("""import time
+
+from src.evaluation.models import PIIItem
+
+active = 0
+
+
+def extract_pii(text):
+    global active
+    active += 1
+    time.sleep(0.1)
+    if active > 1:
+        raise RuntimeError("solution is not reentrant")
+    active -= 1
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+
+    def evaluate(mode):
+        return subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.evaluation.cli",
+                "--dataset",
+                "debug",
+                "--execution-mode",
+                mode,
+                "--admission-strategy",
+                "immediate",
+                "--max-concurrent-documents",
+                "2",
+            ],
+            cwd=tmp_path,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=10.0,
+            check=False,
+        )
+
+    isolated = evaluate("isolated")
+    threaded = evaluate("threaded")
+
+    assert isolated.returncode == 0, isolated.stderr
+    assert "documents_completed=2" in isolated.stdout
+    assert threaded.returncode == 2, threaded.stderr
+    assert "termination_category=document_failures" in threaded.stdout
+    assert "documents_failed=0" not in threaded.stdout
 
 
 def test_threaded_evaluation_reaches_one_hundred_fifty_active_tasks(tmp_path: Path):
@@ -1081,8 +1172,9 @@ def test_threaded_health_ramp_stops_admission_after_early_failure(tmp_path: Path
 
 def extract_pii(text):
     if text == "FAIL":
+        time.sleep(0.2)
         raise RuntimeError("stop ramp")
-    time.sleep(0.2)
+    time.sleep(0.01)
     return []
 """)
     repository = Path(__file__).parents[1]

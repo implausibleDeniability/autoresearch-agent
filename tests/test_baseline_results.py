@@ -22,6 +22,10 @@ FIELDS = [
     "cost",
     "budget_cost_usd",
     "duration_seconds",
+    "result_status",
+    "cost_status",
+    "cost_is_final",
+    "execution_mode",
 ]
 DATASETS = ("dev-19k", "dev-87k", "dev-202k")
 
@@ -43,6 +47,10 @@ def test_saved_baselines_are_complete_and_internally_consistent():
     source_tokens = {dataset: _count_source_tokens(_load_texts(dataset)) for dataset in DATASETS}
     for row in rows:
         label = f"baseline row {row['run']} ({row['dataset']})"
+        assert row["result_status"] == "complete", f"{label} is not complete"
+        assert row["cost_status"] == "complete", f"{label} is not fully metered"
+        assert row["cost_is_final"] == "true", f"{label} cost is not final"
+        assert row["execution_mode"] == "threaded", f"{label} used the wrong topology"
         metrics = EntityMetrics(
             true_positive=int(row["true_positive"]),
             false_positive=int(row["false_positive"]),
