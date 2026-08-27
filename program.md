@@ -23,7 +23,7 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 - **Model access:** Use only the OpenAI GPT-4o and GPT-4o mini models supported by the evaluator. Route every command that may make a paid model call through the evaluation CLI; it counts as an evaluation.
 - **Evaluator cache:** Treat `.cache-local/` and `.openai-response-cache/` as evaluator-owned. During setup, copy the local cache only as directed by `research-runbook.md`. Otherwise, do not inspect, modify, copy, delete, or commit either cache.
 - **Protected data:** Never access `data/raw`. You may discover the blind dataset name by listing directories matching `data/test-*`, but access their contents only through the final evaluator or with explicit user permission.
-- **Implementation scope:** Modify and commit only `solution.py`. Use `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and development diagnostic files only as uncommitted working files. Do not modify other repository files.
+- **Implementation scope:** Keep candidate commits limited to `solution.py` and commit research records separately. Do not modify other repository files.
 - **Diagnostics:** Retain one uniquely named diagnostic file per development evaluation. Never create blind-test diagnostics.
 - **Offline checks:** You may run unlimited free checks against synthetic inputs with fake or patched model responses, including temporary scripts outside the repository. They must not use credentials, external services, repository datasets, or evaluation metrics and do not count toward the 40-evaluation limit.
 
@@ -41,7 +41,7 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 
 **Measure the current baseline.** Before modifying `solution.py`, establish a complete `dev-202k` baseline panel on seeds `0` through `2` with development diagnostics and comparison-evidence sidecars. Record it as `keep` and use it as the starting control bank.
 
-For the first qualifying real panel produced after adopting comparison-evidence schema v1, record the legacy score summary and the new comparator decision in `research.md` before making that panel the control. This one-time shadow check does not authorize extra targeted runs.
+For the first qualifying real panel produced after adopting comparison-evidence schema v1, record the legacy score summary and the new comparator decision in `workspace/research.md` before making that panel the control. This one-time shadow check does not authorize extra targeted runs.
 
 **Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged.
 
@@ -69,34 +69,29 @@ No architecture, number of steps, balance of model and non-model methods, librar
 
 **Use external research.** Before the first non-baseline experiment, consult relevant primary sources, official documentation, established techniques, available libraries, and prior research. Return to external research when unfamiliar failures or weak progress make it likely to improve the experiment portfolio.
 
-Treat findings as possibilities, not prescribed solutions. Record promising findings in `research.md` with their source, relevance, uncertainty, and cost or runtime implications.
+Treat findings as possibilities, not prescribed solutions. Link each useful finding to a hypothesis or record its disposition in `workspace/research.md`.
 
-**Maintain a short, ranked portfolio.** For each hypothesis in `research.md`, record:
+**Maintain a short, ranked portfolio.** Keep current hypotheses in `workspace/HYPOTHESIS_PORTFOLIO.md` with stable IDs. Rank them by evidence, upside, generality, uncertainty, information value, cost, and complexity.
 
-- the observed problem or opportunity;
-- why the hypothesis might improve the result;
-- its main uncertainty;
-- its estimated evaluation cost;
-- what evidence would support or reject it.
+**Keep a chronological journal.** Record each experiment's plan in `workspace/research.md` before implementation and append its result and conclusion afterward. Preserve history; record corrections as amendments.
 
-Before each evaluation, compare the available hypotheses and choose the experiment with the highest expected research value, considering potential quality improvement, information gained, cost, runtime, complexity, and remaining runs.
+Before each evaluation, choose the hypothesis with the highest expected research value. Revise and rerank the portfolio whenever evidence changes; briefly explain any lower-ranked choice.
 
-The portfolio is a decision aid, not a fixed plan. Add, revise, combine, reorder, or discard hypotheses whenever new evidence changes their value. Do not continue an existing line merely because it is already underway.
-
-If a lower-ranked experiment is selected, briefly record why it became the best use of the next run.
+**Audit the portfolio.** At the recorded interval, revisit assumptions, neglected evidence, and research direction, then rerank.
 
 ## Experiment loop
 
-1. Review the incumbent and accumulated evidence, then select the highest-value hypothesis from the ranked portfolio.
-2. Implement one meaningful experiment in `solution.py` and commit the exact candidate.
-3. Check the remaining evaluation and spending budgets, then evaluate by following `research-runbook.md`. Use smaller development datasets for cheap hypothesis testing.
-4. Interpret the run status before using its metrics and inspect the diagnostics. Partial results are diagnostic-only.
-5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, complete the runbook's paired `dev-202k` comparison protocol for that exact commit.
-6. Record every evaluation and its status, update the incumbent and hypothesis portfolio, and continue.
+1. Review the incumbent and evidence, then select the highest-value hypothesis.
+2. Record and commit the experiment plan and portfolio state.
+3. Implement one meaningful change in `solution.py` and commit the candidate separately.
+4. Check the budgets and evaluate by following `research-runbook.md`.
+5. Interpret the run status and inspect the diagnostics. Partial results are diagnostic-only.
+6. Before keeping or promoting a candidate, complete the runbook's paired `dev-202k` protocol.
+7. Append the conclusion, update and commit the research records, audit the portfolio if due, and continue.
 
 ## Communication with the supervisor
 
-Use `REQUESTS.md` for information or requests that could improve the research:
+Use `workspace/REQUESTS.md` for information or requests that could improve the research:
 
 - evidence of problems in the ground truth, annotation policy, evaluator, matching, or metrics;
 - packages or capabilities that could materially improve results;

@@ -7,7 +7,7 @@ description: Review a completed PII autoresearch run and identify gaps in its re
 
 Review existing artifacts only. Do not run evaluations, make paid model calls, or inspect restricted data.
 
-Locate the requested autoresearch worktree, or the most recently active one. Read its `program.md`, `research.md`, `results.tsv`, `REQUESTS.md`, relevant logs, and Git history and diffs for `solution.py`. Read `baseline-results.tsv` when useful.
+Locate the requested autoresearch worktree, or the most recently active one. Read its `program.md`, the tracked files and relevant logs under `workspace/`, and Git history and diffs for those research files and `solution.py`. For a legacy run without `workspace/results.tsv`, use the corresponding root-level artifacts. For a legacy run without a portfolio file, use the portfolio recorded in `research.md`. Read `baseline-results.tsv` when useful.
 
 Do retrospection on this research. Answer these questions sequentially internally, then give the top ten gaps or problems in the research design and suggestions for improving them:
 
