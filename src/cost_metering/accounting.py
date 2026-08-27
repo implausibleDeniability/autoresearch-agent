@@ -137,6 +137,15 @@ class CostReport:
 
 
 @dataclass(frozen=True)
+class RequestReceipt:
+    document_ordinal: int
+    request_ordinal: int
+    request_key: str
+    response_content_sha256: str
+    replayed: bool
+
+
+@dataclass(frozen=True)
 class MeteringOutcome:
     report: CostReport
     status: CostStatusValue
@@ -149,6 +158,7 @@ class MeteringOutcome:
     cache_writes: int = 0
     cache_write_errors: int = 0
     cache_errors: int = 0
+    request_receipts: Tuple[RequestReceipt, ...] = ()
 
 
 def cost_is_comparable(outcome: MeteringOutcome, *, result_is_complete: bool) -> bool:

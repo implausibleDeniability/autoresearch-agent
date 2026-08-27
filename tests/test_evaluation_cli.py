@@ -1,5 +1,6 @@
 import json
 import os
+import stat
 import subprocess
 import sys
 import threading
@@ -417,14 +418,19 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     assert "resolved_evaluation_mode=cache-fill" in completed.stderr
     assert "resolved_evaluation_seed=0" in completed.stderr
     assert "diagnostics written: diagnostics.json (1 documents, schema v7)" in completed.stderr
-    diagnostics_duration = next(
-        line.removeprefix("diagnostics_duration_seconds=")
-        for line in completed.stderr.splitlines()
-        if line.startswith("diagnostics_duration_seconds=")
-    )
-    assert float(diagnostics_duration) >= 0
+    assert "diagnostics_duration_seconds=" not in completed.stderr
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
+    evidence_path = tmp_path / "diagnostics.evidence.json"
+    evidence = json.loads(evidence_path.read_text())
     assert diagnostics["schema_version"] == 7
+    assert evidence["schema_version"] == 1
+    assert evidence["artifact_kind"] == "pii_comparison_evidence"
+    assert evidence["run"]["result_status"] == "complete"
+    assert evidence["metrics"]["documents"][0]["counts"]["true_positive"] == 1
+    assert evidence["requests"]["receipt_count"] == 1
+    assert evidence["provenance"]["promotion_capable"] is False
+    assert "John" not in evidence_path.read_text()
+    assert stat.S_IMODE(evidence_path.stat().st_mode) == 0o600
     assert diagnostics["cost_is_comparable"] is True
     assert diagnostics["evaluation_mode"] == "cache-fill"
     assert diagnostics["evaluation_seed"] == 0
@@ -741,6 +747,57 @@ def extract_pii(text):
     assert [result["document_id"] for result in results] == list(documents)
 
 
+def test_development_workers_keep_importing_the_owner_only_solution_snapshot(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    (text_directory / "second.txt").write_text("Jane")
+    ground_truth = {
+        "doc": [{"first_name": ["John"]}],
+        "second": [{"first_name": ["Jane"]}],
+    }
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""from pathlib import Path
+
+from src.evaluation.models import PIIItem
+
+
+def extract_pii(text):
+    if text == "John":
+        Path("solution.py").write_text("raise RuntimeError('workspace mutation')")
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--diagnostics",
+            "diagnostics.json",
+            "--max-concurrent-documents",
+            "1",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    evidence = json.loads((tmp_path / "diagnostics.evidence.json").read_text())
+    assert evidence["run"]["coverage"]["completed"] == 2
+    assert evidence["provenance"]["solution_matches_snapshot_end"] is False
+    assert evidence["provenance"]["promotion_capable"] is False
+    assert "solution_changed_during_run" in evidence["provenance"]["invalidation_reasons"]
+
+
 def test_first_document_timeout_writes_terminal_ledger_and_kills_process_group(tmp_path: Path):
     # setup
     _write_cli_fixture(tmp_path)
@@ -796,6 +853,11 @@ def extract_pii(text):
         "not_attempted": 0,
     }
     assert diagnostics["document_results"][0]["failure_category"] == "dataset_deadline"
+    evidence = json.loads((tmp_path / "diagnostics.evidence.json").read_text())
+    assert evidence["run"]["result_status"] == "partial"
+    assert evidence["requests"]["status"] == "incomplete"
+    assert evidence["requests"]["request_plan_fingerprint"] is None
+    assert evidence["requests"]["response_bank_fingerprint"] is None
 
 
 def test_dataset_description_requires_no_credentials_or_api_call(tmp_path: Path):

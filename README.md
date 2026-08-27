@@ -25,6 +25,17 @@ metric is an F-score that weighs recall five times as heavily as precision.
 **Cost tracking**: Paid model calls pass through an evaluator-owned proxy that meters spending and
 enforces per-evaluation limits, while the agent tracks the cumulative run budget.
 
+## Careful, cost-efficient research
+
+LLM evaluations are noisy and expensive, so the agent does not treat every score change as a real
+improvement. It uses document-paired linearized testing to make comparisons more sensitive while
+requiring fewer model runs, then applies conservative rules to decide when to continue, stop, or
+leave a result inconclusive.
+
+Every decision is tied to exact code, data, evaluator, and model-response evidence. This keeps the
+research auditable, prevents mismatched or partial runs from becoming false wins, and reduces API
+spend without sacrificing statistical discipline.
+
 ## Framework self-improvement
 
 You can improve the autoresearch framework using feedback from the research agent. The agent records
