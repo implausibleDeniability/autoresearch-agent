@@ -8,6 +8,7 @@ dependencies = [
     "langchain-text-splitters>=1.0.0",
     "openai>=2.0.0",
     "pydantic>=2.0.0",
+    "rapidfuzz>=3.14.0",
     "tiktoken>=0.7.0",
 ]
 

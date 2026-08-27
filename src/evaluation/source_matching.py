@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Tuple
 
+from rapidfuzz.fuzz import ratio as indel_similarity
+
 from src.evaluation.matching import (
     MATCH,
     MINIMUM_FUZZY_LENGTH,
@@ -10,7 +12,7 @@ from src.evaluation.matching import (
     normalize_value,
     similarity_length_bounds,
 )
-from src.evaluation.source_candidate_windows import CandidateWindowBudgetExceeded, candidate_windows
+from src.evaluation.source_candidate_windows import CandidateWindowIndex
 from src.evaluation.source_evidence import SourceEvidence, SourceMatchKind, select_source_evidence
 
 SOURCE_MATCHING_POLICY_VERSION = 1
@@ -52,7 +54,8 @@ def source_matching_policy() -> Dict[str, object]:
 class SourceTextMatcher:
     def __init__(self, text: str) -> None:
         self._text = text
-        self._tokens = tuple(match.span() for match in re.finditer(r"\S+", text))
+        tokens = tuple(match.span() for match in re.finditer(r"\S+", text))
+        self._candidate_index = CandidateWindowIndex(text, tokens=tokens)
         self._cache: Dict[Tuple[str, str], SourceMatchResult] = {}
 
     def find(self, value: str, *, role: SourceValueRoleLiteral) -> SourceMatchResult:
@@ -97,7 +100,7 @@ class SourceTextMatcher:
         if not normalized_value:
             return [], True
         minimum_length, maximum_length = similarity_length_bounds(value)
-        if minimum_length > len(normalize_value(self._text)):
+        if minimum_length > self._candidate_index.normalized_length(0, end=len(self._text)):
             return [], True
         maximum_windows = FUZZY_WORK_BUDGET // max(1, len(normalized_value)) ** 2
         windows = self._candidate_windows(
@@ -123,21 +126,12 @@ class SourceTextMatcher:
     def _candidate_windows(
         self, *, minimum_length: int, maximum_length: int, maximum_windows: int
     ) -> List[Tuple[int, int]] | None:
-        windows: Dict[Tuple[int, int], None] = {}
-        try:
-            for span in candidate_windows(
-                self._text,
-                tokens=self._tokens,
-                minimum_length=minimum_length,
-                maximum_length=maximum_length,
-                maximum_examined=CANDIDATE_ENUMERATION_BUDGET,
-            ):
-                windows[span] = None
-                if len(windows) > maximum_windows:
-                    return None
-        except CandidateWindowBudgetExceeded:
-            return None
-        return list(windows)
+        return self._candidate_index.find(
+            minimum_length=minimum_length,
+            maximum_length=maximum_length,
+            maximum_windows=maximum_windows,
+            maximum_examined=CANDIDATE_ENUMERATION_BUDGET,
+        )
 
 
 def _raw_evidence(start: int, *, value: str) -> SourceEvidence:
@@ -167,10 +161,26 @@ def _matching_evidence(
     end: int,
 ) -> SourceEvidence | None:
     if role == SourceValueRole.PREDICTION:
-        comparison = compare_values(value, ground_truth=candidate)
+        prediction = value
+        ground_truth = candidate
     else:
-        comparison = compare_values(candidate, ground_truth=value)
+        prediction = candidate
+        ground_truth = value
+    if not _could_match_values(prediction, ground_truth=ground_truth):
+        return None
+    comparison = compare_values(prediction, ground_truth=ground_truth)
     if comparison.result != MATCH:
         return None
     match_kind = SourceMatchKind.NORMALIZED_EXACT if comparison.normalized_exact else SourceMatchKind.FUZZY
     return SourceEvidence(start=start, end=end, match_kind=match_kind, similarity=comparison.similarity)
+
+
+def _could_match_values(prediction: str, *, ground_truth: str) -> bool:
+    predicted = normalize_value(prediction)
+    expected = normalize_value(ground_truth)
+    if predicted == expected:
+        return True
+    if len(predicted) < MINIMUM_FUZZY_LENGTH or len(expected) < MINIMUM_FUZZY_LENGTH:
+        return False
+    threshold = 100 * SIMILARITY_THRESHOLD
+    return indel_similarity(predicted, expected, score_cutoff=threshold) >= threshold
