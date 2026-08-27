@@ -21,7 +21,7 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 ## Guardrails
 
 - **Model access:** Use only the OpenAI GPT-4o and GPT-4o mini models supported by the evaluator. Route every command that may make a paid model call through the evaluation CLI; it counts as an evaluation.
-- **Evaluator cache:** Treat `.openai-response-cache/` as evaluator-owned. Do not inspect, modify, copy, delete, or commit it.
+- **Evaluator cache:** Treat `.cache-local/` and `.openai-response-cache/` as evaluator-owned. During setup, copy the local cache only as directed by `research-runbook.md`. Otherwise, do not inspect, modify, copy, delete, or commit either cache.
 - **Protected data:** Never access `data/raw`. You may discover the blind dataset name by listing directories matching `data/test-*`, but access their contents only through the final evaluator or with explicit user permission.
 - **Implementation scope:** Modify and commit only `solution.py`. Use `results.tsv`, `research.md`, `REQUESTS.md`, `run.log`, and development diagnostic files only as uncommitted working files. Do not modify other repository files.
 - **Diagnostics:** Retain one uniquely named diagnostic file per development evaluation. Never create blind-test diagnostics.

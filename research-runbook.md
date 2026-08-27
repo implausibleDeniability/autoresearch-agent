@@ -7,7 +7,7 @@ This is the technical companion to `program.md`. Follow it for setup, evaluation
 1. Read the repository and user instructions for workspace location and naming.
 2. In the primary repository, check out `main` and pull the latest remote `main`. Stop if the pull fails.
 3. Create `autoresearch/<tag>` from updated `main`, using a filesystem-safe day-and-time tag such as `aug-8-11-52`. When the instructions require a worktree, create and enter it with `git worktree add -b autoresearch/<tag> <path> main`. If workspace placement is unspecified, ask before choosing it.
-4. For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored.
+4. For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored. If the primary repository contains `.cache-local/`, copy it without inspection to the new worktree as `.openai-response-cache/`, preserve its permissions, and confirm both paths remain ignored.
 5. Create `results.tsv` with only the header defined below, `research.md` with a short ranked experiment portfolio, and the ignored `diagnostics/` directory. Do not commit these working files.
 6. Review `baseline-results.tsv` to understand ordinary baseline variation, cost, and runtime before spending the first evaluation.
 7. Inspect dataset scale with `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. This command is read-only, requires no API credentials, and does not count as an evaluation.
@@ -116,6 +116,8 @@ If `result_status` is missing, treat the attempt as an evaluator or protocol cra
 ## Initial baseline
 
 Before modifying `solution.py`, evaluate the unchanged solution on `dev-202k` with seeds `0` through `4`. Follow the development evaluation protocol and use a new diagnostic path for each run. Require five complete, final results and record them as the current baseline `keep` panel.
+
+Use `--cache-fill` for this panel. Restored hits are valid baseline evidence; only misses require live requests. Do not use `--fresh` merely to refresh a compatible cached baseline.
 
 ## Diagnostics and failures
 
