@@ -32,6 +32,8 @@ UPSTREAM_HEADER_BLOCKLIST = {
     "upgrade",
 }
 DOWNSTREAM_HEADER_BLOCKLIST = UPSTREAM_HEADER_BLOCKLIST | {"content-encoding"}
+MAX_REQUEST_BODY_BYTES = 10_000_000
+REQUEST_READ_TIMEOUT_SECONDS = 30.0
 
 
 class MeterStateProtocol(Protocol):
@@ -53,7 +55,12 @@ class MeterStateProtocol(Protocol):
         error: str = "",
         run_token: str = "",
         reservation_usd: Decimal = Decimal(),
+        upstream_started: bool = False,
     ) -> None: ...
+
+    def begin_upstream_request(self) -> bool: ...
+
+    def finish_upstream_request(self) -> None: ...
 
     def record_error(self, run_token: str, *, error: str) -> None: ...
 
@@ -128,6 +135,7 @@ class MeterHandler(BaseHTTPRequestHandler):
         error = ""
         cache_fill_key: Optional[str] = None
         cache_fill_succeeded = False
+        upstream_started = False
         try:
             if state.evaluation_mode is EvaluationMode.CACHE:
                 if not self._replay_cache_only(state, path=path, body=body):
@@ -158,27 +166,37 @@ class MeterHandler(BaseHTTPRequestHandler):
                         self._send_json(rejection_status, payload={"error": "metering request rejected"})
                     else:
                         reservation_usd = requested_reservation
-                        state.record_live_request()
-                        forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
-                        self._observed_usage = forwarded.usage
-                        if forwarded.cached_response is None:
-                            error = "cache-fill live response was not successful and cacheable"
-                        elif state.store_cached_response(
-                            path=path,
-                            body=body,
-                            headers=self.headers,
-                            response=forwarded.cached_response,
-                        ):
-                            cache_fill_succeeded = True
+                        if not state.begin_upstream_request():
+                            error = "cache-fill upstream concurrency wait exceeded the deadline"
+                            self._send_json(429, payload={"error": "metering request rejected"})
                         else:
-                            error = (
-                                "paid inference succeeded but the evaluator-owned response cache "
-                                "could not persist it"
-                            )
+                            upstream_started = True
+                            state.record_live_request()
+                            forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
+                            self._observed_usage = forwarded.usage
+                            if forwarded.cached_response is None:
+                                error = "cache-fill live response was not successful and cacheable"
+                            elif state.store_cached_response(
+                                path=path,
+                                body=body,
+                                headers=self.headers,
+                                response=forwarded.cached_response,
+                            ):
+                                cache_fill_succeeded = True
+                            else:
+                                error = (
+                                    "paid inference succeeded but the evaluator-owned response cache "
+                                    "could not persist it"
+                                )
             else:
-                state.record_live_request()
-                forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
-                self._observed_usage = forwarded.usage
+                if not state.begin_upstream_request():
+                    error = "upstream concurrency wait exceeded the evaluation deadline"
+                    self._send_json(429, payload={"error": "metering request rejected"})
+                else:
+                    upstream_started = True
+                    state.record_live_request()
+                    forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
+                    self._observed_usage = forwarded.usage
         except CacheFillFailedError:
             error = "a previous cache-fill attempt for this exact request failed"
             if not self._response_started:
@@ -207,6 +225,8 @@ class MeterHandler(BaseHTTPRequestHandler):
             if not self._response_started:
                 self._send_json(502, payload={"error": error})
         finally:
+            if upstream_started:
+                state.finish_upstream_request()
             if cache_fill_key is not None:
                 state.finish_cache_fill(cache_fill_key, succeeded=cache_fill_succeeded)
             state.finish_request(
@@ -214,6 +234,7 @@ class MeterHandler(BaseHTTPRequestHandler):
                 error=error,
                 run_token=run_token,
                 reservation_usd=reservation_usd,
+                upstream_started=upstream_started,
             )
 
     def _prepare_request(self) -> tuple[str, bytes, bool]:
@@ -284,6 +305,9 @@ class MeterHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", "0"))
         if content_length <= 0:
             raise ValueError(f"request body is empty for {self.path}")
+        if content_length > MAX_REQUEST_BODY_BYTES:
+            raise ValueError(f"request body is {content_length} bytes; maximum is {MAX_REQUEST_BODY_BYTES}")
+        self.connection.settimeout(REQUEST_READ_TIMEOUT_SECONDS)
         return self.rfile.read(content_length)
 
     def _send_response(self, response: httpx.Response, *, content: bytes) -> None:

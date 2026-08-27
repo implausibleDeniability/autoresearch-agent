@@ -13,6 +13,8 @@ from src.evaluation.worker import (
     _parse_document_record,
     _read_record,
 )
+from src.evaluation.threaded_executor import _validate_frame
+from src.evaluation.worker_frames import FrameType, PROTOCOL_VERSION, ThreadedTask
 
 
 def test_worker_start_failure_returns_protocol_error(monkeypatch):
@@ -120,3 +122,23 @@ def test_worker_result_channel_rejects_eof_mid_record():
             _read_record(read_fd, buffer=b"", deadline=time.monotonic() + 1.0)
     finally:
         os.close(read_fd)
+
+
+def test_threaded_protocol_rejects_forged_identity_and_illegal_transition():
+    task = ThreadedTask(ordinal=0, document_id="doc", text="text", source_tokens=1)
+    base = {"protocol_version": PROTOCOL_VERSION, "run_id": "run", "ordinal": 0}
+
+    with pytest.raises(WorkerProtocolError, match="wrong document"):
+        _validate_frame(
+            {**base, "frame_type": FrameType.ACCEPTED, "document_id": "other"},
+            run_id="run",
+            task_by_ordinal={0: task},
+            states={0: "queued"},
+        )
+    with pytest.raises(WorkerProtocolError, match="illegal worker transition"):
+        _validate_frame(
+            {**base, "frame_type": FrameType.SETTLED, "document_id": "doc"},
+            run_id="run",
+            task_by_ordinal={0: task},
+            states={0: "queued"},
+        )

@@ -5,7 +5,7 @@ from collections import Counter
 from dataclasses import asdict
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from src.cost_metering.accounting import cost_is_comparable
 from src.evaluation.results import (
@@ -26,9 +26,29 @@ from src.evaluation.source_matching import (
     source_matching_policy,
 )
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 CONTEXT_RADIUS = 60
 MAX_OCCURRENCES_PER_VALUE = 20
+
+
+def diagnostics_journal_path(path: Path) -> Path:
+    return path.with_name(f"{path.name}.journal.jsonl")
+
+
+def append_document_journal(path: Path, documents: Sequence[DocumentExecution]) -> None:
+    if not documents:
+        return
+    journal = diagnostics_journal_path(path)
+    descriptor = os.open(journal, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    with os.fdopen(descriptor, "a") as file:
+        os.fchmod(file.fileno(), 0o600)
+        for document in documents:
+            payload = {
+                "document": serialize_document_execution(document),
+                "predictions": [asdict(person) for person in document.predictions],
+            }
+            file.write(json.dumps(payload, separators=(",", ":")) + "\n")
+        file.flush()
 
 
 def preflight_diagnostics_path(path: Path) -> None:
@@ -39,6 +59,9 @@ def preflight_diagnostics_path(path: Path) -> None:
         if not path.is_file():
             raise ValueError(f"diagnostics path is not a file: {path}")
         raise ValueError(f"diagnostics path already exists; choose a new path: {path}")
+    journal = diagnostics_journal_path(path)
+    if journal.exists():
+        raise ValueError(f"diagnostics journal already exists; choose a new path: {journal}")
     with tempfile.NamedTemporaryFile(dir=parent, prefix=f".{path.name}.") as file:
         file.write(b"{}")
         file.flush()
@@ -111,6 +134,8 @@ def _serialize_run(run: EvaluationRun) -> Dict[str, object]:
         "result_status": run.result_status,
         "score_is_final": run.result_status == "complete",
         "termination_category": run.termination_category,
+        "execution_mode": run.execution_mode,
+        "usage_attribution_status": run.usage_attribution_status,
         "evaluation_seed": run.evaluation_seed,
         "coverage": {
             "total": len(run.documents),
@@ -136,6 +161,13 @@ def _serialize_run(run: EvaluationRun) -> Dict[str, object]:
         "cache_write_errors": run.cost.cache_write_errors,
         "cache_errors": run.cost.cache_errors,
         "observed_api_cost_usd": str(run.cost.report.total_usd),
+        "reserved_api_cost_usd": str(run.cost.reserved_api_cost_usd),
+        "unknown_api_cost_liability_usd": str(run.cost.unknown_api_cost_liability_usd),
+        "maximum_api_cost_exposure_usd": str(run.cost.maximum_api_cost_exposure_usd),
+        "cost_is_final": run.cost.cost_is_final,
+        "peak_reserved_api_cost_usd": str(run.cost.peak_reserved_api_cost_usd),
+        "peak_active_upstream_requests": run.cost.peak_active_upstream_requests,
+        "reservation_wait_seconds": run.cost.reservation_wait_seconds,
         "metering_error_count": len(run.cost.errors),
         "document_results": [serialize_document_execution(document) for document in run.documents],
     }
@@ -156,6 +188,7 @@ def serialize_document_execution(document: DocumentExecution) -> Dict[str, objec
         "observed_api_cost_usd": str(usage.total_usd) if usage is not None else None,
         "latency_seconds": document.latency_seconds,
         "usage_status": document.usage_status,
+        "usage_attribution_status": document.usage_attribution_status,
         "failure_category": document.failure_category or None,
         "error_message": document.error_message or None,
         "retryable": document.retryable,

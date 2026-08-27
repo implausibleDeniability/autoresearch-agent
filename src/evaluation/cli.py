@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from statistics import median
@@ -25,11 +25,23 @@ from src.cost_metering.accounting import (
 from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
 from src.evaluation.diagnostics import (
     SCHEMA_VERSION,
+    append_document_journal,
     preflight_diagnostics_path,
     serialize_document_execution,
     write_diagnostics,
 )
 from src.evaluation.metrics import EntityMetrics, evaluate_completed_trace
+from src.evaluation.execution import (
+    AdmissionStrategy,
+    DEFAULT_ADMISSION_STRATEGY,
+    DEFAULT_EXECUTION_MODE,
+    DEFAULT_MAX_CONCURRENT_DOCUMENTS,
+    DEFAULT_MAX_INFLIGHT_LIABILITY_CENTS,
+    DEFAULT_SETTLEMENT_GRACE_SECONDS,
+    ExecutionMode,
+    MAX_CONCURRENT_DOCUMENTS,
+    MAX_SETTLEMENT_GRACE_SECONDS,
+)
 from src.evaluation.models import PIIItem
 from src.evaluation.run_results import (
     DocumentExecution,
@@ -39,11 +51,11 @@ from src.evaluation.run_results import (
     ResultStatus,
 )
 from src.evaluation.worker import (
-    DEFAULT_MAX_CONCURRENT_DOCUMENTS,
     extract_documents,
     run_solution_documents,
     run_worker,
 )
+from src.evaluation.threaded_worker import run_threaded_worker
 
 DATA_DIRECTORY = Path("data")
 SOURCE_ENCODING = "o200k_base"
@@ -98,10 +110,43 @@ class DatasetDescription:
 def main(arguments: Sequence[str] = ()) -> int:
     parsed = _parse_arguments(arguments or sys.argv[1:])
     if parsed.worker:
+        if parsed.threaded_worker:
+            return run_threaded_worker(
+                parsed.module,
+                run_id=parsed.worker_run_id,
+                max_concurrent_documents=parsed.max_concurrent_documents,
+                admission_strategy=parsed.admission_strategy,
+            )
         return _run_worker(parsed.module, max_concurrent_documents=parsed.max_concurrent_documents)
     if parsed.describe_dataset:
         return _describe_dataset(parsed.dataset)
+    if parsed.preflight:
+        return _run_preflight(parsed)
     return _run_evaluation(parsed)
+
+
+def _run_preflight(arguments: argparse.Namespace) -> int:
+    blind_test = Dataset.is_blind_test(arguments.dataset)
+    _preflight_evaluation(arguments, blind_test=blind_test)
+    texts = _load_texts(arguments.dataset)
+    payload = {
+        "preflight": "passed",
+        "dataset": arguments.dataset,
+        "documents": len(texts),
+        "execution_mode": arguments.execution_mode,
+        "max_concurrent_documents": arguments.max_concurrent_documents,
+        "max_upstream_requests": arguments.max_upstream_requests,
+        "admission_strategy": arguments.admission_strategy,
+        "settled_spend_limit_cents": str(arguments.settled_spend_limit_cents),
+        "max_inflight_liability_cents": str(arguments.max_inflight_liability_cents),
+        "maximum_api_cost_exposure_cents": str(
+            arguments.settled_spend_limit_cents + arguments.max_inflight_liability_cents
+        ),
+        "settlement_grace_seconds": arguments.settlement_grace_seconds,
+        "openai_requests_admitted": 0,
+    }
+    _print_payload(payload, output_format=arguments.output_format)
+    return 0
 
 
 def _describe_dataset(dataset: str) -> int:
@@ -119,6 +164,15 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
     if not blind_test:
         print(f"resolved_evaluation_mode={_development_evaluation_mode(arguments).value}", file=sys.stderr)
         print(f"resolved_evaluation_seed={_development_evaluation_seed(arguments)}", file=sys.stderr)
+        print(f"resolved_execution_mode={arguments.execution_mode}", file=sys.stderr)
+        print(f"resolved_max_concurrent_documents={arguments.max_concurrent_documents}", file=sys.stderr)
+        print(f"resolved_max_upstream_requests={arguments.max_upstream_requests}", file=sys.stderr)
+        print(f"resolved_admission_strategy={arguments.admission_strategy}", file=sys.stderr)
+        print(
+            f"resolved_maximum_api_cost_exposure_cents="
+            f"{arguments.settled_spend_limit_cents + arguments.max_inflight_liability_cents}",
+            file=sys.stderr,
+        )
     run = _evaluate_with_blind_boundary(arguments, blind_test=blind_test)
     _report_evaluation(
         run,
@@ -126,6 +180,8 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
         blind_test=blind_test,
         duration_seconds=time.monotonic() - started_at,
     )
+    if run.termination_category == "interrupted":
+        return 130
     return 0 if run.result_status == ResultStatus.COMPLETE else 2
 
 
@@ -161,9 +217,18 @@ def _report_evaluation(
 ) -> None:
     if blind_test:
         _validate_frozen_solution(arguments.frozen_commit)
-        _print_blind_test_result(run.trace.metrics, cost=run.cost.report, duration_seconds=duration_seconds)
+        _print_blind_test_result(
+            run.trace.metrics,
+            cost=run.cost.report,
+            duration_seconds=duration_seconds,
+            output_format=arguments.output_format,
+        )
     else:
-        _print_development_result(run, duration_seconds=duration_seconds)
+        _print_development_result(
+            run,
+            duration_seconds=duration_seconds,
+            output_format=arguments.output_format,
+        )
     if arguments.diagnostics:
         _write_development_diagnostics(run, arguments=arguments)
 
@@ -233,6 +298,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         ),
         lifecycle_status=LifecycleStatus.RUNNING,
         termination_category="none",
+        execution_mode=arguments.execution_mode,
         evaluation_seed=evaluation_seed,
         started_at=started_at,
     )
@@ -242,27 +308,38 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         api_key=api_key,
         upstream_base_url=upstream_base_url,
         spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
+        max_inflight_liability_usd=arguments.max_inflight_liability_cents * USD_PER_CENT,
         evaluation_mode=evaluation_mode,
         cache_directory=Path.cwd() / RESPONSE_CACHE_DIRECTORY_NAME,
+        admission_deadline=deadline,
+        max_upstream_requests=arguments.max_upstream_requests,
     ) as meter:
+        journaled_count = 0
+        materialized_count = 0
+        last_materialized_at = time.monotonic()
 
         def checkpoint(completed, outcome):
+            nonlocal journaled_count, materialized_count, last_materialized_at
             if not arguments.diagnostics:
                 return
+            append_document_journal(arguments.diagnostics, completed[journaled_count:])
+            journaled_count = len(completed)
+            now = time.monotonic()
+            materialization_due = (
+                len(completed) - materialized_count >= 10 or now - last_materialized_at >= 1.0
+            )
+            if not materialization_due:
+                return
             ledger = _merge_document_ledger(completed, initial=initial.documents)
-            running = _make_run(
-                run_id=run_id,
-                dataset=arguments.dataset,
-                texts=texts,
-                source_tokens=source_tokens,
+            running = replace(
+                initial,
                 documents=ledger,
                 cost=outcome,
-                lifecycle_status=LifecycleStatus.RUNNING,
-                termination_category="none",
-                evaluation_seed=evaluation_seed,
-                started_at=started_at,
+                updated_at=EvaluationRun.timestamp(),
             )
             _checkpoint_diagnostics(running, arguments=arguments)
+            materialized_count = len(completed)
+            last_materialized_at = now
 
         documents, termination_category = run_solution_documents(
             texts,
@@ -273,8 +350,11 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             source_tokens=document_tokens,
             on_checkpoint=checkpoint,
             max_concurrent_documents=arguments.max_concurrent_documents,
+            execution_mode=arguments.execution_mode,
+            admission_strategy=arguments.admission_strategy,
+            run_id=run_id,
         )
-        cost = meter.finalize(timeout=max(deadline - time.monotonic(), 0.0))
+        cost = meter.finalize(timeout=arguments.settlement_grace_seconds)
     if evaluation_mode.reads_cache and cost.cache_errors:
         termination_category = "cache_error"
     elif evaluation_mode is EvaluationMode.CACHE_FILL and cost.cache_write_errors:
@@ -304,10 +384,10 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         cost=cost,
         lifecycle_status=LifecycleStatus.TERMINAL,
         termination_category=termination_category,
+        execution_mode=arguments.execution_mode,
         evaluation_seed=evaluation_seed,
         started_at=started_at,
     )
-    _checkpoint_diagnostics(run, arguments=arguments)
     return run
 
 
@@ -350,6 +430,7 @@ def _evaluate_blind_dataset(
         cost=MeteringOutcome(report, CostStatus.COMPLETE),
         lifecycle_status=LifecycleStatus.TERMINAL,
         termination_category="none",
+        execution_mode=ExecutionMode.THREADED,
         evaluation_seed=None,
         started_at=started_at,
     )
@@ -365,6 +446,7 @@ def _make_run(
     cost: MeteringOutcome,
     lifecycle_status: str,
     termination_category: str,
+    execution_mode: str,
     evaluation_seed: int | None,
     started_at: str,
 ) -> EvaluationRun:
@@ -385,6 +467,7 @@ def _make_run(
         cost=cost,
         lifecycle_status=lifecycle_status,
         termination_category=termination_category,
+        execution_mode=execution_mode,
         evaluation_seed=evaluation_seed,
         started_at=started_at,
         updated_at=EvaluationRun.timestamp(),
@@ -585,53 +668,85 @@ def _run_worker(module_name: str, *, max_concurrent_documents: int) -> int:
     return 0
 
 
-def _print_development_result(run: EvaluationRun, *, duration_seconds: float) -> None:
+def _print_development_result(
+    run: EvaluationRun, *, duration_seconds: float, output_format: str = "text"
+) -> None:
+    _print_payload(
+        _development_result_payload(run, duration_seconds=duration_seconds),
+        output_format=output_format,
+    )
+
+
+def _development_result_payload(run: EvaluationRun, *, duration_seconds: float) -> Dict[str, object]:
     status = run.result_status
     metrics = run.trace.metrics
-    print(f"result_schema_version={SCHEMA_VERSION}")
-    print(f"result_status={status}")
-    print(f"score_is_final={'true' if status == ResultStatus.COMPLETE else 'false'}")
-    print(f"termination_category={run.termination_category}")
-    print(f"evaluation_mode={run.cost.evaluation_mode}")
-    print(f"evaluation_seed={run.evaluation_seed}")
-    print(f"cache_hits={run.cost.cache_hits}")
-    print(f"cache_misses={run.cost.cache_misses}")
-    print(f"openai_live_requests={run.cost.live_requests}")
-    print(f"cache_writes={run.cost.cache_writes}")
-    print(f"cache_write_errors={run.cost.cache_write_errors}")
-    print(f"cache_errors={run.cost.cache_errors}")
     prefix = "" if status == ResultStatus.COMPLETE else "partial_"
-    print(f"{prefix}f_score={metrics.f_score:.6f}")
-    print(f"{prefix}precision={metrics.precision:.6f}")
-    print(f"{prefix}recall={metrics.recall:.6f}")
-    print(f"{prefix}true_positive={metrics.true_positive}")
-    print(f"{prefix}false_positive={metrics.false_positive}")
-    print(f"{prefix}false_negative={metrics.false_negative}")
     statuses = [document.status for document in run.documents]
-    print(f"documents_total={len(run.documents)}")
-    print(f"documents_completed={statuses.count(DocumentStatus.COMPLETED)}")
-    print(f"documents_failed={statuses.count(DocumentStatus.FAILED)}")
-    print(f"documents_not_attempted={statuses.count(DocumentStatus.NOT_ATTEMPTED)}")
-    print(f"source_tokens={run.source_tokens}")
-    print(f"completed_source_tokens={run.completed_source_tokens}")
-    print(f"pricing_version={PRICE_TABLE_VERSION}")
     cost_key = "api_cost_usd" if status == ResultStatus.COMPLETE else "observed_api_cost_usd"
-    print(f"{cost_key}={run.cost.report.total_usd:.8f}")
-    print(f"cost_status={run.cost.status}")
     comparable_cost = cost_is_comparable(
         run.cost,
         result_is_complete=status == ResultStatus.COMPLETE,
     )
-    print(f"cost_is_comparable={'true' if comparable_cost else 'false'}")
+    payload = {
+        "result_schema_version": SCHEMA_VERSION,
+        "result_status": status,
+        "score_is_final": status == ResultStatus.COMPLETE,
+        "termination_category": run.termination_category,
+        "evaluation_mode": str(run.cost.evaluation_mode),
+        "evaluation_seed": run.evaluation_seed,
+        "execution_mode": run.execution_mode,
+        "cost_is_final": run.cost.cost_is_final,
+        "usage_attribution_status": run.usage_attribution_status,
+        "cache_hits": run.cost.cache_hits,
+        "cache_misses": run.cost.cache_misses,
+        "openai_live_requests": run.cost.live_requests,
+        "cache_writes": run.cost.cache_writes,
+        "cache_write_errors": run.cost.cache_write_errors,
+        "cache_errors": run.cost.cache_errors,
+        f"{prefix}f_score": round(metrics.f_score, 6),
+        f"{prefix}precision": round(metrics.precision, 6),
+        f"{prefix}recall": round(metrics.recall, 6),
+        f"{prefix}true_positive": metrics.true_positive,
+        f"{prefix}false_positive": metrics.false_positive,
+        f"{prefix}false_negative": metrics.false_negative,
+        "documents_total": len(run.documents),
+        "documents_completed": statuses.count(DocumentStatus.COMPLETED),
+        "documents_failed": statuses.count(DocumentStatus.FAILED),
+        "documents_not_attempted": statuses.count(DocumentStatus.NOT_ATTEMPTED),
+        "source_tokens": run.source_tokens,
+        "completed_source_tokens": run.completed_source_tokens,
+        "pricing_version": PRICE_TABLE_VERSION,
+        cost_key: _decimal_text(run.cost.report.total_usd, places=8),
+        "reserved_api_cost_usd": _decimal_text(run.cost.reserved_api_cost_usd, places=8),
+        "unknown_api_cost_liability_usd": _decimal_text(
+            run.cost.unknown_api_cost_liability_usd,
+            places=8,
+        ),
+        "maximum_api_cost_exposure_usd": _decimal_text(
+            run.cost.maximum_api_cost_exposure_usd,
+            places=8,
+        ),
+        "peak_reserved_api_cost_usd": _decimal_text(run.cost.peak_reserved_api_cost_usd, places=8),
+        "peak_active_upstream_requests": run.cost.peak_active_upstream_requests,
+        "reservation_wait_seconds": round(run.cost.reservation_wait_seconds, 6),
+        "cost_status": run.cost.status,
+        "cost_is_comparable": comparable_cost,
+    }
+    error = _operational_error(run)
+    if error:
+        payload.update(error)
     if status == ResultStatus.COMPLETE and comparable_cost:
         normalized = run.cost.report.cost_per_million_source_tokens(run.source_tokens)
-        print(f"cost_usd_per_million_source_tokens={normalized:.6f}")
+        payload["cost_usd_per_million_source_tokens"] = _decimal_text(normalized, places=6)
     elif status != ResultStatus.COMPLETE and run.completed_source_tokens and comparable_cost:
         normalized = run.cost.report.cost_per_million_source_tokens(run.completed_source_tokens)
-        print(f"partial_cost_usd_per_million_completed_source_tokens={normalized:.6f}")
-    print(f"duration_seconds={duration_seconds:.6f}")
-    documents = [serialize_document_execution(document) for document in run.documents]
-    print(f"document_results_json={json.dumps(documents, separators=(',', ':'))}")
+        payload["partial_cost_usd_per_million_completed_source_tokens"] = _decimal_text(
+            normalized,
+            places=6,
+        )
+    payload["duration_seconds"] = round(duration_seconds, 6)
+    payload["document_results_json"] = [serialize_document_execution(document) for document in run.documents]
+    return payload
 
 
 def _print_blind_test_result(
@@ -639,12 +754,77 @@ def _print_blind_test_result(
     *,
     cost: CostReport,
     duration_seconds: float,
+    output_format: str = "text",
 ) -> None:
-    print(f"f_score={metrics.f_score:.6f}")
-    print(f"precision={metrics.precision:.6f}")
-    print(f"recall={metrics.recall:.6f}")
-    print(f"api_cost_usd={cost.total_usd:.8f}")
-    print(f"duration_seconds={duration_seconds:.6f}")
+    payload = {
+        "f_score": round(metrics.f_score, 6),
+        "precision": round(metrics.precision, 6),
+        "recall": round(metrics.recall, 6),
+        "api_cost_usd": _decimal_text(cost.total_usd, places=8),
+        "duration_seconds": round(duration_seconds, 6),
+    }
+    _print_payload(payload, output_format=output_format)
+
+
+def _print_payload(payload: Mapping[str, object], *, output_format: str) -> None:
+    if output_format == "json":
+        print(json.dumps(payload, separators=(",", ":")))
+        return
+    for key, value in payload.items():
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        elif isinstance(value, float):
+            value = f"{value:.6f}"
+        elif isinstance(value, (dict, list)):
+            value = json.dumps(value, separators=(",", ":"))
+        print(f"{key}={value}")
+
+
+def _decimal_text(value: Decimal, *, places: int) -> str:
+    return f"{value:.{places}f}"
+
+
+def _operational_error(run: EvaluationRun) -> Dict[str, str]:
+    if run.result_status == ResultStatus.COMPLETE:
+        return {}
+    if run.termination_category == "interrupted":
+        return _error_fields(
+            code="E_INTERRUPTED",
+            problem="evaluation interrupted after preserving settled results",
+            fix="rerun the same command or inspect the diagnostics journal",
+            anchor="#interrupts",
+        )
+    if any("liability" in error for error in run.cost.errors) or run.termination_category == "spending_limit":
+        return _error_fields(
+            code="E_LIABILITY_LIMIT",
+            problem="configured API liability prevented a request from settling",
+            fix="lower concurrency or pass an explicit larger --max-inflight-liability-cents value",
+            anchor="#cost-safety",
+        )
+    if not run.cost.cost_is_final:
+        return _error_fields(
+            code="E_COST_UNSETTLED",
+            problem="one or more admitted API requests did not produce final billing evidence",
+            fix="use the maximum exposure value and inspect diagnostics before retrying",
+            anchor="#cost-finality",
+        )
+    if run.execution_mode == ExecutionMode.THREADED:
+        return _error_fields(
+            code="E_THREADED_CONTRACT",
+            problem="the solution did not complete under import-once concurrent execution",
+            fix="rerun the same command with --execution-mode isolated",
+            anchor="#execution-modes",
+        )
+    return {}
+
+
+def _error_fields(*, code: str, problem: str, fix: str, anchor: str) -> Dict[str, str]:
+    return {
+        "error_code": code,
+        "error_problem": problem,
+        "error_fix": fix,
+        "error_docs": f"research-runbook.md{anchor}",
+    }
 
 
 def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
@@ -655,7 +835,13 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="print aggregate development-dataset size statistics without running the solution",
     )
-    parser.add_argument("--diagnostics", type=Path, help="write detailed evaluation diagnostics as JSON")
+    diagnostics = parser.add_mutually_exclusive_group()
+    diagnostics.add_argument("--diagnostics", type=Path, help="write detailed diagnostics to PATH")
+    diagnostics.add_argument(
+        "--diagnostics-dir",
+        type=Path,
+        help="write diagnostics under DIR using a collision-free file name",
+    )
     parser.add_argument(
         "--seed",
         type=_non_negative_integer,
@@ -667,16 +853,59 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     )
     parser.add_argument("--timeout", type=_timeout_seconds, default=MAX_TIMEOUT_SECONDS)
     parser.add_argument(
+        "--execution-mode",
+        choices=ExecutionMode.all(),
+        default=DEFAULT_EXECUTION_MODE,
+        help=f"solution isolation topology (default: {DEFAULT_EXECUTION_MODE})",
+    )
+    parser.add_argument(
         "--max-concurrent-documents",
         type=_positive_integer,
         default=DEFAULT_MAX_CONCURRENT_DOCUMENTS,
-        help=f"maximum documents evaluated in parallel (default: {DEFAULT_MAX_CONCURRENT_DOCUMENTS})",
+        help=(
+            f"maximum documents evaluated in parallel, 1-{MAX_CONCURRENT_DOCUMENTS} "
+            f"(default: {DEFAULT_MAX_CONCURRENT_DOCUMENTS})"
+        ),
     )
     parser.add_argument(
+        "--max-upstream-requests",
+        type=_positive_integer,
+        help="maximum simultaneous OpenAI requests (default: document concurrency)",
+    )
+    parser.add_argument(
+        "--admission-strategy",
+        choices=AdmissionStrategy.all(),
+        default=DEFAULT_ADMISSION_STRATEGY,
+        help=f"threaded health admission policy (default: {DEFAULT_ADMISSION_STRATEGY})",
+    )
+    spending_limit = parser.add_mutually_exclusive_group()
+    spending_limit.add_argument(
+        "--settled-spend-limit-cents",
+        type=_positive_decimal,
+        help="stop new paid requests after observed spend reaches this many cents (default: 8)",
+    )
+    spending_limit.add_argument(
         "--cents-limit",
         type=_positive_decimal,
-        default=DEFAULT_SPENDING_LIMIT_USD / USD_PER_CENT,
-        help="absolute API spending limit in cents (default: 8)",
+        help="deprecated alias for --settled-spend-limit-cents",
+    )
+    parser.add_argument(
+        "--max-inflight-liability-cents",
+        type=_positive_decimal,
+        default=Decimal(DEFAULT_MAX_INFLIGHT_LIABILITY_CENTS),
+        help=(
+            "maximum reserved or unknown-billing API liability in cents "
+            f"(default: {DEFAULT_MAX_INFLIGHT_LIABILITY_CENTS})"
+        ),
+    )
+    parser.add_argument(
+        "--settlement-grace-seconds",
+        type=_settlement_grace_seconds,
+        default=DEFAULT_SETTLEMENT_GRACE_SECONDS,
+        help=(
+            "wait for admitted API requests after worker stop "
+            f"(default: {DEFAULT_SETTLEMENT_GRACE_SECONDS:g})"
+        ),
     )
     cache_mode = parser.add_mutually_exclusive_group()
     cache_mode.add_argument(
@@ -696,24 +925,56 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         action="store_true",
         help="strict response replay; never call OpenAI; fail on a miss",
     )
+    parser.add_argument("--preflight", action="store_true", help="validate configuration without API calls")
+    parser.add_argument(
+        "--output-format",
+        choices=("text", "json"),
+        default="text",
+        help="final stdout format (default: text)",
+    )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--threaded-worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-run-id", default="", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)
     parsed = parser.parse_args(arguments)
+    _resolve_argument_defaults(parsed, parser=parser)
     _validate_arguments(parsed, parser=parser)
     return parsed
+
+
+def _resolve_argument_defaults(parsed: argparse.Namespace, *, parser: argparse.ArgumentParser) -> None:
+    default_cents = DEFAULT_SPENDING_LIMIT_USD / USD_PER_CENT
+    parsed.settled_spend_limit_cents = parsed.settled_spend_limit_cents or parsed.cents_limit or default_cents
+    parsed.cents_limit = parsed.settled_spend_limit_cents
+    parsed.max_upstream_requests = parsed.max_upstream_requests or parsed.max_concurrent_documents
+    if parsed.diagnostics_dir:
+        if not parsed.diagnostics_dir.is_dir():
+            parser.error(f"--diagnostics-dir does not exist: {parsed.diagnostics_dir}")
+        run_name = f"{parsed.dataset}-{uuid.uuid4().hex}.json"
+        parsed.diagnostics = parsed.diagnostics_dir / run_name
 
 
 def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.ArgumentParser) -> None:
     if parsed.worker and not parsed.module:
         parser.error("--worker requires --module")
+    if parsed.threaded_worker and not parsed.worker:
+        parser.error("--threaded-worker requires --worker")
+    if parsed.threaded_worker and not parsed.worker_run_id:
+        parser.error("--threaded-worker requires --worker-run-id")
     if not parsed.worker and not parsed.dataset:
         parser.error("--dataset is required")
+    if parsed.max_concurrent_documents > MAX_CONCURRENT_DOCUMENTS:
+        parser.error(f"--max-concurrent-documents must be at most {MAX_CONCURRENT_DOCUMENTS}")
+    if parsed.max_upstream_requests > MAX_CONCURRENT_DOCUMENTS:
+        parser.error(f"--max-upstream-requests must be at most {MAX_CONCURRENT_DOCUMENTS}")
     if parsed.describe_dataset and parsed.diagnostics:
         parser.error("--describe-dataset cannot be combined with --diagnostics")
     if parsed.seed is not None and parsed.worker:
         parser.error("--seed is not allowed with --worker")
     if parsed.seed is not None and parsed.describe_dataset:
         parser.error("--seed is not allowed with --describe-dataset")
+    if parsed.preflight and parsed.worker:
+        parser.error("--preflight is not allowed with --worker")
     selected_mode = next(
         (flag for flag in ("cache_fill", "fresh", "cache") if getattr(parsed, flag)),
         None,
@@ -786,6 +1047,15 @@ def _timeout_seconds(value: str) -> float:
     if not math.isfinite(parsed) or parsed <= 0 or parsed > MAX_TIMEOUT_SECONDS:
         raise argparse.ArgumentTypeError(
             f"timeout must be greater than 0 and at most {MAX_TIMEOUT_SECONDS:g} seconds"
+        )
+    return parsed
+
+
+def _settlement_grace_seconds(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed < 0 or parsed > MAX_SETTLEMENT_GRACE_SECONDS:
+        raise argparse.ArgumentTypeError(
+            f"settlement grace must be between 0 and {MAX_SETTLEMENT_GRACE_SECONDS:g} seconds"
         )
     return parsed
 

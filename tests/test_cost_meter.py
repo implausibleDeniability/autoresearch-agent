@@ -1,4 +1,5 @@
 import json
+import socket
 import stat
 import threading
 import time
@@ -27,6 +28,7 @@ from src.cost_metering.accounting import (
     request_cost_upper_bound,
 )
 from src.cost_metering.proxy import SPENDING_LIMIT_STATUS, MeteringProxy, MeterState
+from src.cost_metering.http import MAX_REQUEST_BODY_BYTES
 from src.cost_metering.response_cache import CachedResponse, ResponseCache
 
 
@@ -35,6 +37,8 @@ class _Answer(BaseModel):
 
 
 class _UpstreamServer(ThreadingHTTPServer):
+    request_queue_size = 200
+
     def __init__(self) -> None:
         self.requests = []
         super().__init__(("127.0.0.1", 0), _UpstreamHandler)
@@ -735,6 +739,36 @@ def test_concurrent_requests_are_all_metered(upstream_server):
     assert len(report.usages) == 4
 
 
+def test_proxy_admits_one_hundred_fifty_bounded_upstream_requests(upstream_server):
+    payload = {
+        "model": "gpt-4o-mini-2024-07-18",
+        "messages": [],
+        "max_completion_tokens": 1,
+        "metadata": {"delay_seconds": 0.05},
+    }
+    with MeteringProxy(
+        api_key="real-key",
+        upstream_base_url=upstream_server.base_url,
+        max_upstream_requests=150,
+    ) as meter:
+
+        def request():
+            return httpx.post(
+                f"{meter.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {meter.run_token}"},
+                json=payload,
+                timeout=10.0,
+            )
+
+        with ThreadPoolExecutor(max_workers=150) as executor:
+            responses = list(executor.map(lambda _: request(), range(150)))
+        outcome = meter.finalize(timeout=5.0)
+
+    assert [response.status_code for response in responses] == [200] * 150
+    assert len(outcome.report.usages) == 150
+    assert 1 < outcome.peak_active_upstream_requests <= 150
+
+
 def test_wrong_run_token_is_rejected_without_polluting_report(upstream_server):
     # setup
     with MeteringProxy(api_key="real-key", upstream_base_url=upstream_server.base_url) as meter:
@@ -750,6 +784,26 @@ def test_wrong_run_token_is_rejected_without_polluting_report(upstream_server):
     # check
     assert response.status_code == 401
     assert report.usages == ()
+
+
+def test_oversized_proxy_request_is_rejected_without_upstream_call(upstream_server):
+    with MeteringProxy(api_key="real-key", upstream_base_url=upstream_server.base_url) as meter:
+        host, port = meter._server.server_address
+        with socket.create_connection((host, port), timeout=2.0) as connection:
+            request = (
+                "POST /v1/chat/completions HTTP/1.1\r\n"
+                f"Host: {host}:{port}\r\n"
+                f"Authorization: Bearer {meter.run_token}\r\n"
+                f"Content-Length: {MAX_REQUEST_BODY_BYTES + 1}\r\n"
+                "Connection: close\r\n\r\n"
+            )
+            connection.sendall(request.encode())
+            response = connection.recv(4096)
+        outcome = meter.finalize(timeout=1.0)
+
+    assert response.startswith(b"HTTP/1.1 502")
+    assert upstream_server.requests == []
+    assert outcome.status == "incomplete"
 
 
 def test_hosted_tool_invalidates_run(upstream_server):
@@ -1064,6 +1118,63 @@ def test_request_reservations_bound_concurrent_spending():
     # check
     assert outcome.status == "complete"
     assert outcome.report.usages == (usage, usage)
+
+
+def test_settled_spend_does_not_consume_inflight_liability_capacity():
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    first_token = state.issue_token()
+    second_token = state.issue_token()
+    usage = ModelUsage("gpt-4o-2024-08-06", 20_000, 0, 0)
+    assert state.begin_request("Bearer run-token") == 0
+    state.finish_request(usage=usage)
+    assert state.begin_request(f"Bearer {first_token}", reservation_usd=Decimal("0.01")) == 0
+
+    second_status = state.begin_request(
+        f"Bearer {second_token}",
+        reservation_usd=Decimal("0.06"),
+    )
+
+    assert second_status == 0
+    state.finish_request(usage=None, run_token=first_token, reservation_usd=Decimal("0.01"))
+    state.finish_request(usage=None, run_token=second_token, reservation_usd=Decimal("0.06"))
+    state.close()
+
+
+def test_unknown_billing_retains_liability_and_prevents_final_cost():
+    state = MeterState(api_key="real-key", run_token="run-token", upstream_base_url="http://127.0.0.1:1")
+    reservation = Decimal("0.06")
+    assert state.begin_request("Bearer run-token", reservation_usd=reservation) == 0
+
+    state.finish_request(
+        usage=None,
+        reservation_usd=reservation,
+        upstream_started=True,
+    )
+    outcome = state.finalize(timeout=1.0)
+    state.close()
+
+    assert outcome.status == "incomplete"
+    assert outcome.cost_is_final is False
+    assert outcome.reserved_api_cost_usd == Decimal()
+    assert outcome.unknown_api_cost_liability_usd == reservation
+    assert outcome.maximum_api_cost_exposure_usd == reservation
+
+
+def test_single_request_above_liability_limit_fails_without_waiting():
+    state = MeterState(
+        api_key="real-key",
+        run_token="run-token",
+        upstream_base_url="http://127.0.0.1:1",
+        max_inflight_liability_usd=Decimal("0.05"),
+    )
+
+    status = state.begin_request("Bearer run-token", reservation_usd=Decimal("0.06"))
+    outcome = state.finalize(timeout=0.0)
+    state.close()
+
+    assert status == SPENDING_LIMIT_STATUS
+    assert outcome.status == "incomplete"
+    assert "exceeds in-flight limit" in outcome.errors[0]
 
 
 def _begin_reserved_request(
