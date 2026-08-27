@@ -12,7 +12,6 @@ This is the technical companion to `program.md`. Follow it for setup, evaluation
 6. Review `baseline-results.tsv` to understand ordinary baseline variation, cost, and runtime before spending the first evaluation.
 7. Inspect dataset scale with `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. This command is read-only, requires no API credentials, and does not count as an evaluation.
 8. Discover the blind dataset name by listing only directory names matching `data/test-*`. Do not inspect their contents.
-9. Before modifying `solution.py`, evaluate the unchanged solution on `dev-202k` with seeds `0` through `4`, using a new path under `diagnostics/` for each run. Follow **Before each development evaluation** and **Run a development evaluation** below. Require five complete results and record them as the current baseline `keep` panel.
 
 ## Working files
 
@@ -26,15 +25,27 @@ This is the technical companion to `program.md`. Follow it for setup, evaluation
 
 Use a new path for every development evaluation, named `diagnostics/<evaluation>-<commit>-<dataset>-seed<seed>.json`. The evaluator rejects existing paths. Never request diagnostics for a blind dataset.
 
-## Before each development evaluation
+## Development evaluation protocol
 
-1. Confirm that another evaluation fits within the 40-evaluation limit. For `--cache-fill` or `--fresh`, also confirm that possible live requests fit within the remaining $0.50 API budget while preserving enough budget for the final evaluation.
-2. Before a mode that can call OpenAI, estimate total API spend. Estimate normalized cost when the result can be comparable. The target is at most $1.50 per million source-document tokens.
-3. Choose the dataset and concurrency appropriate for the hypothesis. The evaluator processes up to 50 documents concurrently by default; use `--max-concurrent-documents N` to reduce simultaneous worker and API load.
-4. Choose the hypothesis before the cache mode. Cache availability must not raise an experiment's research priority.
-5. Choose the seed before the run. Use seeds `0` through `4` for the baseline and every comparable five-run `dev-202k` candidate, pairing results by seed without additions, omissions, or substitutions.
+### Evaluation modes
 
-## Cost and evaluator behavior
+| Mode | Cache behavior | OpenAI behavior | Cost evidence |
+| --- | --- | --- | --- |
+| `--cache-fill` | Replay exact hits; save successful misses | Call and charge on misses | Comparable only when `cache_hits=0` |
+| `--fresh` | Bypass reads and writes | Call and charge every request | Comparable; use only for response-variability hypotheses |
+| `--cache` | Strict exact replay | Never call OpenAI; fail on a miss | Never comparable |
+
+Development evaluations default to cache-fill if a flag is omitted, but research commands must include the flag explicitly. Cache-fill hits work without credentials; a miss without `OPENAI_API_KEY` fails before a live call. Strict cache provides deterministic response replay, not a guarantee that arbitrary solution code has no other source of nondeterminism or network access. Development cache modes are unavailable for blind evaluations.
+
+For `--fresh`, record in `research.md` why the hypothesis requires fresh responses.
+
+### Paired seed panels
+
+The evaluator passes `--seed N` to `solution.py` as `EVALUATION_SEED=N`. The reference solution includes it in every OpenAI request, so the cache stores one response per exact request and seed. Prompt, model, schema, or request changes miss and fill normally.
+
+Use seeds `0` through `4` for the baseline and every `dev-202k` candidate considered for promotion. Pair candidate and baseline results by seed without additions, omissions, or substitutions. Filling the baseline panel lets downstream-only candidates replay the same five response sets. If more seeds are needed, add incremental values starting from `5` without replacing the fixed panel.
+
+### Cost accounting and evaluator behavior
 
 Cost is measured in USD per million source-document tokens:
 
@@ -48,27 +59,22 @@ The evaluator supports Chat Completions and Responses with the allowed models, i
 
 The default 8-cent meter is a guard rather than the normalized-cost target. Override the default limit with `--cents-limit` only when the estimated live run fits the total research budget. A request may exceed the remaining per-run limit so the evaluator can return useful results; further requests are then rejected.
 
-### Evaluation modes
-
-| Mode | Cache behavior | OpenAI behavior | Cost evidence |
-| --- | --- | --- | --- |
-| `--cache-fill` | Replay exact hits; save successful misses | Call and charge on misses | Comparable only when `cache_hits=0` |
-| `--fresh` | Bypass reads and writes | Call and charge every request | Comparable; use only for response-variability hypotheses |
-| `--cache` | Strict exact replay | Never call OpenAI; fail on a miss | Never comparable |
-
-Development evaluations default to cache-fill if a flag is omitted, but research commands must include the flag explicitly. Cache-fill hits work without credentials; a miss without `OPENAI_API_KEY` fails before a live call. Strict cache provides deterministic response replay, not a guarantee that arbitrary solution code has no other source of nondeterminism or network access. Development cache modes are unavailable for blind evaluations.
-
-The evaluator passes `--seed N` to `solution.py` as `EVALUATION_SEED=N`. The reference solution includes it in every OpenAI request, so the cache stores one response per exact request and seed. Filling baseline seeds `0` through `4` lets downstream-only candidates replay the matching five response sets. Prompt, model, schema, or request changes still miss and fill normally.
-
 Every mode counts toward the 40-evaluation limit. Charge `budget_cost_usd=0` for strict cache. For cache-fill and fresh, charge actual live spend; apply the existing incomplete-metering rule after a failure. A strict miss is a `crash` and still counts.
 
-## Run a development evaluation
+### Before each run
+
+1. Confirm that another evaluation fits within the 40-evaluation limit. For `--cache-fill` or `--fresh`, also confirm that possible live requests fit within the remaining $0.50 API budget while preserving enough budget for the final evaluation.
+2. Before a mode that can call OpenAI, estimate total API spend. Estimate normalized cost when the result can be comparable. The target is at most $1.50 per million source-document tokens.
+3. Choose the dataset and concurrency appropriate for the hypothesis. The evaluator processes up to 50 documents concurrently by default; use `--max-concurrent-documents N` to reduce simultaneous worker and API load.
+4. Select the evaluation mode and seed under the protocol above.
+
+### Commands
 
 Run the evaluator in one of these modes:
 
 ```bash
 # Normal development evaluation: replay hits and fill misses
-set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/001-a1b2c3d-dev-19k-seed0.json --cache-fill > run.log 2>&1
+set -a; source .env; set +a; uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/001-a1b2c3d-dev-19k-seed0.json --cache-fill > run.log 2>&1
 
 # Fresh response-variability experiment; record the reason in research.md first
 set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/002-a1b2c3d-dev-19k-seed0.json --fresh > run.log 2>&1
@@ -79,17 +85,19 @@ uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics dia
 
 Substitute the actual evaluation number, commit, and visible dataset. `--timeout` may set a shorter deadline but cannot exceed 180 seconds.
 
+### Result interpretation
+
 Read the run status before interpreting metrics:
 
 ```bash
 grep -E '^(result_status|score_is_final|termination_category|evaluation_mode|evaluation_seed|cache_hits|cache_misses|cache_errors|cache_writes|cache_write_errors|openai_live_requests|documents_completed|documents_failed|documents_not_attempted|cost_status|cost_is_comparable|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|document_results_json)=' run.log
 ```
 
-### Complete result
+#### Complete result
 
 When `result_status=complete` and `score_is_final=true`, use the normal score fields to evaluate the candidate. Use normalized cost for candidate comparisons only when `cost_is_comparable=true`. Complete hybrid cache-fill results may support quality conclusions, but not cost conclusions.
 
-### Partial result
+#### Partial result
 
 When `result_status=partial` and `score_is_final=false`:
 
@@ -101,9 +109,13 @@ When `result_status=partial` and `score_is_final=false`:
 - record the failure category and diagnostic path in `finding`;
 - for an API-capable evaluation with `cost_status=incomplete`, charge the larger of `observed_api_cost_usd` and the pre-run estimate.
 
-### Missing status
+#### Missing status
 
 If `result_status` is missing, treat the attempt as an evaluator or protocol crash and inspect the final 50 lines of `run.log`. For an API-capable evaluation, charge the pre-run estimate unless a trustworthy observed subtotal is available.
+
+## Initial baseline
+
+Before modifying `solution.py`, evaluate the unchanged solution on `dev-202k` with seeds `0` through `4`. Follow the development evaluation protocol and use a new diagnostic path for each run. Require five complete, final results and record them as the current baseline `keep` panel.
 
 ## Diagnostics and failures
 
@@ -135,7 +147,7 @@ The columns are:
 12. `true` only when the numeric normalized cost supports comparison: fresh or zero-hit cache-fill. Otherwise `false` and record cost as `0.000000`.
 13. non-negative development evaluation seed.
 
-Record every development evaluation, including repetitions and crashes, as a separate row. Row order determines the experiment number. Record the cache mode and seed in `research.md`; for `--fresh`, explain why fresh responses are necessary. After deciding, assign the same status to successful repetitions of the same commit, dataset, and seed panel. Recompute cumulative spend after each evaluation. Report the blind result separately.
+Record every development evaluation, including repetitions and crashes, as a separate row. Row order determines the experiment number. After deciding, assign the same status to successful repetitions of the same commit, dataset, and seed panel. Recompute cumulative spend after each evaluation. Report the blind result separately.
 
 ## Candidate decisions
 
@@ -143,7 +155,7 @@ Commit every changed candidate before evaluating it and record its seven-charact
 
 A complete result on a smaller development dataset may justify `discard` or `inconclusive`, but never `keep`. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-202k` with the baseline seed panel `0` through `4`. Compare the paired per-seed results and their medians. Require five complete, final results; partial results cannot support promotion.
 
-If cost could change a candidate decision and no comparable saved run exists, mark the cost conclusion inconclusive. Do not use `--fresh` merely to obtain cost evidence; it remains reserved for hypotheses that explicitly measure model-response variability.
+If cost could change a candidate decision and no comparable saved run exists, leave the cost conclusion inconclusive. Missing cost evidence does not justify a fresh run.
 
 When a candidate does not replace the incumbent, return to the incumbent without deleting its recorded evaluations.
 

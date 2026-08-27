@@ -39,15 +39,13 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 
 ### Evaluation confidence
 
-Use read-through caching (--cache-fill) for every development evaluation. Force fresh OpenAI responses  (--fresh) only when the hypothesis explicitly measures model-response variability. Use cache-only (--cache) mode when the evaluation must be deterministic and make no live calls. Blind evaluations are always live.
-
-For every experiment, record the cache mode and evaluation seed in `research.md`. For `--fresh`, also explain why the hypothesis requires fresh responses.
-
-**Measure the current baseline.** Before modifying `solution.py`, evaluate the unchanged solution once on `dev-202k` with development diagnostics. Record a complete result as `keep`. Use its score and diagnostics as the starting evidence.
+**Measure the current baseline.** Before modifying `solution.py`, establish a complete `dev-202k` baseline panel on seeds `0` through `4` with development diagnostics. Record it as `keep` and use its scores and diagnostics as the starting evidence.
 
 **Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged.
 
-**Use paired seeds.** Use seeds `0` through `4`, matching each candidate run to the baseline run with the same seed. If more seeds are needed, use incremental values, starting from 5. Use seeds from 0 to 4 for the first run as well. Outside this fixed panel, hold seed, temperature, and other sampling controls constant.
+**Use paired evidence for promotion.** Compare a candidate with the baseline on the same seeds `0` through `4` before promoting it. Do not add, omit, substitute, or cherry-pick seeds; keep other sampling controls fixed.
+
+**Choose hypotheses before evaluation modes.** Cache availability must not affect research priority. Reuse exact responses to isolate downstream-only changes. Use fresh responses only when the hypothesis measures model-response variability. Blind evaluations are always live.
 
 **Spend only to resolve decision-relevant uncertainty.** Prefer saved results and other free evidence. One run may be enough to reject a clearly inferior candidate; repeat competitive candidates when uncertainty could change the decision. Allow `inconclusive` results and judge repetitions together rather than selecting the best run.
 
@@ -91,7 +89,7 @@ If a lower-ranked experiment is selected, briefly record why it became the best 
 2. Implement one meaningful experiment in `solution.py` and commit the exact candidate.
 3. Check the remaining evaluation and spending budgets, then evaluate by following `research-runbook.md`. Use smaller development datasets for cheap hypothesis testing.
 4. Interpret the run status before using its metrics and inspect the diagnostics. Partial results are diagnostic-only.
-5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-202k`; only a complete final score can support promotion.
+5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, complete the runbook's paired `dev-202k` promotion protocol for that exact commit.
 6. Record every evaluation and its status, update the incumbent and hypothesis portfolio, and continue.
 
 ## Communication with the supervisor
