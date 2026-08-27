@@ -39,11 +39,13 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 
 ### Evaluation confidence
 
-**Measure the current baseline.** Before modifying `solution.py`, evaluate the unchanged solution once on `dev-202k` with development diagnostics. Record a complete result as `keep`. Use its score and diagnostics as the starting evidence.
+**Measure the current baseline.** Before modifying `solution.py`, establish a complete `dev-202k` baseline panel on seeds `0` through `4` with development diagnostics. Record it as `keep` and use its scores and diagnostics as the starting evidence.
 
 **Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged.
 
-**Hold sampling settings fixed.** Treat `seed`, `temperature`, and other sampling parameters as experimental controls. Do not vary them to search for a better score. Compare results only when evaluator behavior, labels, model, and sampling settings are compatible.
+**Use paired evidence for promotion.** Compare a candidate with the baseline on the same seeds `0` through `4` before promoting it. Do not add, omit, substitute, or cherry-pick seeds; keep other sampling controls fixed.
+
+**Choose hypotheses before evaluation modes.** Cache availability must not affect research priority. Reuse exact responses to isolate downstream-only changes. Use fresh responses only when the hypothesis measures model-response variability. Blind evaluations are always live.
 
 **Spend only to resolve decision-relevant uncertainty.** Prefer saved results and other free evidence. One run may be enough to reject a clearly inferior candidate; repeat competitive candidates when uncertainty could change the decision. Allow `inconclusive` results and judge repetitions together rather than selecting the best run.
 
@@ -87,7 +89,7 @@ If a lower-ranked experiment is selected, briefly record why it became the best 
 2. Implement one meaningful experiment in `solution.py` and commit the exact candidate.
 3. Check the remaining evaluation and spending budgets, then evaluate by following `research-runbook.md`. Use smaller development datasets for cheap hypothesis testing.
 4. Interpret the run status before using its metrics and inspect the diagnostics. Partial results are diagnostic-only.
-5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, evaluate that exact commit on `dev-202k`; only a complete final score can support promotion.
+5. A complete result on a smaller dataset may support `discard` or `inconclusive`. Before marking a candidate `keep` or replacing the incumbent, complete the runbook's paired `dev-202k` promotion protocol for that exact commit.
 6. Record every evaluation and its status, update the incumbent and hypothesis portfolio, and continue.
 
 ## Communication with the supervisor

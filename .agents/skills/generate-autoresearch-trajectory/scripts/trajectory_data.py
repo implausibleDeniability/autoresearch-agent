@@ -17,7 +17,9 @@ LEGACY_FIELDS = (
 )
 CURRENT_FIELDS = LEGACY_FIELDS + ("finding",)
 REPLAY_FIELDS = CURRENT_FIELDS + ("evaluation_mode",)
-EVALUATION_MODES = {"live", "cached"}
+COMPARABILITY_FIELDS = REPLAY_FIELDS + ("cost_is_comparable",)
+SEED_FIELDS = COMPARABILITY_FIELDS + ("evaluation_seed",)
+EVALUATION_MODES = {"live", "cached", "cache-fill", "fresh", "cache"}
 STATUSES = {"keep", "discard", "inconclusive", "crash"}
 DATASETS = {"debug", "dev-19k", "dev-87k", "dev-202k"}
 BLIND_FIELDS = ("f_score", "precision", "recall", "api_cost_usd", "duration_seconds")
@@ -41,6 +43,8 @@ class Experiment:
     budget_cost_usd: float
     finding: str
     evaluation_mode: str = "live"
+    cost_is_comparable: bool = True
+    evaluation_seed: int | None = None
 
 
 @dataclass(frozen=True)
@@ -98,15 +102,25 @@ def read_experiments(path: Path) -> list[Experiment]:
         with path.open(encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle, delimiter="\t", quoting=csv.QUOTE_NONE)
             fields = tuple(reader.fieldnames or ())
-            if fields not in {LEGACY_FIELDS, CURRENT_FIELDS, REPLAY_FIELDS}:
-                raise TrajectoryError(f"{path}: expected the exact 9-, 10-, or 11-column supported header")
+            if fields not in {
+                LEGACY_FIELDS,
+                CURRENT_FIELDS,
+                REPLAY_FIELDS,
+                COMPARABILITY_FIELDS,
+                SEED_FIELDS,
+            }:
+                raise TrajectoryError(
+                    f"{path}: expected the exact 9-, 10-, 11-, 12-, or 13-column supported header"
+                )
             experiments = [
                 _parse_experiment(
                     path,
                     number,
                     row,
-                    has_finding=fields in {CURRENT_FIELDS, REPLAY_FIELDS},
-                    has_evaluation_mode=fields == REPLAY_FIELDS,
+                    has_finding=fields in {CURRENT_FIELDS, REPLAY_FIELDS, COMPARABILITY_FIELDS, SEED_FIELDS},
+                    has_evaluation_mode=fields in {REPLAY_FIELDS, COMPARABILITY_FIELDS, SEED_FIELDS},
+                    has_cost_comparability=fields in {COMPARABILITY_FIELDS, SEED_FIELDS},
+                    has_evaluation_seed=fields == SEED_FIELDS,
                 )
                 for number, row in enumerate(reader, start=1)
             ]
@@ -127,6 +141,8 @@ def _parse_experiment(
     row: dict[str | None, str | list[str] | None],
     has_finding: bool,
     has_evaluation_mode: bool,
+    has_cost_comparability: bool,
+    has_evaluation_seed: bool,
 ) -> Experiment:
     if None in row or any(value is None for value in row.values()):
         raise TrajectoryError(f"{path}: row {number}: column count does not match the header")
@@ -149,6 +165,29 @@ def _parse_experiment(
     evaluation_mode = values.get("evaluation_mode", "live")
     if has_evaluation_mode and evaluation_mode not in EVALUATION_MODES:
         raise TrajectoryError(f"{path}: row {number}: unsupported evaluation_mode")
+    if has_cost_comparability:
+        raw_comparability = values["cost_is_comparable"]
+        if raw_comparability not in {"true", "false"}:
+            raise TrajectoryError(f"{path}: row {number}: cost_is_comparable must be true or false")
+        cost_is_comparable = raw_comparability == "true"
+        if values["status"] == "crash" and cost_is_comparable:
+            raise TrajectoryError(f"{path}: row {number}: crash cost must not be comparable")
+        if evaluation_mode in {"cache", "cached"} and cost_is_comparable:
+            raise TrajectoryError(f"{path}: row {number}: cached cost must not be comparable")
+        if values["status"] != "crash" and evaluation_mode in {"fresh", "live"} and not cost_is_comparable:
+            raise TrajectoryError(f"{path}: row {number}: fresh cost must be comparable")
+    else:
+        if evaluation_mode == "cache-fill":
+            raise TrajectoryError(f"{path}: row {number}: cache-fill requires the cost_is_comparable column")
+        cost_is_comparable = evaluation_mode in {"live", "fresh"}
+    evaluation_seed = None
+    if has_evaluation_seed:
+        evaluation_seed = _parse_non_negative_integer(
+            path,
+            number,
+            "evaluation_seed",
+            values["evaluation_seed"],
+        )
     if has_finding and values["status"] == "keep" and values["dataset"] == "dev-202k" and not finding:
         raise TrajectoryError(f"{path}: row {number}: accepted dev-202k finding must not be empty")
     return Experiment(
@@ -164,6 +203,8 @@ def _parse_experiment(
         budget,
         finding,
         evaluation_mode,
+        cost_is_comparable,
+        evaluation_seed,
     )
 
 
@@ -183,6 +224,16 @@ def _parse_number(
     if not math.isfinite(number) or number < minimum or (maximum is not None and number > maximum):
         bounds = f"between {minimum:g} and {maximum:g}" if maximum is not None else f"at least {minimum:g}"
         raise TrajectoryError(f"{path}: row {row_number}: {field} must be finite and {bounds}")
+    return number
+
+
+def _parse_non_negative_integer(path: Path, row_number: int, field: str, value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise TrajectoryError(f"{path}: row {row_number}: {field} must be a non-negative integer") from error
+    if number < 0:
+        raise TrajectoryError(f"{path}: row {row_number}: {field} must be a non-negative integer")
     return number
 
 

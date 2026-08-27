@@ -74,6 +74,7 @@ class EvaluationRun:
     cost: MeteringOutcome
     lifecycle_status: LifecycleStatusValue
     termination_category: str
+    evaluation_seed: Optional[int]
     started_at: str
     updated_at: str
 
@@ -88,6 +89,8 @@ class EvaluationRun:
             for document in self.documents
         ):
             raise ValueError("only completed documents may retain predictions")
+        if self.evaluation_seed is not None and self.evaluation_seed < 0:
+            raise ValueError("evaluation seed must be non-negative")
         if self.lifecycle_status == LifecycleStatus.TERMINAL:
             complete = all(document.status == DocumentStatus.COMPLETED for document in self.documents)
             if (complete and self.cost.status == "complete") != (self.result_status == ResultStatus.COMPLETE):

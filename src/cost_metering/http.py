@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from .accounting import (
+    CacheFillFailedError,
     EvaluationMode,
     ModelUsage,
     StreamUsageParser,
@@ -43,6 +44,8 @@ class MeterStateProtocol(Protocol):
 
     def begin_request(self, authorization: Optional[str], *, reservation_usd: Decimal = Decimal()) -> int: ...
 
+    def reserve_request_spending(self, reservation_usd: Decimal) -> int: ...
+
     def finish_request(
         self,
         *,
@@ -62,6 +65,16 @@ class MeterStateProtocol(Protocol):
         headers: Mapping[str, str],
     ) -> Optional[CachedResponse]: ...
 
+    def claim_cache_fill(
+        self,
+        *,
+        path: str,
+        body: bytes,
+        headers: Mapping[str, str],
+    ) -> tuple[Optional[CachedResponse], Optional[str]]: ...
+
+    def finish_cache_fill(self, request_key: str, *, succeeded: bool) -> None: ...
+
     def record_live_request(self) -> None: ...
 
     def store_cached_response(
@@ -71,7 +84,7 @@ class MeterStateProtocol(Protocol):
         body: bytes,
         headers: Mapping[str, str],
         response: CachedResponse,
-    ) -> None: ...
+    ) -> bool: ...
 
 
 class MeterServerProtocol(Protocol):
@@ -98,7 +111,9 @@ class MeterHandler(BaseHTTPRequestHandler):
         try:
             path, body, is_stream = self._prepare_request()
             reservation_usd = (
-                Decimal() if state.evaluation_mode == "cached" else request_cost_upper_bound(path, body)
+                request_cost_upper_bound(path, body)
+                if state.evaluation_mode is EvaluationMode.FRESH
+                else Decimal()
             )
         except Exception as caught_error:
             error = f"metering failed for {self.path}: {caught_error}"
@@ -111,26 +126,80 @@ class MeterHandler(BaseHTTPRequestHandler):
             return
         self._observed_usage = None
         error = ""
+        cache_fill_key: Optional[str] = None
+        cache_fill_succeeded = False
         try:
-            if state.evaluation_mode == "cached":
-                self._replay_cached(state, path=path, body=body)
+            if state.evaluation_mode is EvaluationMode.CACHE:
+                if not self._replay_cache_only(state, path=path, body=body):
+                    error = "strict response cache miss"
+            elif state.evaluation_mode is EvaluationMode.CACHE_FILL:
+                cached_response, cache_fill_key = state.claim_cache_fill(
+                    path=path,
+                    body=body,
+                    headers=self.headers,
+                )
+                if cached_response is not None:
+                    self._send_cached_response(cached_response)
+                elif state.client is None:
+                    error = "cache-fill found a miss but OPENAI_API_KEY is unavailable"
+                    self._send_openai_error(
+                        400,
+                        message=(
+                            "Cache-fill found a miss but OPENAI_API_KEY is unavailable. "
+                            "No live request was made. Load .env and rerun the same command."
+                        ),
+                        error_type="response_cache_fill_requires_api_key",
+                    )
+                else:
+                    requested_reservation = request_cost_upper_bound(path, body)
+                    rejection_status = state.reserve_request_spending(requested_reservation)
+                    if rejection_status:
+                        error = "cache-fill live request was rejected by the spending meter"
+                        self._send_json(rejection_status, payload={"error": "metering request rejected"})
+                    else:
+                        reservation_usd = requested_reservation
+                        state.record_live_request()
+                        forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
+                        self._observed_usage = forwarded.usage
+                        if forwarded.cached_response is None:
+                            error = "cache-fill live response was not successful and cacheable"
+                        elif state.store_cached_response(
+                            path=path,
+                            body=body,
+                            headers=self.headers,
+                            response=forwarded.cached_response,
+                        ):
+                            cache_fill_succeeded = True
+                        else:
+                            error = (
+                                "paid inference succeeded but the evaluator-owned response cache "
+                                "could not persist it"
+                            )
             else:
                 state.record_live_request()
                 forwarded = self._forward(state, path=path, body=body, is_stream=is_stream)
                 self._observed_usage = forwarded.usage
-                if forwarded.cached_response is not None:
-                    state.store_cached_response(
-                        path=path,
-                        body=body,
-                        headers=self.headers,
-                        response=forwarded.cached_response,
-                    )
+        except CacheFillFailedError:
+            error = "a previous cache-fill attempt for this exact request failed"
+            if not self._response_started:
+                self._send_openai_error(
+                    502,
+                    message=(
+                        "A previous cache-fill attempt for this exact request failed during this "
+                        "evaluation. No additional OpenAI call was made. Inspect the first failure "
+                        "before rerunning."
+                    ),
+                    error_type="response_cache_fill_failed",
+                )
         except CacheEntryError:
             error = f"response cache error for {self.path}"
             if not self._response_started:
                 self._send_openai_error(
                     400,
-                    message="response cache entry is invalid; rerun live after a human resets the cache",
+                    message=(
+                        "The evaluator-owned response cache entry is invalid. No OpenAI call was "
+                        "made. Escalate for human cache repair; do not modify the cache."
+                    ),
                     error_type="response_cache_error",
                 )
         except Exception as caught_error:
@@ -138,6 +207,8 @@ class MeterHandler(BaseHTTPRequestHandler):
             if not self._response_started:
                 self._send_json(502, payload={"error": error})
         finally:
+            if cache_fill_key is not None:
+                state.finish_cache_fill(cache_fill_key, succeeded=cache_fill_succeeded)
             state.finish_request(
                 usage=self._observed_usage,
                 error=error,
@@ -150,15 +221,23 @@ class MeterHandler(BaseHTTPRequestHandler):
         body, is_stream = prepare_request(path, self._read_body())
         return path, body, is_stream
 
-    def _replay_cached(self, state: MeterStateProtocol, *, path: str, body: bytes) -> None:
+    def _replay_cache_only(self, state: MeterStateProtocol, *, path: str, body: bytes) -> bool:
         response = state.get_cached_response(path=path, body=body, headers=self.headers)
         if response is None:
             self._send_openai_error(
                 400,
-                message="response cache miss; rerun without --cache to warm it",
+                message=(
+                    "--cache found no exact response. No OpenAI call was made. Run with "
+                    "--cache-fill to fill it; misses may spend API budget and require "
+                    "OPENAI_API_KEY."
+                ),
                 error_type="response_cache_miss",
             )
-            return
+            return False
+        self._send_cached_response(response)
+        return True
+
+    def _send_cached_response(self, response: CachedResponse) -> None:
         self.send_response(response.status_code)
         self.send_header("Content-Type", response.content_type)
         self.send_header("Content-Length", str(len(response.content)))
@@ -170,7 +249,7 @@ class MeterHandler(BaseHTTPRequestHandler):
         self, state: MeterStateProtocol, *, path: str, body: bytes, is_stream: bool
     ) -> _ForwardedResponse:
         if state.client is None:
-            raise RuntimeError("upstream client is unavailable in cached evaluation mode")
+            raise RuntimeError(f"upstream client is unavailable in {state.evaluation_mode.value} mode")
         headers = _upstream_headers(self.headers, api_key=state.api_key)
         url = f"{state.upstream_base_url}{path}"
         with state.client.stream("POST", url, content=body, headers=headers) as response:

@@ -9,6 +9,7 @@ from typing import Dict, List, Mapping, Optional
 import httpx
 
 from .accounting import (
+    CacheFillFailedError,
     CostReport,
     CostStatus,
     EvaluationMode,
@@ -32,16 +33,18 @@ class MeterState:
         run_token: str,
         upstream_base_url: str,
         spending_limit_usd: Decimal = DEFAULT_SPENDING_LIMIT_USD,
-        evaluation_mode: EvaluationMode = "live",
+        evaluation_mode: EvaluationMode = EvaluationMode.FRESH,
         response_cache: Optional[ResponseCache] = None,
     ) -> None:
         _validate_spending_limit(spending_limit_usd)
-        _validate_evaluation_mode(evaluation_mode)
+        evaluation_mode = _normalize_evaluation_mode(evaluation_mode)
         self.api_key = api_key or ""
         self.run_token = run_token
         self.upstream_base_url = upstream_base_url
         self.evaluation_mode = evaluation_mode
-        self.client = httpx.Client(timeout=300.0) if evaluation_mode == "live" else None
+        self.client = (
+            httpx.Client(timeout=300.0) if evaluation_mode.allows_upstream and self.api_key else None
+        )
         self._response_cache = response_cache
         self._condition = threading.Condition()
         self._run_token = run_token
@@ -63,6 +66,8 @@ class MeterState:
         self._cache_writes = 0
         self._cache_write_errors = 0
         self._cache_errors = 0
+        self._cache_fills_in_progress: set[str] = set()
+        self._cache_fill_failures: set[str] = set()
         self._final_outcome: Optional[MeteringOutcome] = None
 
     def issue_token(self) -> str:
@@ -97,7 +102,21 @@ class MeterState:
 
     def _must_wait_for_budget(self, reservation_usd: Decimal) -> bool:
         projected = self._observed_spending_usd + self._reserved_spending_usd + reservation_usd
-        return self._accepting and self._active_requests > 0 and projected > self._spending_limit_usd
+        return (
+            self._accepting
+            and reservation_usd > 0
+            and self._reserved_spending_usd > 0
+            and projected > self._spending_limit_usd
+        )
+
+    def reserve_request_spending(self, reservation_usd: Decimal) -> int:
+        with self._condition:
+            while self._must_wait_for_budget(reservation_usd):
+                self._condition.wait()
+            if not self._accepting:
+                return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
+            self._reserved_spending_usd += reservation_usd
+        return 0
 
     def finish_request(
         self,
@@ -137,7 +156,7 @@ class MeterState:
         body: bytes,
         headers: Mapping[str, str],
     ) -> Optional[CachedResponse]:
-        if self.evaluation_mode != "cached" or self._response_cache is None:
+        if not self.evaluation_mode.reads_cache or self._response_cache is None:
             raise RuntimeError("response cache lookup is not enabled")
         try:
             response = self._response_cache.get(path=path, body=body, headers=headers)
@@ -152,6 +171,42 @@ class MeterState:
                 self._cache_hits += 1
         return response
 
+    def claim_cache_fill(
+        self,
+        *,
+        path: str,
+        body: bytes,
+        headers: Mapping[str, str],
+    ) -> tuple[Optional[CachedResponse], Optional[str]]:
+        if self.evaluation_mode is not EvaluationMode.CACHE_FILL or self._response_cache is None:
+            raise RuntimeError("response cache fill is not enabled")
+        request_key = self._response_cache.request_key(path=path, body=body, headers=headers)
+        with self._condition:
+            while request_key in self._cache_fills_in_progress:
+                self._condition.wait()
+            try:
+                response = self._response_cache.get(path=path, body=body, headers=headers)
+            except CacheEntryError:
+                self._cache_errors += 1
+                raise
+            if response is not None:
+                self._cache_hits += 1
+                return response, None
+            self._cache_misses += 1
+            if request_key in self._cache_fill_failures:
+                raise CacheFillFailedError(
+                    "a previous cache-fill attempt for this exact request failed during this evaluation"
+                )
+            self._cache_fills_in_progress.add(request_key)
+            return None, request_key
+
+    def finish_cache_fill(self, request_key: str, *, succeeded: bool) -> None:
+        with self._condition:
+            self._cache_fills_in_progress.remove(request_key)
+            if not succeeded:
+                self._cache_fill_failures.add(request_key)
+            self._condition.notify_all()
+
     def record_live_request(self) -> None:
         with self._condition:
             self._live_requests += 1
@@ -163,9 +218,9 @@ class MeterState:
         body: bytes,
         headers: Mapping[str, str],
         response: CachedResponse,
-    ) -> None:
+    ) -> bool:
         if self._response_cache is None:
-            return
+            return False
         try:
             stored = self._response_cache.put(
                 path=path,
@@ -176,10 +231,11 @@ class MeterState:
         except (OSError, TypeError, ValueError):
             with self._condition:
                 self._cache_write_errors += 1
-            return
+            return False
         if stored:
             with self._condition:
                 self._cache_writes += 1
+        return True
 
     def seal_and_report(self, *, timeout: float) -> CostReport:
         outcome = self.finalize(timeout=timeout)
@@ -291,18 +347,18 @@ class MeteringProxy:
         api_key: Optional[str] = None,
         upstream_base_url: str = "https://api.openai.com",
         spending_limit_usd: Decimal = DEFAULT_SPENDING_LIMIT_USD,
-        evaluation_mode: EvaluationMode = "live",
+        evaluation_mode: EvaluationMode | str = EvaluationMode.FRESH,
         cache_directory: Optional[Path] = None,
     ) -> None:
-        _validate_evaluation_mode(evaluation_mode)
-        if evaluation_mode == "live":
+        normalized_mode = _normalize_evaluation_mode(evaluation_mode)
+        if normalized_mode.requires_api_key_upfront:
             _validate_api_key(api_key)
-        elif cache_directory is None:
-            raise ValueError("cache_directory is required in cached evaluation mode")
+        if normalized_mode.reads_cache and cache_directory is None:
+            raise ValueError(f"cache_directory is required in {normalized_mode.value} evaluation mode")
         normalized_upstream_base_url = upstream_base_url.rstrip("/")
         response_cache = (
             ResponseCache(cache_directory, upstream_base_url=normalized_upstream_base_url)
-            if cache_directory is not None
+            if cache_directory is not None and normalized_mode.reads_cache
             else None
         )
         self._state = MeterState(
@@ -310,7 +366,7 @@ class MeteringProxy:
             run_token=secrets.token_urlsafe(32),
             upstream_base_url=normalized_upstream_base_url,
             spending_limit_usd=spending_limit_usd,
-            evaluation_mode=evaluation_mode,
+            evaluation_mode=normalized_mode,
             response_cache=response_cache,
         )
         self._server = _MeterServer(("127.0.0.1", 0), MeterHandler)
@@ -380,9 +436,13 @@ def _validate_api_key(api_key: Optional[str]) -> None:
         raise ValueError("api_key must not be empty")
 
 
-def _validate_evaluation_mode(evaluation_mode: str) -> None:
-    if evaluation_mode not in {"live", "cached"}:
-        raise ValueError(f"unsupported evaluation_mode {evaluation_mode!r}")
+def _normalize_evaluation_mode(evaluation_mode: EvaluationMode | str) -> EvaluationMode:
+    try:
+        return EvaluationMode(evaluation_mode)
+    except ValueError as error:
+        raise ValueError(
+            f"unsupported evaluation_mode {evaluation_mode!r}; expected one of {EvaluationMode.all()}"
+        ) from error
 
 
 def _validate_spending_limit(spending_limit_usd: Decimal) -> None:

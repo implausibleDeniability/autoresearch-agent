@@ -10,12 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from src.cost_metering.accounting import CostReport, ModelUsage
+from src.cost_metering.accounting import CostReport, EvaluationMode, ModelUsage
 from src.cost_metering.proxy import MeteringProxy
 from src.evaluation.cli import (
     Dataset,
     _count_source_tokens,
     _dataset_description,
+    _development_evaluation_mode,
+    _development_evaluation_seed,
     _parse_arguments,
     _parse_worker_result,
     _run_solution,
@@ -77,10 +79,34 @@ def test_cli_accepts_diagnostics_path():
     assert parsed.diagnostics == Path("diagnostics.json")
 
 
-def test_cli_accepts_exact_response_replay_cache_for_development():
-    parsed = _parse_arguments(("--dataset", "debug", "--cache"))
+def test_cli_defaults_to_seed_zero_and_accepts_an_explicit_seed():
+    default = _parse_arguments(("--dataset", "debug"))
+    explicit = _parse_arguments(("--dataset", "debug", "--seed", "4"))
 
-    assert parsed.cache
+    assert default.seed is None
+    assert _development_evaluation_seed(default) == 0
+    assert _development_evaluation_seed(explicit) == 4
+
+
+@pytest.mark.parametrize("value", ["-1", "1.5", "many"])
+def test_cli_rejects_invalid_evaluation_seeds(value):
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", "debug", "--seed", value))
+
+
+@pytest.mark.parametrize(
+    ("arguments", "expected"),
+    [
+        (("--dataset", "debug"), EvaluationMode.CACHE_FILL),
+        (("--dataset", "debug", "--cache-fill"), EvaluationMode.CACHE_FILL),
+        (("--dataset", "debug", "--fresh"), EvaluationMode.FRESH),
+        (("--dataset", "debug", "--cache"), EvaluationMode.CACHE),
+    ],
+)
+def test_cli_resolves_development_cache_mode(arguments, expected):
+    parsed = _parse_arguments(arguments)
+
+    assert _development_evaluation_mode(parsed) is expected
 
 
 def test_cli_accepts_dataset_description_mode():
@@ -112,8 +138,20 @@ def test_cli_accepts_dynamic_blind_test_name_with_frozen_commit():
         ("--dataset", "dev-19k", "--describe-dataset", "--diagnostics", "diagnostics.json"),
         ("--dataset", "test-private-v2", "--describe-dataset", "--frozen-commit", "abc1234"),
         ("--dataset", "test-private-v2", "--frozen-commit", "abc1234", "--cache"),
+        ("--dataset", "test-private-v2", "--frozen-commit", "abc1234", "--fresh"),
+        ("--dataset", "test-private-v2", "--frozen-commit", "abc1234", "--cache-fill"),
+        ("--dataset", "test-private-v2", "--frozen-commit", "abc1234", "--seed", "0"),
         ("--dataset", "dev-19k", "--describe-dataset", "--cache"),
+        ("--dataset", "dev-19k", "--describe-dataset", "--fresh"),
+        ("--dataset", "dev-19k", "--describe-dataset", "--cache-fill"),
+        ("--dataset", "dev-19k", "--describe-dataset", "--seed", "0"),
         ("--worker", "--module", "solution", "--cache"),
+        ("--worker", "--module", "solution", "--fresh"),
+        ("--worker", "--module", "solution", "--cache-fill"),
+        ("--worker", "--module", "solution", "--seed", "0"),
+        ("--dataset", "debug", "--cache", "--fresh"),
+        ("--dataset", "debug", "--cache", "--cache-fill"),
+        ("--dataset", "debug", "--fresh", "--cache-fill"),
         ("--dataset", "test-private/ground_truth.json", "--frozen-commit", "abc1234"),
     ],
 )
@@ -156,12 +194,14 @@ def test_solution_environment_replaces_openai_credentials():
         # operate
         environment = _solution_environment(
             meter,
+            evaluation_seed=4,
             source={"PATH": "/usr/bin", "OPENAI_API_KEY": "real-key", "OPENAI_ADMIN_KEY": "admin-key"},
         )
 
     # check
     assert environment["OPENAI_API_KEY"] == meter.run_token
     assert environment["OPENAI_BASE_URL"] == meter.base_url
+    assert environment["EVALUATION_SEED"] == "4"
     assert "OPENAI_ADMIN_KEY" not in environment
 
 
@@ -180,11 +220,15 @@ def test_solution_environment_removes_every_evaluator_credential():
     with MeteringProxy(api_key="real-key", upstream_base_url="http://127.0.0.1:1") as meter:
 
         # operate
-        environment = _solution_environment(meter, source={"PATH": "/usr/bin", **sensitive})
+        environment = _solution_environment(
+            meter,
+            source={"PATH": "/usr/bin", "EVALUATION_SEED": "999", **sensitive},
+        )
 
     # check
     assert not (sensitive.keys() - {"OPENAI_API_KEY"}) & environment.keys()
     assert environment["OPENAI_API_KEY"] == meter.run_token
+    assert "EVALUATION_SEED" not in environment
 
 
 def test_whitespace_solution_runs_in_subprocess_without_api_calls():
@@ -312,7 +356,7 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
 
     # check
     assert completed.returncode == 0, completed.stderr
-    assert "result_schema_version=5" in completed.stdout
+    assert "result_schema_version=7" in completed.stdout
     assert "result_status=complete" in completed.stdout
     assert "score_is_final=true" in completed.stdout
     assert "f_score=1.000000" in completed.stdout
@@ -343,6 +387,7 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
         "score_is_final",
         "termination_category",
         "evaluation_mode",
+        "evaluation_seed",
         "cache_hits",
         "cache_misses",
         "openai_live_requests",
@@ -364,11 +409,14 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
         "pricing_version",
         "api_cost_usd",
         "cost_status",
+        "cost_is_comparable",
         "cost_usd_per_million_source_tokens",
         "duration_seconds",
         "document_results_json",
     ]
-    assert "diagnostics written: diagnostics.json (1 documents, schema v5)" in completed.stderr
+    assert "resolved_evaluation_mode=cache-fill" in completed.stderr
+    assert "resolved_evaluation_seed=0" in completed.stderr
+    assert "diagnostics written: diagnostics.json (1 documents, schema v7)" in completed.stderr
     diagnostics_duration = next(
         line.removeprefix("diagnostics_duration_seconds=")
         for line in completed.stderr.splitlines()
@@ -376,6 +424,16 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     )
     assert float(diagnostics_duration) >= 0
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
+    assert diagnostics["schema_version"] == 7
+    assert diagnostics["cost_is_comparable"] is True
+    assert diagnostics["evaluation_mode"] == "cache-fill"
+    assert diagnostics["evaluation_seed"] == 0
+    assert diagnostics["cache_hits"] == 0
+    assert diagnostics["cache_misses"] == 1
+    assert diagnostics["openai_live_requests"] == 1
+    assert diagnostics["cache_writes"] == 1
+    assert diagnostics["cache_write_errors"] == 0
+    assert diagnostics["cache_errors"] == 0
     assert diagnostics["documents"][0]["person_matches"] == [{"prediction_index": 0, "ground_truth_index": 0}]
     document_results = json.loads(
         next(
@@ -395,7 +453,7 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     assert float(duration_seconds) > 0
 
 
-def test_evaluator_cli_replays_cached_response_without_credentials_or_upstream(tmp_path: Path):
+def test_evaluator_cli_reuses_the_paired_seed_panel_without_credentials_or_upstream(tmp_path: Path):
     _write_cli_fixture(tmp_path)
     upstream = ThreadingHTTPServer(("127.0.0.1", 0), _CliUpstreamHandler)
     thread = threading.Thread(target=upstream.serve_forever, daemon=True)
@@ -407,19 +465,52 @@ def test_evaluator_cli_replays_cached_response_without_credentials_or_upstream(t
     environment["OPENAI_UPSTREAM_BASE_URL"] = f"http://{host}:{port}"
     environment["PYTHONPATH"] = str(repository)
 
-    live = subprocess.run(
-        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug"],
-        cwd=tmp_path,
-        env=environment,
-        text=True,
-        capture_output=True,
-        timeout=20.0,
-        check=False,
-    )
+    fills = [
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.evaluation.cli",
+                "--dataset",
+                "debug",
+                "--seed",
+                str(seed),
+                "--cache-fill",
+            ],
+            cwd=tmp_path,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=20.0,
+            check=False,
+        )
+        for seed in range(5)
+    ]
     upstream.shutdown()
     upstream.server_close()
     thread.join()
     environment.pop("OPENAI_API_KEY")
+    replays = [
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.evaluation.cli",
+                "--dataset",
+                "debug",
+                "--seed",
+                str(seed),
+                "--cache-fill",
+            ],
+            cwd=tmp_path,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=20.0,
+            check=False,
+        )
+        for seed in range(5)
+    ]
     cached = subprocess.run(
         [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug", "--cache"],
         cwd=tmp_path,
@@ -430,17 +521,30 @@ def test_evaluator_cli_replays_cached_response_without_credentials_or_upstream(t
         check=False,
     )
 
-    assert live.returncode == 0, live.stderr
-    assert "evaluation_mode=live" in live.stdout
-    assert "openai_live_requests=1" in live.stdout
-    assert "cache_writes=1" in live.stdout
+    for seed, fill in enumerate(fills):
+        assert fill.returncode == 0, fill.stderr
+        assert f"evaluation_seed={seed}" in fill.stdout
+        assert "evaluation_mode=cache-fill" in fill.stdout
+        assert "cache_misses=1" in fill.stdout
+        assert "openai_live_requests=1" in fill.stdout
+        assert "cache_writes=1" in fill.stdout
+    for seed, replay in enumerate(replays):
+        assert replay.returncode == 0, replay.stderr
+        assert f"evaluation_seed={seed}" in replay.stdout
+        assert "evaluation_mode=cache-fill" in replay.stdout
+        assert "cache_hits=1" in replay.stdout
+        assert "cache_misses=0" in replay.stdout
+        assert "openai_live_requests=0" in replay.stdout
+        assert "cost_is_comparable=false" in replay.stdout
     assert cached.returncode == 0, cached.stderr
-    assert "evaluation_mode=cached" in cached.stdout
+    assert "evaluation_mode=cache" in cached.stdout
     assert "cache_hits=1" in cached.stdout
     assert "cache_misses=0" in cached.stdout
     assert "openai_live_requests=0" in cached.stdout
     assert "api_cost_usd=0.00000000" in cached.stdout
-    assert (tmp_path / ".openai-response-cache").is_dir()
+    assert "cost_is_comparable=false" in cached.stdout
+    assert "cost_usd_per_million_source_tokens=" not in cached.stdout
+    assert len(list((tmp_path / ".openai-response-cache").rglob("*.json"))) == 5
 
 
 def test_evaluator_cli_cache_miss_is_partial_without_credentials_or_network(tmp_path: Path):
@@ -464,10 +568,37 @@ def test_evaluator_cli_cache_miss_is_partial_without_credentials_or_network(tmp_
     assert completed.returncode == 2, completed.stderr
     assert "result_status=partial" in completed.stdout
     assert "termination_category=cache_miss" in completed.stdout
-    assert "evaluation_mode=cached" in completed.stdout
+    assert "evaluation_mode=cache" in completed.stdout
     assert "cache_misses=1" in completed.stdout
     assert "openai_live_requests=0" in completed.stdout
     assert not (tmp_path / ".openai-response-cache").exists()
+
+
+def test_evaluator_cli_cache_fill_miss_requires_credentials_without_network(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment.pop("OPENAI_API_KEY", None)
+    environment["OPENAI_UPSTREAM_BASE_URL"] = "http://127.0.0.1:1"
+    environment["PYTHONPATH"] = str(repository)
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug", "--cache-fill"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    assert completed.returncode == 2, completed.stderr
+    assert "result_status=partial" in completed.stdout
+    assert "termination_category=cache_fill_requires_api_key" in completed.stdout
+    assert "evaluation_mode=cache-fill" in completed.stdout
+    assert "cache_misses=1" in completed.stdout
+    assert "openai_live_requests=0" in completed.stdout
+    assert "cost_is_comparable=false" in completed.stdout
 
 
 def test_evaluator_cli_reports_partial_results_and_continues_after_document_failure(tmp_path: Path):
@@ -516,7 +647,7 @@ def extract_pii(text):
 
     # check
     assert completed.returncode == 2, completed.stderr
-    assert "result_schema_version=5" in completed.stdout
+    assert "result_schema_version=7" in completed.stdout
     assert "result_status=partial" in completed.stdout
     assert "score_is_final=false" in completed.stdout
     assert "documents_completed=2" in completed.stdout
@@ -536,9 +667,10 @@ def extract_pii(text):
     assert document_results[1]["failure_category"] == "solution_error"
     assert "secret document content" not in json.dumps(document_results)
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
-    assert diagnostics["schema_version"] == 5
+    assert diagnostics["schema_version"] == 7
     assert diagnostics["lifecycle_status"] == "terminal"
     assert diagnostics["result_status"] == "partial"
+    assert diagnostics["cost_is_comparable"] is False
     assert diagnostics["completed_document_count"] == 2
     assert len(diagnostics["documents"]) == 2
 
@@ -1004,7 +1136,9 @@ def _write_cli_fixture(directory: Path, *, dataset: str = "debug") -> None:
     (text_directory / "doc.txt").write_text("John")
     ground_truth = {"doc": [{"first_name": ["John"]}]}
     (directory / "data" / dataset / "ground_truth.json").write_text(json.dumps(ground_truth))
-    (directory / "solution.py").write_text("""from openai import OpenAI
+    (directory / "solution.py").write_text("""import os
+
+from openai import OpenAI
 from src.evaluation.models import PIIItem
 
 
@@ -1012,6 +1146,7 @@ def extract_pii(text):
     OpenAI().chat.completions.create(
         model="gpt-4o-mini-2024-07-18",
         messages=[{"role": "user", "content": text}],
+        seed=int(os.environ.get("EVALUATION_SEED", "42")),
     )
     return [PIIItem(first_name=(text,))]
 """)
