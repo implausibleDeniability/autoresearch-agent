@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.15.0.0] - 2026-08-27
+
+### Added
+
+- Compare full 121-document experiment banks with `pii-compare`, using exact mean score changes,
+  document-paired linearized uncertainty, fixed decision thresholds, and structured next actions.
+- Write compact PII-free evidence sidecars with immutable solution, evaluator, dataset, runtime,
+  request-plan, and response-bank provenance.
+- Include synthetic comparison banks for a no-cost quickstart and strict validation coverage for
+  malformed, inconsistent, incomplete, duplicated, or unsafe evidence.
+
+### Changed
+
+- Use seeds `0` through `2` for response-changing control and candidate panels, with early heuristic
+  futility screening, formal rejection at run three, and strict fixed replay over one or more
+  distinct cached seed banks.
+
 ## [0.14.0.0] - 2026-08-27
 
 ### Added
