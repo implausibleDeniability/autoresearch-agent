@@ -35,10 +35,10 @@ leave a result inconclusive.
 ## Framework self-improvement
 
 You can improve the autoresearch framework using feedback from the research agent. The agent records
-that feedback in `REQUESTS.md` as the research proceeds. You can also run the `$autoresearch-retro`
-skill after a completed run to review the experiment artifacts, identify what limited the agent, and
-recommend changes to the research design, evaluator, data, environment, and repository. This creates
-a feedback loop that improves the research process itself.
+that feedback in `workspace/REQUESTS.md` as the research proceeds. You can also run the `$autoresearch-retro`
+skill after a completed run to review the journal, portfolio, experiment artifacts, and their Git
+history; identify what limited the agent; and recommend changes to the research design, evaluator,
+data, environment, and repository. This creates a feedback loop that improves the research process.
 
 ## Quick start
 

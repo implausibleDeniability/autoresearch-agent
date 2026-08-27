@@ -8,23 +8,61 @@ This is the technical companion to `program.md`. Follow it for setup, evaluation
 2. In the primary repository, check out `main` and pull the latest remote `main`. Stop if the pull fails.
 3. Create `autoresearch/<tag>` from updated `main`, using a filesystem-safe day-and-time tag such as `aug-8-11-52`. When the instructions require a worktree, create and enter it with `git worktree add -b autoresearch/<tag> <path> main`. If workspace placement is unspecified, ask before choosing it.
 4. For a new worktree, copy only required ignored local files such as `.env`, preserve their permissions, and confirm they remain ignored. If the primary repository contains `.cache-local/`, copy it without inspection to the new worktree as `.openai-response-cache/`, preserve its permissions, and confirm both paths remain ignored.
-5. Create `results.tsv` with only the header defined below, `research.md` with a short ranked experiment portfolio, and the ignored `diagnostics/` directory. Do not commit these working files.
+5. Reset the tracked files in `workspace/` from their repository templates for the new run. Fill in the run metadata, add the initial evidence and portfolio, then commit this initialization. Create the ignored `workspace/diagnostics/` directory separately.
 6. Review `baseline-results.tsv` to understand ordinary baseline variation, cost, and runtime before spending the first evaluation.
 7. Inspect dataset scale with `uv run python -m src.evaluation.cli --dataset dev-87k --describe-dataset`. This command is read-only, requires no API credentials, and does not count as an evaluation.
 8. Discover the blind dataset name by listing only directory names matching `data/test-*`. Do not inspect their contents.
 
 ## Working files
 
-| File | Purpose |
-| --- | --- |
-| `results.tsv` | Development evaluation results and cumulative spend |
-| `research.md` | Ranked hypothesis portfolio and external research findings |
-| `REQUESTS.md` | Information and requests for the human supervisor |
-| `run.log` | Output from the latest evaluation |
-| `diagnostics/<bank>/<evaluation>-<commit>-<dataset>-seed<seed>.json` | Rich development diagnostics |
-| `diagnostics/<bank>/<evaluation>-<commit>-<dataset>-seed<seed>.evidence.json` | PII-free comparison evidence written automatically |
+| File | Purpose | Tracking |
+| --- | --- | --- |
+| `workspace/results.tsv` | Development evaluation results and cumulative spend | Tracked |
+| `workspace/research.md` | Append-oriented evidence, reasoning, experiments, and conclusions | Tracked |
+| `workspace/HYPOTHESIS_PORTFOLIO.md` | Current ranked snapshot of hypotheses and priorities | Tracked |
+| `workspace/REQUESTS.md` | Information and requests for the human supervisor | Tracked; no raw source text or PII |
+| `workspace/run.log` | Output from the latest evaluation | Ignored |
+| `workspace/diagnostics/<bank>/<evaluation>-<commit>-<dataset>-seed<seed>.json` | Rich development diagnostics | Ignored |
+| `workspace/diagnostics/<bank>/<evaluation>-<commit>-<dataset>-seed<seed>.evidence.json` | PII-free comparison evidence written automatically | Ignored |
 
 Keep each exact incumbent or candidate panel in its own directory. Use a new diagnostic path for every development evaluation; the evaluator derives and preflights its `.evidence.json` sidecar. Never request diagnostics for a blind dataset.
+
+## Research record protocol
+
+Use stable hypothesis IDs across the journal, portfolio, and result findings. Convert each useful external finding into a linked hypothesis, defer it with a reason, or record why it will not be pursued.
+
+Before implementing or evaluating a hypothesis, append a stage to `workspace/research.md` and commit it with any portfolio changes. Use this structure:
+
+```markdown
+## Stage N — HYPOTHESIS-ID: Short title
+
+### Evidence
+### Reasoning
+### Hypothesis
+### Generality case
+### Prediction
+### Experiment
+### Results
+### Conclusion
+### Implications
+```
+
+The plan commit fills the sections through `Experiment`, including the decision rule and evaluation design. After evaluation, append the exact candidate commit, results, uncertainty, conclusion, implications, and portfolio changes. Do not rewrite a stage to make a result look anticipated; add a dated amendment when a correction is necessary.
+
+Describe generality as `broad`, `conditional`, or `local` when useful, and explain why. These labels summarize transfer expectations; they are not quotas or gates.
+
+Set a portfolio-audit interval in concluded hypotheses at setup, using five unless the run's scale justifies another cadence. At each audit, review changed evidence, failed assumptions, possible overfitting to local errors, disconnected external findings, neglected uncertainties, and the best current opportunities. Record the audit in `workspace/research.md` and update the ranked portfolio.
+
+## Commit protocol
+
+Keep research state and evaluated code attributable:
+
+1. Commit the initialized research journal, portfolio, requests, and results ledger.
+2. Before each experiment, commit its planned journal stage and portfolio decision.
+3. Commit the candidate with only the intended `solution.py` change, then evaluate that exact commit.
+4. After deciding, commit the completed stage, `workspace/results.tsv`, and updated portfolio. Include `workspace/REQUESTS.md` when it changed.
+
+Never amend or rewrite an evaluated candidate commit. If a long or failure-prone evaluation needs a checkpoint before the decision is complete, make an additional research-only checkpoint and finish the stage in a later research commit.
 
 ## Development evaluation protocol
 
@@ -38,7 +76,7 @@ Keep each exact incumbent or candidate panel in its own directory. Use a new dia
 
 Development evaluations default to cache-fill if a flag is omitted, but research commands must include the flag explicitly. Cache-fill hits work without credentials; a miss without `OPENAI_API_KEY` fails before a live call. Strict cache provides deterministic response replay, not a guarantee that arbitrary solution code has no other source of nondeterminism or network access. Development cache modes are unavailable for blind evaluations.
 
-For `--fresh`, record in `research.md` why the hypothesis requires fresh responses.
+For `--fresh`, record in the stage's `Experiment` section why the hypothesis requires fresh responses.
 
 ### Execution modes
 
@@ -105,18 +143,19 @@ uv run pii-eval --dataset dev-202k --execution-mode threaded \
   --max-inflight-liability-cents 100 --fresh --preflight --output-format json
 
 # Normal development evaluation: replay hits and fill misses
-set -a; source .env; set +a; uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/candidate/001-a1b2c3d-dev-19k-seed0.json --cache-fill > run.log 2>&1
+set -a; source .env; set +a; uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics workspace/diagnostics/candidate/001-a1b2c3d-dev-19k-seed0.json --cache-fill > workspace/run.log 2>&1
 
-# Fresh response-variability experiment; record the reason in research.md first
-set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/candidate/002-a1b2c3d-dev-19k-seed0.json --fresh > run.log 2>&1
+# Fresh response-variability experiment; record the reason in the stage first
+set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics workspace/diagnostics/candidate/002-a1b2c3d-dev-19k-seed0.json --fresh > workspace/run.log 2>&1
 
 # Strict response replay with no OpenAI call
-uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics diagnostics/candidate/003-a1b2c3d-dev-19k-seed0.json --cache > run.log 2>&1
+uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics workspace/diagnostics/candidate/003-a1b2c3d-dev-19k-seed0.json --cache > workspace/run.log 2>&1
 
 # Threaded live evaluation with bounded one-dollar in-flight liability
 set -a; source .env; set +a; uv run pii-eval --dataset dev-202k --seed 0 \
   --execution-mode threaded --max-concurrent-documents 150 --max-upstream-requests 150 \
-  --max-inflight-liability-cents 100 --diagnostics-dir diagnostics --fresh > run.log 2>&1
+  --max-inflight-liability-cents 100 --diagnostics-dir workspace/diagnostics \
+  --fresh > workspace/run.log 2>&1
 ```
 
 Substitute the actual evaluation number, commit, and visible dataset. `--timeout` may set a shorter deadline but cannot exceed 180 seconds.
@@ -128,7 +167,7 @@ Substitute the actual evaluation number, commit, and visible dataset. `--timeout
 Read the run status before interpreting metrics:
 
 ```bash
-grep -E '^(result_status|score_is_final|termination_category|execution_mode|evaluation_mode|evaluation_seed|cache_hits|cache_misses|cache_errors|cache_writes|cache_write_errors|openai_live_requests|documents_completed|documents_failed|documents_not_attempted|cost_status|cost_is_final|cost_is_comparable|usage_attribution_status|api_cost_usd|observed_api_cost_usd|reserved_api_cost_usd|unknown_api_cost_liability_usd|maximum_api_cost_exposure_usd|peak_active_upstream_requests|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|duration_seconds|document_results_json)=' run.log
+grep -E '^(result_status|score_is_final|termination_category|execution_mode|evaluation_mode|evaluation_seed|cache_hits|cache_misses|cache_errors|cache_writes|cache_write_errors|openai_live_requests|documents_completed|documents_failed|documents_not_attempted|cost_status|cost_is_final|cost_is_comparable|usage_attribution_status|api_cost_usd|observed_api_cost_usd|reserved_api_cost_usd|unknown_api_cost_liability_usd|maximum_api_cost_exposure_usd|peak_active_upstream_requests|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|duration_seconds|document_results_json)=' workspace/run.log
 ```
 
 #### Complete result
@@ -149,7 +188,7 @@ When `result_status=partial` and `score_is_final=false`:
 
 #### Missing status
 
-If `result_status` is missing, treat the attempt as an evaluator or protocol crash and inspect the final 50 lines of `run.log`. For an API-capable evaluation, charge the pre-run estimate unless a trustworthy observed subtotal is available.
+If `result_status` is missing, treat the attempt as an evaluator or protocol crash and inspect the final 50 lines of `workspace/run.log`. For an API-capable evaluation, charge the pre-run estimate unless a trustworthy observed subtotal is available.
 
 #### Interrupts
 
@@ -163,13 +202,13 @@ Use `--cache-fill` for this panel. Restored hits are valid baseline evidence; on
 
 ## Diagnostics and failures
 
-Before another paid run, inspect the diagnostic file from the current evaluation. Inventory every false negative and false positive by document ID, field, person index, and exact value; use source evidence to inspect the highest-impact errors. Record concrete examples and the diagnostic path in `research.md`, then name an observed error class in the next hypothesis and summarize the conclusion in `results.tsv` `finding`. Never propose or evaluate a new experiment from aggregate metrics alone.
+Before another paid run, inspect the diagnostic file from the current evaluation. Inventory every false negative and false positive by document ID, field, person index, and exact value; use source evidence to inspect the highest-impact errors. Keep exact values and raw source text only in ignored diagnostics. Record document IDs, error classes, and diagnostic paths in `workspace/research.md`, then summarize the conclusion in `workspace/results.tsv` `finding`. Never propose or evaluate a new experiment from aggregate metrics alone.
 
 If a run crashes, preserve and inspect any partial diagnostics. Fix and rerun an easy implementation failure; log `crash` and move on when the idea is fundamentally broken. Never assume an API-capable crash cost $0: charge the observed cost when complete, or the larger of observed cost and the pre-run estimate when metering is incomplete.
 
 ## Logging results
 
-Use tab-separated `results.tsv`; commas in descriptions make CSV unsuitable. Start with this header:
+Use tab-separated `workspace/results.tsv`; commas in descriptions make CSV unsuitable. Start with this header:
 
 ```tsv
 commit	score	precision	recall	cost	status	description	dataset	budget_cost_usd	finding	evaluation_mode	cost_is_comparable	evaluation_seed
@@ -191,7 +230,7 @@ The columns are:
 12. `true` only when the numeric normalized cost supports comparison: fresh or zero-hit cache-fill. Otherwise `false` and record cost as `0.000000`.
 13. non-negative development evaluation seed.
 
-Record every development evaluation, including repetitions and crashes, as a separate row. Row order determines the experiment number. After deciding, assign the same status to successful repetitions of the same commit, dataset, and seed panel. Recompute cumulative spend after each evaluation. Report the blind result separately.
+Record every development evaluation, including repetitions and crashes, as a separate row. Row order determines the experiment number. After deciding, assign the same status to successful repetitions of the same commit, dataset, and seed panel. Recompute cumulative spend after each evaluation. Commit the rows with the completed hypothesis stage. Report the blind result separately.
 
 ## Paired comparison decisions
 
@@ -201,8 +240,8 @@ A complete result on a smaller development dataset may justify `discard` or `inc
 
 ```bash
 uv run pii-compare \
-  --incumbent diagnostics/incumbent-bank \
-  --candidate diagnostics/candidate-bank
+  --incumbent workspace/diagnostics/incumbent-bank \
+  --candidate workspace/diagnostics/candidate-bank
 ```
 
 JSON is the authoritative agent interface. Exit `0` means valid evidence and any scientific outcome; `2` means invalid evidence or usage; `1` means an internal failure. `run_again` names the next fixed seed. `stop_for_futility` is an early heuristic, not a formal rejection. At seed three, promotion requires one-sided `p < 0.05`; a gain of at least 1 percentage point is promotion-eligible, while a gain from 0.3 to 1 point requires mechanistic review. Formal rejection occurs only when the one-sided 80% upper confidence bound is below +0.3 points. Otherwise postpone the result as inconclusive.
@@ -213,7 +252,7 @@ For a strict downstream replay, compare the same fixed seed prefix in each arm w
 
 Diagnostics created before comparison-evidence schema v1 are unsupported because they lack immutable provenance and response receipts. Do not backfill or infer those fields from filenames. Generate a new incumbent panel and evaluate candidates under the same evaluator, dataset, runtime, and scoring contract.
 
-On the first qualifying real three-seed bank, record both the legacy score summary and the comparator decision in `research.md` before making that bank the control. This shadow record checks the operational migration without weakening the comparator's locked decision. It is required once; it does not authorize extra targeted runs.
+On the first qualifying real three-seed bank, record both the legacy score summary and the comparator decision in `workspace/research.md` before making that bank the control. This shadow record checks the operational migration without weakening the comparator's locked decision. It is required once; it does not authorize extra targeted runs.
 
 Common failures are recoverable without changing thresholds:
 
@@ -243,7 +282,7 @@ Any modification to the candidate between repetitions creates a **new hypothesis
 
 If cost could change a candidate decision and no comparable saved run exists, leave the cost conclusion inconclusive. Missing cost evidence does not justify a fresh run.
 
-When a candidate does not replace the incumbent, return to the incumbent without deleting its recorded evaluations. The comparator never modifies Git state or launches another evaluation.
+When a candidate does not replace the incumbent, return to the incumbent without deleting its recorded evaluations. Append the decision and evidence to its journal stage and update the portfolio before continuing. The comparator never modifies Git state or launches another evaluation.
 
 ## Final evaluation
 
@@ -254,9 +293,9 @@ When a candidate does not replace the incumbent, return to the incumbent without
 5. If it fits, run one evaluation on the discovered blind dataset without diagnostics:
 
 ```bash
-set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > run.log 2>&1
+set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.evaluation.cli --dataset 'test-<discovered-name>' --frozen-commit '<full-frozen-commit>' > workspace/run.log 2>&1
 ```
 
-The evaluator verifies the frozen commit before and after the run. Leave its aggregate output in `run.log`, charge the cost, and stop experimenting.
+The evaluator verifies the frozen commit before and after the run. Leave its aggregate output in `workspace/run.log`, charge the cost, and stop experimenting. Append the aggregate result, spend, and frozen-commit provenance to `workspace/research.md`; update the tracked ledger and portfolio when relevant; then commit the final research record without modifying `solution.py`.
 
 Whether or not the blind evaluation ran, invoke `$report-autoresearch-progress` and use its output as the final report. Invoke `$generate-autoresearch-trajectory` only when the user requests a trajectory.
