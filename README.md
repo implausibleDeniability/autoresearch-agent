@@ -74,10 +74,10 @@ uv run pii-eval --dataset dev-202k --execution-mode threaded \
 
 # Fast live evaluation; the explicit liability limit permits full parallel admission
 set -a; source .env; set +a
-mkdir -p diagnostics
+mkdir -p workspace/diagnostics
 uv run pii-eval --dataset dev-202k --seed 0 --execution-mode threaded \
   --max-concurrent-documents 150 --max-upstream-requests 150 \
-  --max-inflight-liability-cents 100 --fresh --diagnostics-dir diagnostics
+  --max-inflight-liability-cents 100 --fresh --diagnostics-dir workspace/diagnostics
 ```
 
 The default `isolated` mode launches one killable process per document. `threaded` imports the
