@@ -86,7 +86,7 @@ class ResponseCache:
                 pass
 
     def request_key(self, *, path: str, body: bytes, headers: Mapping[str, str]) -> str:
-        return _request_digest(
+        return canonical_request_key(
             upstream_base_url=self._upstream_base_url,
             path=path,
             body=body,
@@ -105,7 +105,7 @@ class ResponseCache:
             path.chmod(0o700)
 
 
-def _request_digest(
+def canonical_request_key(
     *,
     upstream_base_url: str,
     path: str,
