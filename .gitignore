@@ -38,4 +38,5 @@ research.md
 *.log
 diagnostics.json
 .openai-response-cache/
+.cache-local/
 diagnostics/
