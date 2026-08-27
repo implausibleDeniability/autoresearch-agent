@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.16.0.0] - 2026-08-27
+
+### Added
+
+- Add bounded threaded evaluation for up to 150 documents, with isolated compatibility mode and a
+  staged `32` → `96` → `150` health ramp.
+- Record execution mode, concurrency, completion, final cost, and canonical aggregate evidence in
+  diagnostics and baseline results.
+
+### Changed
+
+- Reuse one OpenAI client and evaluate independent documents concurrently without changing the
+  model, prompt, seed, or 8,192-token completion limit.
+- Split settled spend, in-flight liability, and unknown liability so high parallelism can use the
+  approved budget without weakening the hard cost ceiling.
+- Bound worker, upstream, request, response, cache, journal, and diagnostic resources, with
+  fail-closed cleanup for stalls, malformed frames, oversized payloads, and interrupted runs.
+
+### Fixed
+
+- Make concurrent journals identity-safe and aggregate evidence deterministic despite
+  nondeterministic completion order.
+- Prevent capacity wake-up races, cache working-set overruns, cross-resource deadlocks, and leaked
+  worker process groups during failures.
+
 ## [0.15.0.0] - 2026-08-27
 
 ### Added
