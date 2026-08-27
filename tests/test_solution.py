@@ -1,10 +1,13 @@
 import os
 import subprocess
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
 from solution import extract_pii
+import solution
 
 
 def test_empty_text_returns_without_openai_credentials():
@@ -33,3 +36,22 @@ def test_solution_uses_the_evaluator_seed_with_blind_fallback(environment_seed, 
     )
 
     assert completed.stdout.strip() == expected
+
+
+def test_openai_client_is_constructed_once_during_concurrent_first_use(monkeypatch):
+    clients = []
+
+    def construct_client(**_kwargs):
+        time.sleep(0.01)
+        client = object()
+        clients.append(client)
+        return client
+
+    monkeypatch.setattr(solution, "_CLIENT", None)
+    monkeypatch.setattr(solution, "OpenAI", construct_client)
+
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        results = tuple(executor.map(lambda _index: solution._openai_client(), range(50)))
+
+    assert len(clients) == 1
+    assert all(result is clients[0] for result in results)

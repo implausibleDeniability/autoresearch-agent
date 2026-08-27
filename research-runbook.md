@@ -78,13 +78,28 @@ Development evaluations default to cache-fill if a flag is omitted, but research
 
 For `--fresh`, record in the stage's `Experiment` section why the hypothesis requires fresh responses.
 
+### Execution modes
+
+| Mode | Process model | Usage attribution | Use when |
+| --- | --- | --- | --- |
+| `--execution-mode isolated` | One killable process per document | Exact per document | Compatibility, untrusted state, or debugging |
+| `--execution-mode threaded` | One killable process with a thread pool | Aggregate only | The solution is thread-safe and startup dominates runtime |
+
+Isolated remains the default. Threaded mode preserves the model request, seed, cache key, result order, deadline, and process-group kill boundary. Its default admission ramp is 32, 96, then the requested concurrency; an early document failure stops further admission. `--admission-strategy immediate` skips the ramp and is an advanced override.
+
+Blind evaluations use threaded mode and reject an explicit isolated override. They still enforce the configured document, upstream-request, settled-spend, and in-flight-liability limits.
+
+Set `--max-concurrent-documents` for document work and `--max-upstream-requests` for simultaneous OpenAI calls. Both accept at most 150. Run `--preflight --output-format json` first to validate the dataset, topology, limits, and diagnostics path without credentials or API calls.
+
+To roll back the topology, rerun development evaluation with `--execution-mode isolated`; cache identity is unchanged. If the candidate source is faulty in both modes, restore the prior candidate commit instead of weakening evaluator safeguards.
+
 ### Paired seed panels
 
 The evaluator passes `--seed N` to `solution.py` as `EVALUATION_SEED=N`. The reference solution includes it in every OpenAI request, so the cache stores one response per exact request and seed. Prompt, model, schema, or request changes miss and fill normally.
 
 Use seeds `0` through `2` for the incumbent control bank. A response-changing candidate starts at seed `0`; run seed `1` and then seed `2` only when `pii-compare` recommends the next fixed seed. The comparator always matches the candidate prefix to the same incumbent seeds while requiring the complete three-seed control bank. Never pool different candidate commits or add targeted repeats.
 
-For a change strictly downstream of model responses, `--change-type fixed-replay` permits a formal look after seed `0`. When distinct cached banks already exist, it also accepts the fixed prefixes `0,1` and `0,1,2`. Every paired seed must use `--cache`, replay every request, and have identical document-scoped request and response receipts across arms. Banks must be distinct across seeds; rerunning one bank adds no evidence. A caller's classification alone cannot activate this exception, and do not make paid calls solely to create more replay banks.
+For a change strictly downstream of model responses, `--change-type fixed-replay` permits a formal look after seed `0`. When distinct cached banks already exist, it also accepts the fixed prefixes `0,1` and `0,1,2`. Every paired seed must use `--cache`, replay every request, and have identical canonical request and response receipts across arms. Isolated receipts are document-scoped; threaded receipts use deterministic aggregate ordering because per-document attribution is unavailable. Banks must be distinct across seeds; rerunning one bank adds no evidence. A caller's classification alone cannot activate this exception, and do not make paid calls solely to create more replay banks.
 
 ### Cost accounting and evaluator behavior
 
@@ -98,7 +113,15 @@ The denominator counts each original document once and excludes system prompts, 
 
 The evaluator supports Chat Completions and Responses with the allowed models, including structured outputs, local function calling, prompt caching, retries, concurrency, and streaming. Successful responses that cannot be priced make cost accounting incomplete rather than counting as free. Provider-hosted tools and other billable endpoints are unavailable without an evaluator pricing rule.
 
-The default 8-cent meter is a guard rather than the normalized-cost target. Override the default limit with `--cents-limit` only when the estimated live run fits the total research budget. A request may exceed the remaining per-run limit so the evaluator can return useful results; further requests are then rejected.
+#### Cost safety
+
+The default eight-cent settled-spend limit stops new requests after observed spend exceeds the limit. `--settled-spend-limit-cents` sets it; `--cents-limit` remains a deprecated alias.
+
+In-flight liability is separate. Each admitted request reserves its maximum possible cost until usage settles. `--max-inflight-liability-cents` bounds concurrent reservations plus unknown billing exposure; unresolved liability permanently consumes capacity for that run. Increase this limit only when the resulting exposure fits the total research budget. `maximum_api_cost_exposure_usd` reports observed spend plus outstanding and unknown liability.
+
+#### Cost finality
+
+`cost_is_final=true` requires every admitted request to settle with priceable usage. If an upstream request starts but usage never returns, its reservation becomes `unknown_api_cost_liability_usd`, cost remains incomplete, and the maximum exposure—not the observed subtotal—is the safe budget charge. `--settlement-grace-seconds` controls how long finalization waits for admitted requests.
 
 Every mode counts toward the 40-evaluation limit. Charge `budget_cost_usd=0` for strict cache. For cache-fill and fresh, charge actual live spend; apply the existing incomplete-metering rule after a failure. A strict miss is a `crash` and still counts.
 
@@ -106,7 +129,7 @@ Every mode counts toward the 40-evaluation limit. Charge `budget_cost_usd=0` for
 
 1. Confirm that another evaluation fits within the 40-evaluation limit. For `--cache-fill` or `--fresh`, also confirm that possible live requests fit within the remaining $0.50 API budget while preserving enough budget for the final evaluation.
 2. Before a mode that can call OpenAI, estimate total API spend. Estimate normalized cost when the result can be comparable. The target is at most $1.50 per million source-document tokens.
-3. Choose the dataset and concurrency appropriate for the hypothesis. The evaluator processes up to 50 documents concurrently by default; use `--max-concurrent-documents N` to reduce simultaneous worker and API load.
+3. Choose the dataset and topology appropriate for the hypothesis. The evaluator processes up to 50 documents concurrently by default. Use threaded mode only after a no-spend preflight and a small live canary. Keep the health ramp unless prior evidence justifies immediate admission.
 4. Select the evaluation mode and seed under the protocol above.
 
 ### Commands
@@ -114,6 +137,11 @@ Every mode counts toward the 40-evaluation limit. Charge `budget_cost_usd=0` for
 Run the evaluator in one of these modes:
 
 ```bash
+# No-spend validation of the 150-document threaded topology
+uv run pii-eval --dataset dev-202k --execution-mode threaded \
+  --max-concurrent-documents 150 --max-upstream-requests 150 \
+  --max-inflight-liability-cents 100 --fresh --preflight --output-format json
+
 # Normal development evaluation: replay hits and fill misses
 set -a; source .env; set +a; uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics workspace/diagnostics/candidate/001-a1b2c3d-dev-19k-seed0.json --cache-fill > workspace/run.log 2>&1
 
@@ -122,16 +150,24 @@ set -a; source .env; set +a; test -n "$OPENAI_API_KEY" && uv run python -m src.e
 
 # Strict response replay with no OpenAI call
 uv run python -m src.evaluation.cli --dataset dev-19k --seed 0 --diagnostics workspace/diagnostics/candidate/003-a1b2c3d-dev-19k-seed0.json --cache > workspace/run.log 2>&1
+
+# Threaded live evaluation with bounded one-dollar in-flight liability
+set -a; source .env; set +a; uv run pii-eval --dataset dev-202k --seed 0 \
+  --execution-mode threaded --max-concurrent-documents 150 --max-upstream-requests 150 \
+  --max-inflight-liability-cents 100 --diagnostics-dir workspace/diagnostics \
+  --fresh > workspace/run.log 2>&1
 ```
 
 Substitute the actual evaluation number, commit, and visible dataset. `--timeout` may set a shorter deadline but cannot exceed 180 seconds.
+
+`duration_seconds` measures dataset execution and metering finalization. Full diagnostic serialization runs afterward and may add command wall time; omit diagnostics for timing panels after one diagnostic canary has confirmed correctness.
 
 ### Result interpretation
 
 Read the run status before interpreting metrics:
 
 ```bash
-grep -E '^(result_status|score_is_final|termination_category|evaluation_mode|evaluation_seed|cache_hits|cache_misses|cache_errors|cache_writes|cache_write_errors|openai_live_requests|documents_completed|documents_failed|documents_not_attempted|cost_status|cost_is_comparable|api_cost_usd|observed_api_cost_usd|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|document_results_json)=' workspace/run.log
+grep -E '^(result_status|score_is_final|termination_category|execution_mode|evaluation_mode|evaluation_seed|cache_hits|cache_misses|cache_errors|cache_writes|cache_write_errors|openai_live_requests|documents_completed|documents_failed|documents_not_attempted|cost_status|cost_is_final|cost_is_comparable|usage_attribution_status|api_cost_usd|observed_api_cost_usd|reserved_api_cost_usd|unknown_api_cost_liability_usd|maximum_api_cost_exposure_usd|peak_active_upstream_requests|f_score|partial_f_score|precision|partial_precision|recall|partial_recall|cost_usd_per_million_source_tokens|partial_cost_usd_per_million_completed_source_tokens|duration_seconds|document_results_json)=' workspace/run.log
 ```
 
 #### Complete result
@@ -153,6 +189,10 @@ When `result_status=partial` and `score_is_final=false`:
 #### Missing status
 
 If `result_status` is missing, treat the attempt as an evaluator or protocol crash and inspect the final 50 lines of `workspace/run.log`. For an API-capable evaluation, charge the pre-run estimate unless a trustworthy observed subtotal is available.
+
+#### Interrupts
+
+On `SIGINT`, threaded mode stops admission, terminates its process group, waits for metering settlement, writes final diagnostics, and exits 130. The adjacent owner-only `.journal.jsonl` file records each settled document before lightweight progress checkpoints; terminal finalization replaces the checkpoint with full diagnostics. Treat an interrupted run as partial; never promote from it.
 
 ## Initial baseline
 

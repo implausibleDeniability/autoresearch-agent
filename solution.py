@@ -1,4 +1,5 @@
 import os
+import threading
 from typing import List
 
 from openai import OpenAI
@@ -10,6 +11,8 @@ MODEL = "gpt-4o-mini-2024-07-18"
 DEFAULT_SEED = 42
 SEED = int(os.environ.get("EVALUATION_SEED", str(DEFAULT_SEED)))
 MAX_COMPLETION_TOKENS = 8192
+_CLIENT = None
+_CLIENT_LOCK = threading.Lock()
 
 PROMPT = """
 Extract every real person mentioned in the document and group their personally identifiable
@@ -68,7 +71,7 @@ def _has_candidate_content(text: str) -> bool:
 
 
 def _extract_people(text: str) -> _People:
-    completion = OpenAI(max_retries=2, timeout=300.0).chat.completions.parse(
+    completion = _openai_client().chat.completions.parse(
         model=MODEL,
         messages=[{"role": "user", "content": PROMPT.format(text=text)}],
         response_format=_People,
@@ -82,3 +85,11 @@ def _extract_people(text: str) -> _People:
     if message.parsed is None:
         raise RuntimeError("OpenAI returned no parsed PII response")
     return message.parsed
+
+
+def _openai_client() -> OpenAI:
+    global _CLIENT
+    with _CLIENT_LOCK:
+        if _CLIENT is None:
+            _CLIENT = OpenAI(max_retries=2, timeout=300.0)
+        return _CLIENT

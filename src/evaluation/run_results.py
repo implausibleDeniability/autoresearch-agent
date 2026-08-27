@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Literal, Mapping, Optional, Tuple
 
 from src.cost_metering.accounting import CostReport, MeteringOutcome
+from src.evaluation.execution import ExecutionModeValue
 from src.evaluation.models import PIIItem
 from src.evaluation.results import EvaluationTrace
 
@@ -44,6 +45,18 @@ class LifecycleStatus:
 LifecycleStatusValue = Literal["running", "terminal"]
 
 
+class UsageAttributionStatus:
+    EXACT = "exact"
+    UNAVAILABLE = "unavailable"
+
+    @classmethod
+    def all(cls) -> Tuple[str, ...]:
+        return cls.EXACT, cls.UNAVAILABLE
+
+
+UsageAttributionStatusValue = Literal["exact", "unavailable"]
+
+
 @dataclass(frozen=True)
 class DocumentExecution:
     ordinal: int
@@ -52,6 +65,7 @@ class DocumentExecution:
     source_tokens: int
     usage: Optional[CostReport] = None
     usage_complete: bool = False
+    usage_attribution_status: UsageAttributionStatusValue = UsageAttributionStatus.EXACT
     latency_seconds: Optional[float] = None
     predictions: Tuple[PIIItem, ...] = ()
     failure_category: str = ""
@@ -60,6 +74,8 @@ class DocumentExecution:
 
     @property
     def usage_status(self) -> str:
+        if self.usage_attribution_status == UsageAttributionStatus.UNAVAILABLE:
+            return UsageAttributionStatus.UNAVAILABLE
         return "complete" if self.usage_complete else "incomplete"
 
 
@@ -74,6 +90,7 @@ class EvaluationRun:
     cost: MeteringOutcome
     lifecycle_status: LifecycleStatusValue
     termination_category: str
+    execution_mode: ExecutionModeValue
     evaluation_seed: Optional[int]
     started_at: str
     updated_at: str
@@ -110,6 +127,11 @@ class EvaluationRun:
             for document in self.documents
             if document.status == DocumentStatus.COMPLETED
         )
+
+    @property
+    def usage_attribution_status(self) -> str:
+        statuses = {document.usage_attribution_status for document in self.documents}
+        return statuses.pop() if len(statuses) == 1 else "mixed"
 
     @classmethod
     def timestamp(cls) -> str:

@@ -158,7 +158,17 @@ class MeteringOutcome:
     cache_writes: int = 0
     cache_write_errors: int = 0
     cache_errors: int = 0
+    reserved_api_cost_usd: Decimal = Decimal()
+    unknown_api_cost_liability_usd: Decimal = Decimal()
+    maximum_api_cost_exposure_usd: Decimal = Decimal()
+    peak_reserved_api_cost_usd: Decimal = Decimal()
+    peak_active_upstream_requests: int = 0
+    reservation_wait_seconds: float = 0.0
     request_receipts: Tuple[RequestReceipt, ...] = ()
+
+    @property
+    def cost_is_final(self) -> bool:
+        return self.status == CostStatus.COMPLETE and self.unknown_api_cost_liability_usd == 0
 
 
 def cost_is_comparable(outcome: MeteringOutcome, *, result_is_complete: bool) -> bool:

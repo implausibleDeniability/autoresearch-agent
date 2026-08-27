@@ -6,10 +6,13 @@ import os
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Callable, Mapping, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 CACHE_SCHEMA_VERSION = 1
+MAX_CACHED_RESPONSE_BYTES = 10_000_000
+MAX_SERIALIZED_CACHE_ENTRY_BYTES = 13_350_000
+MAX_CACHE_ENTRY_WORKING_SET_BYTES = MAX_CACHED_RESPONSE_BYTES + MAX_SERIALIZED_CACHE_ENTRY_BYTES
 SEMANTIC_HEADER_NAMES = (
     "Idempotency-Key",
     "OpenAI-Beta",
@@ -40,12 +43,20 @@ class ResponseCache:
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> Optional[CachedResponse]:
         entry_path = self._entry_path(path=path, body=body, headers=headers)
         if not entry_path.exists():
             return None
         try:
-            serialized = entry_path.read_bytes()
+            if entry_path.stat().st_size > MAX_SERIALIZED_CACHE_ENTRY_BYTES:
+                raise ValueError("response cache entry exceeds the size limit")
+            if before_read is not None:
+                before_read()
+            with entry_path.open("rb") as handle:
+                serialized = handle.read(MAX_SERIALIZED_CACHE_ENTRY_BYTES + 1)
+            if len(serialized) > MAX_SERIALIZED_CACHE_ENTRY_BYTES:
+                raise ValueError("response cache entry exceeds the size limit")
             payload = json.loads(serialized)
             return _decode_response(payload)
         except (OSError, UnicodeError, ValueError, TypeError, KeyError) as error:
@@ -140,6 +151,8 @@ def canonical_request_key(
 
 
 def _encode_response(response: CachedResponse) -> bytes:
+    if len(response.content) > MAX_CACHED_RESPONSE_BYTES:
+        raise ValueError("response cache content exceeds the size limit")
     checksum = hashlib.sha256(response.content).hexdigest()
     payload = {
         "schema_version": CACHE_SCHEMA_VERSION,
@@ -163,6 +176,8 @@ def _decode_response(payload: object) -> CachedResponse:
     if not all(isinstance(value, str) for value in (content_type, checksum, encoded)):
         raise ValueError("invalid response cache metadata")
     content = base64.b64decode(encoded, validate=True)
+    if len(content) > MAX_CACHED_RESPONSE_BYTES:
+        raise ValueError("response cache content exceeds the size limit")
     if hashlib.sha256(content).hexdigest() != checksum:
         raise ValueError("response cache checksum mismatch")
     return CachedResponse(status_code=status_code, content_type=content_type, content=content)

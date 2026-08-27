@@ -2,10 +2,11 @@ import hashlib
 import secrets
 import threading
 import time
+from dataclasses import replace
 from decimal import Decimal
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from typing import Dict, List, Mapping, Optional
+from typing import Callable, Dict, List, Mapping, Optional
 
 import httpx
 
@@ -24,7 +25,13 @@ from .http import MeterHandler
 from .response_cache import CacheEntryError, CachedResponse, ResponseCache, canonical_request_key
 
 DEFAULT_SPENDING_LIMIT_USD = Decimal("0.08")
+DEFAULT_INFLIGHT_LIABILITY_LIMIT_USD = Decimal("0.08")
+DEFAULT_PROXY_INFLIGHT_LIABILITY_LIMIT_USD = Decimal("1.00")
+DEFAULT_MAX_UPSTREAM_REQUESTS = 150
+HANDLER_HEADROOM = 16
 SPENDING_LIMIT_STATUS = 429
+MAX_RETAINED_REQUEST_BYTES = 50_000_000
+MAX_RETAINED_RESPONSE_BYTES = 200_000_000
 
 
 class MeterState:
@@ -35,17 +42,27 @@ class MeterState:
         run_token: str,
         upstream_base_url: str,
         spending_limit_usd: Decimal = DEFAULT_SPENDING_LIMIT_USD,
+        max_inflight_liability_usd: Decimal = DEFAULT_INFLIGHT_LIABILITY_LIMIT_USD,
         evaluation_mode: EvaluationMode = EvaluationMode.FRESH,
         response_cache: Optional[ResponseCache] = None,
+        admission_deadline: Optional[float] = None,
+        max_upstream_requests: int = DEFAULT_MAX_UPSTREAM_REQUESTS,
     ) -> None:
         _validate_spending_limit(spending_limit_usd)
+        _validate_spending_limit(max_inflight_liability_usd)
         evaluation_mode = _normalize_evaluation_mode(evaluation_mode)
         self.api_key = api_key or ""
         self.run_token = run_token
         self.upstream_base_url = upstream_base_url
         self.evaluation_mode = evaluation_mode
+        limits = httpx.Limits(
+            max_connections=max_upstream_requests,
+            max_keepalive_connections=max_upstream_requests,
+        )
         self.client = (
-            httpx.Client(timeout=300.0) if evaluation_mode.allows_upstream and self.api_key else None
+            httpx.Client(timeout=300.0, limits=limits)
+            if evaluation_mode.allows_upstream and self.api_key
+            else None
         )
         self._response_cache = response_cache
         self._condition = threading.Condition()
@@ -56,9 +73,19 @@ class MeterState:
         self._accepting = True
         self._limit_exceeded = False
         self._spending_limit_usd = spending_limit_usd
+        self._max_inflight_liability_usd = max_inflight_liability_usd
+        self._admission_deadline = admission_deadline
+        self._max_upstream_requests = max_upstream_requests
         self._observed_spending_usd = Decimal()
         self._reserved_spending_usd = Decimal()
+        self._unknown_liability_usd = Decimal()
+        self._peak_reserved_spending_usd = Decimal()
+        self._reservation_wait_seconds = 0.0
         self._active_requests = 0
+        self._active_upstream_requests = 0
+        self._retained_request_bytes = 0
+        self._retained_response_bytes = 0
+        self._peak_active_upstream_requests = 0
         self._active_requests_by_token = {run_token: 0}
         self._usages: List[ModelUsage] = []
         self._usages_by_token: Dict[str, List[ModelUsage]] = {run_token: []}
@@ -135,32 +162,64 @@ class MeterState:
         if run_token is None:
             return 401
         with self._condition:
-            while self._must_wait_for_budget(reservation_usd):
-                self._condition.wait()
-            if not self._accepting:
-                return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
-            self._reserved_spending_usd += reservation_usd
+            rejection_status = self._reserve_liability(reservation_usd)
+            if rejection_status:
+                return rejection_status
             self._active_requests += 1
             self._active_requests_by_token[run_token] += 1
         return 0
 
-    def _must_wait_for_budget(self, reservation_usd: Decimal) -> bool:
-        projected = self._observed_spending_usd + self._reserved_spending_usd + reservation_usd
+    def _reserve_liability(self, reservation_usd: Decimal) -> int:
+        if reservation_usd > self._max_inflight_liability_usd:
+            self._record_liability_error(
+                f"request liability ${reservation_usd:.8f} exceeds in-flight limit "
+                f"${self._max_inflight_liability_usd:.8f}"
+            )
+            return SPENDING_LIMIT_STATUS
+        if self._unknown_liability_usd + reservation_usd > self._max_inflight_liability_usd:
+            self._record_liability_error("unknown billing liability leaves insufficient in-flight capacity")
+            return SPENDING_LIMIT_STATUS
+        started_at = time.monotonic()
+        while self._must_wait_for_liability(reservation_usd):
+            remaining = self._admission_remaining_seconds()
+            if remaining == 0:
+                self._record_liability_error("request liability waited past the evaluation deadline")
+                return SPENDING_LIMIT_STATUS
+            self._condition.wait(remaining)
+        self._reservation_wait_seconds += time.monotonic() - started_at
+        if self._unknown_liability_usd + reservation_usd > self._max_inflight_liability_usd:
+            self._record_liability_error("unknown billing liability leaves insufficient in-flight capacity")
+            return SPENDING_LIMIT_STATUS
+        if not self._accepting:
+            return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
+        self._reserved_spending_usd += reservation_usd
+        self._peak_reserved_spending_usd = max(
+            self._peak_reserved_spending_usd,
+            self._reserved_spending_usd,
+        )
+        return 0
+
+    def _must_wait_for_liability(self, reservation_usd: Decimal) -> bool:
+        projected = self._unknown_liability_usd + self._reserved_spending_usd + reservation_usd
         return (
             self._accepting
             and reservation_usd > 0
             and self._reserved_spending_usd > 0
-            and projected > self._spending_limit_usd
+            and projected > self._max_inflight_liability_usd
         )
+
+    def _admission_remaining_seconds(self) -> Optional[float]:
+        if self._admission_deadline is None:
+            return None
+        return max(self._admission_deadline - time.monotonic(), 0.0)
+
+    def _record_liability_error(self, error: str) -> None:
+        if error not in self._errors:
+            self._errors.append(error)
 
     def reserve_request_spending(self, reservation_usd: Decimal) -> int:
         with self._condition:
-            while self._must_wait_for_budget(reservation_usd):
-                self._condition.wait()
-            if not self._accepting:
-                return SPENDING_LIMIT_STATUS if self._limit_exceeded else 503
-            self._reserved_spending_usd += reservation_usd
-        return 0
+            return self._reserve_liability(reservation_usd)
 
     def finish_request(
         self,
@@ -169,10 +228,13 @@ class MeterState:
         error: str = "",
         run_token: str = "",
         reservation_usd: Decimal = Decimal(),
+        upstream_started: bool = False,
     ) -> None:
         run_token = run_token or self._run_token
         with self._condition:
             self._reserved_spending_usd -= reservation_usd
+            if upstream_started and usage is None:
+                self._unknown_liability_usd += reservation_usd
             if usage is not None:
                 self._usages.append(usage)
                 self._usages_by_token[run_token].append(usage)
@@ -187,6 +249,63 @@ class MeterState:
             self._active_requests_by_token[run_token] -= 1
             self._condition.notify_all()
 
+    def begin_upstream_request(self) -> bool:
+        with self._condition:
+            while self._accepting and self._active_upstream_requests >= self._max_upstream_requests:
+                remaining = self._admission_remaining_seconds()
+                if remaining == 0:
+                    return False
+                self._condition.wait(remaining)
+            if not self._accepting:
+                return False
+            self._active_upstream_requests += 1
+            self._peak_active_upstream_requests = max(
+                self._peak_active_upstream_requests,
+                self._active_upstream_requests,
+            )
+            return True
+
+    def acquire_request_bytes(self, size: int) -> bool:
+        return self._acquire_payload_bytes(size, response=False)
+
+    def acquire_response_bytes(self, size: int) -> bool:
+        return self._acquire_payload_bytes(size, response=True)
+
+    def _acquire_payload_bytes(self, size: int, *, response: bool) -> bool:
+        limit = MAX_RETAINED_RESPONSE_BYTES if response else MAX_RETAINED_REQUEST_BYTES
+        with self._condition:
+            if size > limit:
+                return False
+            retained = self._retained_response_bytes if response else self._retained_request_bytes
+            while self._accepting and retained + size > limit:
+                remaining = self._admission_remaining_seconds()
+                if remaining == 0:
+                    return False
+                self._condition.wait(remaining)
+                retained = self._retained_response_bytes if response else self._retained_request_bytes
+            if not self._accepting:
+                return False
+            if response:
+                self._retained_response_bytes += size
+            else:
+                self._retained_request_bytes += size
+            return True
+
+    def release_request_bytes(self, size: int) -> None:
+        with self._condition:
+            self._retained_request_bytes -= size
+            self._condition.notify_all()
+
+    def release_response_bytes(self, size: int) -> None:
+        with self._condition:
+            self._retained_response_bytes -= size
+            self._condition.notify_all()
+
+    def finish_upstream_request(self) -> None:
+        with self._condition:
+            self._active_upstream_requests -= 1
+            self._condition.notify_all()
+
     def record_error(self, run_token: str, *, error: str) -> None:
         with self._condition:
             self._errors.append(error)
@@ -199,11 +318,17 @@ class MeterState:
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> Optional[CachedResponse]:
         if not self.evaluation_mode.reads_cache or self._response_cache is None:
             raise RuntimeError("response cache lookup is not enabled")
         try:
-            response = self._response_cache.get(path=path, body=body, headers=headers)
+            response = self._response_cache.get(
+                path=path,
+                body=body,
+                headers=headers,
+                before_read=before_read,
+            )
         except CacheEntryError:
             with self._condition:
                 self._cache_errors += 1
@@ -221,15 +346,26 @@ class MeterState:
         path: str,
         body: bytes,
         headers: Mapping[str, str],
+        before_read: Optional[Callable[[], None]] = None,
     ) -> tuple[Optional[CachedResponse], Optional[str]]:
         if self.evaluation_mode is not EvaluationMode.CACHE_FILL or self._response_cache is None:
             raise RuntimeError("response cache fill is not enabled")
         request_key = self._response_cache.request_key(path=path, body=body, headers=headers)
         with self._condition:
             while request_key in self._cache_fills_in_progress:
-                self._condition.wait()
+                if not self._accepting:
+                    raise MeteringError("cache-fill wait stopped during evaluator shutdown")
+                remaining = self._admission_remaining_seconds()
+                if remaining == 0:
+                    raise MeteringError("cache-fill wait exceeded the evaluation deadline")
+                self._condition.wait(remaining)
             try:
-                response = self._response_cache.get(path=path, body=body, headers=headers)
+                response = self._response_cache.get(
+                    path=path,
+                    body=body,
+                    headers=headers,
+                    before_read=before_read,
+                )
             except CacheEntryError:
                 self._cache_errors += 1
                 raise
@@ -309,7 +445,7 @@ class MeterState:
                 status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
                 errors=tuple(errors),
                 active_request_count=active_requests,
-                request_receipts=tuple(self._receipts_by_token[run_token]),
+                request_receipts=_canonical_request_receipts(self._receipts_by_token[run_token]),
                 **self._cache_outcome_fields(),
             )
 
@@ -341,21 +477,21 @@ class MeterState:
                 f"observed API spending ${self._observed_spending_usd:.8f} exceeded run "
                 f"limit ${self._spending_limit_usd:.8f}; in-flight requests may cause bounded overshoot"
             )
+        if self._unknown_liability_usd:
+            errors.append(f"billing outcome is unknown for up to ${self._unknown_liability_usd:.8f}")
         return MeteringOutcome(
             report=CostReport(tuple(self._usages)),
             status=CostStatus.INCOMPLETE if errors else CostStatus.COMPLETE,
             errors=tuple(errors),
             active_request_count=active_request_count,
-            request_receipts=tuple(
-                sorted(
-                    self._request_receipts,
-                    key=lambda receipt: (receipt.document_ordinal, receipt.request_ordinal),
-                )
-            ),
+            request_receipts=_canonical_request_receipts(self._request_receipts),
             **self._cache_outcome_fields(),
         )
 
     def _cache_outcome_fields(self) -> dict[str, object]:
+        maximum_exposure = (
+            self._observed_spending_usd + self._reserved_spending_usd + self._unknown_liability_usd
+        )
         return {
             "evaluation_mode": self.evaluation_mode,
             "cache_hits": self._cache_hits,
@@ -364,6 +500,12 @@ class MeterState:
             "cache_writes": self._cache_writes,
             "cache_write_errors": self._cache_write_errors,
             "cache_errors": self._cache_errors,
+            "reserved_api_cost_usd": self._reserved_spending_usd,
+            "unknown_api_cost_liability_usd": self._unknown_liability_usd,
+            "maximum_api_cost_exposure_usd": maximum_exposure,
+            "peak_reserved_api_cost_usd": self._peak_reserved_spending_usd,
+            "peak_active_upstream_requests": self._peak_active_upstream_requests,
+            "reservation_wait_seconds": self._reservation_wait_seconds,
         }
 
     def stop_accepting(self) -> None:
@@ -390,6 +532,27 @@ class _MeterServer(ThreadingHTTPServer):
     daemon_threads = True
     block_on_close = False
 
+    def __init__(self, server_address, handler, *, max_handlers: int, backlog: int) -> None:
+        self.request_queue_size = backlog
+        self._handler_slots = threading.BoundedSemaphore(max_handlers)
+        super().__init__(server_address, handler)
+
+    def process_request(self, request, client_address) -> None:
+        if not self._handler_slots.acquire(blocking=False):
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self._handler_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._handler_slots.release()
+
 
 class MeteringProxy:
     def __init__(
@@ -398,8 +561,11 @@ class MeteringProxy:
         api_key: Optional[str] = None,
         upstream_base_url: str = "https://api.openai.com",
         spending_limit_usd: Decimal = DEFAULT_SPENDING_LIMIT_USD,
+        max_inflight_liability_usd: Decimal = DEFAULT_PROXY_INFLIGHT_LIABILITY_LIMIT_USD,
         evaluation_mode: EvaluationMode | str = EvaluationMode.FRESH,
         cache_directory: Optional[Path] = None,
+        admission_deadline: Optional[float] = None,
+        max_upstream_requests: int = DEFAULT_MAX_UPSTREAM_REQUESTS,
     ) -> None:
         normalized_mode = _normalize_evaluation_mode(evaluation_mode)
         if normalized_mode.requires_api_key_upfront:
@@ -417,10 +583,19 @@ class MeteringProxy:
             run_token=secrets.token_urlsafe(32),
             upstream_base_url=normalized_upstream_base_url,
             spending_limit_usd=spending_limit_usd,
+            max_inflight_liability_usd=max_inflight_liability_usd,
             evaluation_mode=normalized_mode,
             response_cache=response_cache,
+            admission_deadline=admission_deadline,
+            max_upstream_requests=max_upstream_requests,
         )
-        self._server = _MeterServer(("127.0.0.1", 0), MeterHandler)
+        max_handlers = max_upstream_requests + HANDLER_HEADROOM
+        self._server = _MeterServer(
+            ("127.0.0.1", 0),
+            MeterHandler,
+            max_handlers=max_handlers,
+            backlog=max_handlers,
+        )
         self._server.state = self._state
         self._thread: Optional[threading.Thread] = None
         self._closed = False
@@ -499,3 +674,20 @@ def _normalize_evaluation_mode(evaluation_mode: EvaluationMode | str) -> Evaluat
 def _validate_spending_limit(spending_limit_usd: Decimal) -> None:
     if spending_limit_usd <= 0:
         raise ValueError(f"spending_limit_usd must be positive, got {spending_limit_usd}")
+
+
+def _canonical_request_receipts(receipts: List[RequestReceipt]) -> tuple[RequestReceipt, ...]:
+    attributed = sorted(
+        (receipt for receipt in receipts if receipt.document_ordinal >= 0),
+        key=lambda receipt: (receipt.document_ordinal, receipt.request_ordinal),
+    )
+    aggregate = sorted(
+        (receipt for receipt in receipts if receipt.document_ordinal < 0),
+        key=lambda receipt: (
+            receipt.request_key,
+            receipt.response_content_sha256,
+            receipt.replayed,
+        ),
+    )
+    aggregate = [replace(receipt, request_ordinal=index) for index, receipt in enumerate(aggregate)]
+    return tuple((*aggregate, *attributed))

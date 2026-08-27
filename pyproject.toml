@@ -17,6 +17,7 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 pii-compare = "src.evaluation.compare_cli:entrypoint"
+pii-eval = "src.evaluation.cli:main"
 
 [tool.uv]
 package = true
@@ -24,6 +25,7 @@ package = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+namespaces = true
 
 [dependency-groups]
 dev = [

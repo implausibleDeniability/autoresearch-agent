@@ -33,7 +33,7 @@ def test_diagnostics_preserve_raw_values_matches_errors_and_occurrences(tmp_path
 
     # check
     result = json.loads(path.read_text())
-    assert result["schema_version"] == 7
+    assert result["schema_version"] == 8
     assert list(result) == [
         "schema_version",
         "source_matching_policy",

@@ -13,14 +13,25 @@ from typing import Callable, Dict, Iterator, List, Mapping, Optional, Sequence, 
 
 from src.cost_metering.accounting import CostReport, CostStatus, MeteringOutcome
 from src.cost_metering.proxy import MeteringProxy
+from src.evaluation.execution import (
+    AdmissionStrategy,
+    AdmissionStrategyValue,
+    DEFAULT_MAX_CONCURRENT_DOCUMENTS,
+    ExecutionMode,
+    ExecutionModeValue,
+)
 from src.evaluation.models import PIIItem
-from src.evaluation.run_results import DocumentExecution, DocumentStatus
+from src.evaluation.run_results import DocumentExecution, DocumentStatus, UsageAttributionStatus
+from src.evaluation.worker_frames import (
+    MAX_PII_VALUE_LENGTH,
+    MAX_PREDICTIONS_PER_DOCUMENT,
+    MAX_VALUES_PER_FIELD,
+)
 
 RESULT_FD_ENVIRONMENT = "EVALUATION_RESULT_FD"
 MAX_RESULT_BYTES = 10_000_000
 PROCESS_GRACE_SECONDS = 0.5
 CheckpointCallback = Callable[[Sequence[DocumentExecution], MeteringOutcome], None]
-DEFAULT_MAX_CONCURRENT_DOCUMENTS = 50
 
 
 class WorkerProtocolError(RuntimeError):
@@ -78,7 +89,25 @@ def run_solution_documents(
     source_tokens: Mapping[str, int],
     on_checkpoint: CheckpointCallback,
     max_concurrent_documents: int = DEFAULT_MAX_CONCURRENT_DOCUMENTS,
+    execution_mode: ExecutionModeValue = ExecutionMode.ISOLATED,
+    admission_strategy: AdmissionStrategyValue = AdmissionStrategy.RAMP,
+    run_id: str = "isolated",
 ) -> Tuple[Tuple[DocumentExecution, ...], str]:
+    if execution_mode == ExecutionMode.THREADED:
+        from src.evaluation.threaded_executor import run_threaded_solution_documents
+
+        return run_threaded_solution_documents(
+            texts,
+            module=module,
+            meter=meter,
+            deadline=deadline,
+            environment=environment,
+            source_tokens=source_tokens,
+            on_checkpoint=on_checkpoint,
+            max_concurrent_documents=max_concurrent_documents,
+            admission_strategy=admission_strategy,
+            run_id=run_id,
+        )
     tasks = _document_tasks(texts, source_tokens=source_tokens, meter=meter)
     documents: Dict[int, DocumentExecution] = {}
     termination_category = "none"
@@ -326,6 +355,7 @@ def _parse_document_record(
     usage: CostReport,
     usage_complete: bool,
     latency_seconds: float,
+    usage_attribution_status: str = UsageAttributionStatus.EXACT,
 ) -> DocumentExecution:
     if record.get("ordinal") != ordinal:
         raise WorkerProtocolError(f"worker returned sequence {record.get('ordinal')!r}; expected {ordinal!r}")
@@ -343,6 +373,7 @@ def _parse_document_record(
             source_tokens=source_tokens,
             usage=usage,
             usage_complete=usage_complete,
+            usage_attribution_status=usage_attribution_status,
             latency_seconds=latency_seconds,
             predictions=predictions,
         )
@@ -355,6 +386,7 @@ def _parse_document_record(
         source_tokens=source_tokens,
         usage=usage,
         usage_complete=usage_complete,
+        usage_attribution_status=usage_attribution_status,
         latency_seconds=latency_seconds,
         failure_category=str(record.get("failure_category", "solution_error")),
         error_message=str(record.get("error_message", "solution failed"))[:500],
@@ -365,10 +397,30 @@ def _parse_document_record(
 def _deserialize_predictions(serialized: object) -> Tuple[PIIItem, ...]:
     if not isinstance(serialized, list):
         raise WorkerProtocolError("worker predictions must be a list")
-    try:
-        return tuple(
-            PIIItem(**{field: tuple(values) for field, values in person.items()}) for person in serialized
+    if len(serialized) > MAX_PREDICTIONS_PER_DOCUMENT:
+        raise WorkerProtocolError(
+            f"worker predictions exceeded {MAX_PREDICTIONS_PER_DOCUMENT} people per document"
         )
+    try:
+        predictions = []
+        for person in serialized:
+            fields = {}
+            for field, values in person.items():
+                if not isinstance(values, (list, tuple)):
+                    raise TypeError
+                if len(values) > MAX_VALUES_PER_FIELD:
+                    raise WorkerProtocolError(
+                        f"worker prediction field exceeded {MAX_VALUES_PER_FIELD} values"
+                    )
+                if any(not isinstance(value, str) for value in values):
+                    raise TypeError
+                if any(len(value) > MAX_PII_VALUE_LENGTH for value in values):
+                    raise WorkerProtocolError(
+                        f"worker prediction value exceeded {MAX_PII_VALUE_LENGTH} characters"
+                    )
+                fields[field] = tuple(values)
+            predictions.append(PIIItem(**fields))
+        return tuple(predictions)
     except (AttributeError, TypeError) as error:
         raise WorkerProtocolError("worker predictions do not match the PII schema") from error
 

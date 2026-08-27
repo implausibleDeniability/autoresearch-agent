@@ -13,6 +13,7 @@ import pytest
 
 from src.cost_metering.accounting import CostReport, EvaluationMode, ModelUsage
 from src.cost_metering.proxy import MeteringProxy
+from src.evaluation.execution import AdmissionStrategy, ExecutionMode, MAX_CONCURRENT_DOCUMENTS
 from src.evaluation.cli import (
     Dataset,
     _count_source_tokens,
@@ -44,6 +45,47 @@ def test_cli_accepts_intentional_cent_limit_override():
     parsed = _parse_arguments(("--dataset", "debug", "--cents-limit", "20"))
 
     assert parsed.cents_limit == Decimal("20")
+
+
+def test_cli_exposes_threaded_execution_and_split_cost_limits():
+    parsed = _parse_arguments(
+        (
+            "--dataset",
+            "debug",
+            "--execution-mode",
+            "threaded",
+            "--max-concurrent-documents",
+            "150",
+            "--max-inflight-liability-cents",
+            "100",
+            "--settled-spend-limit-cents",
+            "12",
+            "--admission-strategy",
+            "immediate",
+        )
+    )
+
+    assert parsed.execution_mode == ExecutionMode.THREADED
+    assert parsed.max_concurrent_documents == MAX_CONCURRENT_DOCUMENTS
+    assert parsed.max_upstream_requests == MAX_CONCURRENT_DOCUMENTS
+    assert parsed.max_inflight_liability_cents == Decimal("100")
+    assert parsed.settled_spend_limit_cents == parsed.cents_limit == Decimal("12")
+    assert parsed.admission_strategy == AdmissionStrategy.IMMEDIATE
+
+
+def test_blind_cli_defaults_to_fixed_threaded_topology_and_rejects_isolated_override():
+    blind = ("--dataset", "test-private-v2", "--frozen-commit", "abc1234")
+    parsed = _parse_arguments(blind)
+
+    assert parsed.execution_mode == ExecutionMode.THREADED
+    with pytest.raises(SystemExit):
+        _parse_arguments((*blind, "--execution-mode", ExecutionMode.ISOLATED))
+
+
+@pytest.mark.parametrize("option", ["--max-concurrent-documents", "--max-upstream-requests"])
+def test_cli_rejects_concurrency_above_hard_limit(option):
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", "debug", option, "151"))
 
 
 def test_cli_uses_three_minute_timeout_by_default_and_accepts_the_limit():
@@ -80,6 +122,19 @@ def test_cli_accepts_diagnostics_path():
     assert parsed.diagnostics == Path("diagnostics.json")
 
 
+def test_cli_diagnostics_directory_requires_existing_directory_and_uses_unique_names(tmp_path):
+    missing = tmp_path / "missing"
+    with pytest.raises(SystemExit):
+        _parse_arguments(("--dataset", "debug", "--diagnostics-dir", str(missing)))
+
+    first = _parse_arguments(("--dataset", "debug", "--diagnostics-dir", str(tmp_path)))
+    second = _parse_arguments(("--dataset", "debug", "--diagnostics-dir", str(tmp_path)))
+
+    assert first.diagnostics.parent == second.diagnostics.parent == tmp_path
+    assert first.diagnostics.name.startswith("debug-")
+    assert first.diagnostics != second.diagnostics
+
+
 def test_cli_defaults_to_seed_zero_and_accepts_an_explicit_seed():
     default = _parse_arguments(("--dataset", "debug"))
     explicit = _parse_arguments(("--dataset", "debug", "--seed", "4"))
@@ -114,6 +169,46 @@ def test_cli_accepts_dataset_description_mode():
     parsed = _parse_arguments(("--dataset", "dev-202k", "--describe-dataset"))
 
     assert parsed.describe_dataset
+
+
+def test_preflight_json_never_requires_credentials_or_admits_openai(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment.pop("OPENAI_API_KEY", None)
+    environment["PYTHONPATH"] = str(repository)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--execution-mode",
+            "threaded",
+            "--max-concurrent-documents",
+            "150",
+            "--max-inflight-liability-cents",
+            "100",
+            "--preflight",
+            "--output-format",
+            "json",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert completed.returncode == 0, completed.stderr
+    assert payload["preflight"] == "passed"
+    assert payload["documents"] == 1
+    assert payload["max_concurrent_documents"] == 150
+    assert payload["openai_requests_admitted"] == 0
 
 
 def test_cli_accepts_dynamic_blind_test_name_with_frozen_commit():
@@ -357,7 +452,7 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
 
     # check
     assert completed.returncode == 0, completed.stderr
-    assert "result_schema_version=7" in completed.stdout
+    assert "result_schema_version=8" in completed.stdout
     assert "result_status=complete" in completed.stdout
     assert "score_is_final=true" in completed.stdout
     assert "f_score=1.000000" in completed.stdout
@@ -389,6 +484,9 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
         "termination_category",
         "evaluation_mode",
         "evaluation_seed",
+        "execution_mode",
+        "cost_is_final",
+        "usage_attribution_status",
         "cache_hits",
         "cache_misses",
         "openai_live_requests",
@@ -409,6 +507,12 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
         "completed_source_tokens",
         "pricing_version",
         "api_cost_usd",
+        "reserved_api_cost_usd",
+        "unknown_api_cost_liability_usd",
+        "maximum_api_cost_exposure_usd",
+        "peak_reserved_api_cost_usd",
+        "peak_active_upstream_requests",
+        "reservation_wait_seconds",
         "cost_status",
         "cost_is_comparable",
         "cost_usd_per_million_source_tokens",
@@ -417,12 +521,17 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     ]
     assert "resolved_evaluation_mode=cache-fill" in completed.stderr
     assert "resolved_evaluation_seed=0" in completed.stderr
-    assert "diagnostics written: diagnostics.json (1 documents, schema v7)" in completed.stderr
-    assert "diagnostics_duration_seconds=" not in completed.stderr
+    assert "diagnostics written: diagnostics.json (1 documents, schema v8)" in completed.stderr
+    diagnostics_duration = next(
+        line.removeprefix("diagnostics_duration_seconds=")
+        for line in completed.stderr.splitlines()
+        if line.startswith("diagnostics_duration_seconds=")
+    )
+    assert float(diagnostics_duration) >= 0
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
+    assert diagnostics["schema_version"] == 8
     evidence_path = tmp_path / "diagnostics.evidence.json"
     evidence = json.loads(evidence_path.read_text())
-    assert diagnostics["schema_version"] == 7
     assert evidence["schema_version"] == 1
     assert evidence["artifact_kind"] == "pii_comparison_evidence"
     assert evidence["run"]["result_status"] == "complete"
@@ -440,6 +549,9 @@ def test_evaluator_cli_reports_quality_cost_and_duration(tmp_path: Path):
     assert diagnostics["cache_writes"] == 1
     assert diagnostics["cache_write_errors"] == 0
     assert diagnostics["cache_errors"] == 0
+    journal_path = tmp_path / "diagnostics.json.journal.jsonl"
+    assert stat.S_IMODE(journal_path.stat().st_mode) == 0o600
+    assert len(journal_path.read_text().splitlines()) == 1
     assert diagnostics["documents"][0]["person_matches"] == [{"prediction_index": 0, "ground_truth_index": 0}]
     document_results = json.loads(
         next(
@@ -553,6 +665,74 @@ def test_evaluator_cli_reuses_the_paired_seed_panel_without_credentials_or_upstr
     assert len(list((tmp_path / ".openai-response-cache").rglob("*.json"))) == 5
 
 
+def test_strict_cache_predictions_match_between_isolated_and_threaded_modes(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    for index in range(1, 4):
+        (text_directory / f"doc-{index}.txt").write_text(f"Person {index}")
+    texts = {path.stem: path.read_text() for path in sorted(text_directory.glob("*.txt"))}
+    ground_truth = {document_id: [{"first_name": [text]}] for document_id, text in texts.items()}
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    upstream = ThreadingHTTPServer(("127.0.0.1", 0), _CliUpstreamHandler)
+    thread = threading.Thread(target=upstream.serve_forever, daemon=True)
+    thread.start()
+    host, port = upstream.server_address
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["OPENAI_API_KEY"] = "real-key"
+    environment["OPENAI_UPSTREAM_BASE_URL"] = f"http://{host}:{port}"
+    environment["PYTHONPATH"] = str(repository)
+    fill = subprocess.run(
+        [sys.executable, "-m", "src.evaluation.cli", "--dataset", "debug", "--cache-fill"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+    environment.pop("OPENAI_API_KEY")
+
+    def replay(mode: str, diagnostics: str):
+        return subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.evaluation.cli",
+                "--dataset",
+                "debug",
+                "--cache",
+                "--execution-mode",
+                mode,
+                "--max-concurrent-documents",
+                "4",
+                "--diagnostics",
+                diagnostics,
+            ],
+            cwd=tmp_path,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=20.0,
+            check=False,
+        )
+
+    isolated = replay("isolated", "isolated.json")
+    threaded = replay("threaded", "threaded.json")
+    upstream.shutdown()
+    upstream.server_close()
+    thread.join()
+
+    assert fill.returncode == 0, fill.stderr
+    assert isolated.returncode == threaded.returncode == 0
+    isolated_diagnostics = json.loads((tmp_path / "isolated.json").read_text())
+    threaded_diagnostics = json.loads((tmp_path / "threaded.json").read_text())
+    assert isolated_diagnostics["metrics"] == threaded_diagnostics["metrics"]
+    assert isolated_diagnostics["documents"] == threaded_diagnostics["documents"]
+    assert "cache_hits=4" in isolated.stdout
+    assert "cache_hits=4" in threaded.stdout
+
+
 def test_evaluator_cli_cache_miss_is_partial_without_credentials_or_network(tmp_path: Path):
     _write_cli_fixture(tmp_path)
     repository = Path(__file__).parents[1]
@@ -653,7 +833,7 @@ def extract_pii(text):
 
     # check
     assert completed.returncode == 2, completed.stderr
-    assert "result_schema_version=7" in completed.stdout
+    assert "result_schema_version=8" in completed.stdout
     assert "result_status=partial" in completed.stdout
     assert "score_is_final=false" in completed.stdout
     assert "documents_completed=2" in completed.stdout
@@ -673,7 +853,7 @@ def extract_pii(text):
     assert document_results[1]["failure_category"] == "solution_error"
     assert "secret document content" not in json.dumps(document_results)
     diagnostics = json.loads((tmp_path / "diagnostics.json").read_text())
-    assert diagnostics["schema_version"] == 7
+    assert diagnostics["schema_version"] == 8
     assert diagnostics["lifecycle_status"] == "terminal"
     assert diagnostics["result_status"] == "partial"
     assert diagnostics["cost_is_comparable"] is False
@@ -798,7 +978,237 @@ def extract_pii(text):
     assert "solution_changed_during_run" in evidence["provenance"]["invalidation_reasons"]
 
 
-def test_first_document_timeout_writes_terminal_ledger_and_kills_process_group(tmp_path: Path):
+def test_threaded_evaluation_uses_one_worker_and_preserves_document_order(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    documents = {"doc": "John", "fourth": "Dave", "second": "Jane", "third": "Alex"}
+    for document_id, text in documents.items():
+        (text_directory / f"{document_id}.txt").write_text(text)
+    ground_truth = {document_id: [{"first_name": [text]}] for document_id, text in documents.items()}
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""import os
+import time
+from pathlib import Path
+
+from src.evaluation.models import PIIItem
+
+
+def extract_pii(text):
+    Path(f"worker-pid-{os.getpid()}").touch()
+    time.sleep({"John": 0.3, "Dave": 0.0, "Jane": 0.2, "Alex": 0.1}[text])
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--execution-mode",
+            "threaded",
+            "--admission-strategy",
+            "immediate",
+            "--max-concurrent-documents",
+            "4",
+            "--diagnostics",
+            "threaded.json",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "execution_mode=threaded" in completed.stdout
+    assert "usage_attribution_status=unavailable" in completed.stdout
+    assert len(tuple(tmp_path.glob("worker-pid-*"))) == 1
+    results = json.loads(
+        next(
+            line.removeprefix("document_results_json=")
+            for line in completed.stdout.splitlines()
+            if line.startswith("document_results_json=")
+        )
+    )
+    assert [result["document_id"] for result in results] == list(documents)
+    assert {result["usage_attribution_status"] for result in results} == {"unavailable"}
+    journal = [
+        json.loads(line) for line in (tmp_path / "threaded.json.journal.jsonl").read_text().splitlines()
+    ]
+    assert [record["document"]["ordinal"] for record in journal] == [1, 3, 2, 0]
+
+
+def test_non_reentrant_solution_succeeds_isolated_and_fails_truthfully_threaded(tmp_path: Path):
+    _write_cli_fixture(tmp_path)
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    (text_directory / "second.txt").write_text("Jane")
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(
+        json.dumps(
+            {
+                "doc": [{"first_name": ["John"]}],
+                "second": [{"first_name": ["Jane"]}],
+            }
+        )
+    )
+    (tmp_path / "solution.py").write_text("""import time
+
+from src.evaluation.models import PIIItem
+
+active = 0
+
+
+def extract_pii(text):
+    global active
+    active += 1
+    time.sleep(0.1)
+    if active > 1:
+        raise RuntimeError("solution is not reentrant")
+    active -= 1
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+
+    def evaluate(mode):
+        return subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.evaluation.cli",
+                "--dataset",
+                "debug",
+                "--execution-mode",
+                mode,
+                "--admission-strategy",
+                "immediate",
+                "--max-concurrent-documents",
+                "2",
+            ],
+            cwd=tmp_path,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=10.0,
+            check=False,
+        )
+
+    isolated = evaluate("isolated")
+    threaded = evaluate("threaded")
+
+    assert isolated.returncode == 0, isolated.stderr
+    assert "documents_completed=2" in isolated.stdout
+    assert threaded.returncode == 2, threaded.stderr
+    assert "termination_category=document_failures" in threaded.stdout
+    assert "documents_failed=0" not in threaded.stdout
+
+
+def test_threaded_evaluation_reaches_one_hundred_fifty_active_tasks(tmp_path: Path):
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    text_directory.mkdir(parents=True)
+    documents = {f"doc-{index:03d}": f"Person {index}" for index in range(150)}
+    for document_id, text in documents.items():
+        (text_directory / f"{document_id}.txt").write_text(text)
+    ground_truth = {document_id: [{"first_name": [text]}] for document_id, text in documents.items()}
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(json.dumps(ground_truth))
+    (tmp_path / "solution.py").write_text("""import threading
+
+from src.evaluation.models import PIIItem
+
+barrier = threading.Barrier(150)
+
+
+def extract_pii(text):
+    barrier.wait(timeout=5.0)
+    return [PIIItem(first_name=(text,))]
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--execution-mode",
+            "threaded",
+            "--admission-strategy",
+            "immediate",
+            "--max-concurrent-documents",
+            "150",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=20.0,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "documents_completed=150" in completed.stdout
+    assert "documents_failed=0" in completed.stdout
+
+
+def test_threaded_health_ramp_stops_admission_after_early_failure(tmp_path: Path):
+    text_directory = tmp_path / "data" / "debug" / "texts"
+    text_directory.mkdir(parents=True)
+    documents = {f"doc-{index:03d}": "FAIL" if index == 0 else f"Person {index}" for index in range(40)}
+    for document_id, text in documents.items():
+        (text_directory / f"{document_id}.txt").write_text(text)
+    (tmp_path / "data" / "debug" / "ground_truth.json").write_text(
+        json.dumps({document_id: [] for document_id in documents})
+    )
+    (tmp_path / "solution.py").write_text("""import time
+
+
+def extract_pii(text):
+    if text == "FAIL":
+        time.sleep(0.2)
+        raise RuntimeError("stop ramp")
+    time.sleep(0.01)
+    return []
+""")
+    repository = Path(__file__).parents[1]
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(repository)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.evaluation.cli",
+            "--dataset",
+            "debug",
+            "--execution-mode",
+            "threaded",
+            "--max-concurrent-documents",
+            "40",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=10.0,
+        check=False,
+    )
+
+    assert completed.returncode == 2, completed.stderr
+    assert "documents_failed=1" in completed.stdout
+    assert "documents_not_attempted=8" in completed.stdout
+
+
+@pytest.mark.parametrize("execution_mode", ["isolated", "threaded"])
+def test_first_document_timeout_writes_terminal_ledger_and_kills_process_group(
+    tmp_path: Path, execution_mode: str
+):
     # setup
     _write_cli_fixture(tmp_path)
     marker = tmp_path / "grandchild-survived"
@@ -827,6 +1237,8 @@ def extract_pii(text):
             "debug",
             "--diagnostics",
             "diagnostics.json",
+            "--execution-mode",
+            execution_mode,
             "--timeout",
             "0.2",
         ],
