@@ -1,8 +1,9 @@
+import itertools
 import time
 
-from src.evaluation.matching import match_values, similarity_length_bounds
+from src.evaluation.matching import MATCH, compare_values, match_values, similarity_length_bounds
 from src.evaluation.source_evidence import SourceEvidence, SourceMatchKind, select_source_evidence
-from src.evaluation.source_matching import SourceTextMatcher, SourceValueRole
+from src.evaluation.source_matching import SourceTextMatcher, SourceValueRole, _could_match_values
 
 PREDICTION = SourceValueRole.PREDICTION
 GROUND_TRUTH = SourceValueRole.GROUND_TRUTH
@@ -102,6 +103,35 @@ def test_similarity_length_bounds_include_threshold_edge_lengths():
     assert similarity_length_bounds("x" * 20) == (10, 41)
 
 
+def test_source_matcher_rejects_impossible_candidate_without_evidence():
+    evidence = SourceTextMatcher("zzzzzzzzzz").find("abcdefghij", role=GROUND_TRUTH).evidence
+
+    assert evidence == ()
+
+
+def test_similarity_upper_bound_handles_short_values_and_threshold_boundary():
+    boundary_prediction = "a" * 20
+    boundary_ground_truth = "a" * 13 + "b" * 7
+
+    assert not _could_match_values("ab", ground_truth="zz")
+    assert compare_values(boundary_prediction, ground_truth=boundary_ground_truth).result == MATCH
+    assert _could_match_values(boundary_prediction, ground_truth=boundary_ground_truth)
+
+
+def test_similarity_upper_bound_never_rejects_evaluator_matches():
+    values = tuple(
+        "".join(characters) for length in range(5) for characters in itertools.product("ab.", repeat=length)
+    )
+
+    for prediction, ground_truth in itertools.product(values, repeat=2):
+        comparison = compare_values(prediction, ground_truth=ground_truth)
+
+        assert comparison.result != MATCH or _could_match_values(
+            prediction,
+            ground_truth=ground_truth,
+        )
+
+
 def test_exact_value_assignment_remains_reserved_before_fuzzy_assignment():
     matches = match_values(("Jon", "John"), ground_truth=("John",))
 
@@ -115,7 +145,7 @@ def test_repetitive_source_matching_finishes_within_a_generous_bound():
     match_result = matcher.find("john@example.com", role=GROUND_TRUTH)
 
     assert match_result.evidence == ()
-    assert time.monotonic() - started_at < 3
+    assert time.monotonic() - started_at < 0.5
 
 
 def test_fuzzy_evidence_preserves_evaluator_comparison_direction():
