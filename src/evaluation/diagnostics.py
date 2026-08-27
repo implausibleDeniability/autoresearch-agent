@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple
 
+from src.cost_metering.accounting import cost_is_comparable
 from src.evaluation.results import (
     DocumentEvaluation,
     EntityMetrics,
@@ -25,7 +26,7 @@ from src.evaluation.source_matching import (
     source_matching_policy,
 )
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 7
 CONTEXT_RADIUS = 60
 MAX_OCCURRENCES_PER_VALUE = 20
 
@@ -110,6 +111,7 @@ def _serialize_run(run: EvaluationRun) -> Dict[str, object]:
         "result_status": run.result_status,
         "score_is_final": run.result_status == "complete",
         "termination_category": run.termination_category,
+        "evaluation_seed": run.evaluation_seed,
         "coverage": {
             "total": len(run.documents),
             "completed": statuses.count("completed"),
@@ -122,6 +124,17 @@ def _serialize_run(run: EvaluationRun) -> Dict[str, object]:
         "source_tokens": run.source_tokens,
         "completed_source_tokens": run.completed_source_tokens,
         "cost_status": run.cost.status,
+        "cost_is_comparable": cost_is_comparable(
+            run.cost,
+            result_is_complete=run.result_status == "complete",
+        ),
+        "evaluation_mode": run.cost.evaluation_mode,
+        "cache_hits": run.cost.cache_hits,
+        "cache_misses": run.cost.cache_misses,
+        "openai_live_requests": run.cost.live_requests,
+        "cache_writes": run.cost.cache_writes,
+        "cache_write_errors": run.cost.cache_write_errors,
+        "cache_errors": run.cost.cache_errors,
         "observed_api_cost_usd": str(run.cost.report.total_usd),
         "metering_error_count": len(run.cost.errors),
         "document_results": [serialize_document_execution(document) for document in run.documents],

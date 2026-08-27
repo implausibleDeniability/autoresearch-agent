@@ -39,11 +39,15 @@ Stay creative. Explore approaches at every layer, including prompt and context e
 
 ### Evaluation confidence
 
+Use read-through caching (--cache-fill) for every development evaluation. Force fresh OpenAI responses  (--fresh) only when the hypothesis explicitly measures model-response variability. Use cache-only (--cache) mode when the evaluation must be deterministic and make no live calls. Blind evaluations are always live.
+
+For every experiment, record the cache mode and evaluation seed in `research.md`. For `--fresh`, also explain why the hypothesis requires fresh responses.
+
 **Measure the current baseline.** Before modifying `solution.py`, evaluate the unchanged solution once on `dev-202k` with development diagnostics. Record a complete result as `keep`. Use its score and diagnostics as the starting evidence.
 
 **Treat scores as noisy evidence.** Model-backed evaluations may vary even when the implementation is unchanged.
 
-**Hold sampling settings fixed.** Treat `seed`, `temperature`, and other sampling parameters as experimental controls. Do not vary them to search for a better score. Compare results only when evaluator behavior, labels, model, and sampling settings are compatible.
+**Use paired seeds.** Use seeds `0` through `4`, matching each candidate run to the baseline run with the same seed. If more seeds are needed, use incremental values, starting from 5. Use seeds from 0 to 4 for the first run as well. Outside this fixed panel, hold seed, temperature, and other sampling controls constant.
 
 **Spend only to resolve decision-relevant uncertainty.** Prefer saved results and other free evidence. One run may be enough to reject a clearly inferior candidate; repeat competitive candidates when uncertainty could change the decision. Allow `inconclusive` results and judge repetitions together rather than selecting the best run.
 

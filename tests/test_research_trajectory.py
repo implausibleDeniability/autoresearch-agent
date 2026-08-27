@@ -8,9 +8,11 @@ import pytest
 
 from generate_trajectory import main as generate_main
 from trajectory_data import (
+    COMPARABILITY_FIELDS,
     CURRENT_FIELDS,
     LEGACY_FIELDS,
     REPLAY_FIELDS,
+    SEED_FIELDS,
     Experiment,
     IncumbentState,
     Trajectory,
@@ -249,7 +251,130 @@ def test_replay_schema_preserves_evaluation_mode_and_legacy_defaults_live(tmp_pa
     legacy = read_experiments(legacy_results)
 
     assert replay[0].evaluation_mode == "cached"
+    assert replay[0].cost_is_comparable is False
     assert legacy[0].evaluation_mode == "live"
+    assert legacy[0].cost_is_comparable is True
+
+
+def test_comparability_schema_preserves_new_mode_and_explicit_cost_comparability(tmp_path):
+    results = tmp_path / "results.tsv"
+    _write_results(
+        results,
+        [
+            _experiment(
+                1,
+                "aaaaaaa",
+                0.700,
+                status="keep",
+                evaluation_mode="cache-fill",
+                cost_is_comparable=False,
+            )
+        ],
+        fields=COMPARABILITY_FIELDS,
+    )
+
+    experiments = read_experiments(results)
+
+    assert experiments[0].evaluation_mode == "cache-fill"
+    assert experiments[0].cost_is_comparable is False
+
+
+def test_seed_schema_preserves_evaluation_seed(tmp_path):
+    results = tmp_path / "results.tsv"
+    _write_results(
+        results,
+        [
+            _experiment(
+                1,
+                "aaaaaaa",
+                0.700,
+                status="keep",
+                evaluation_mode="cache-fill",
+                cost_is_comparable=False,
+                evaluation_seed=4,
+            )
+        ],
+        fields=SEED_FIELDS,
+    )
+
+    experiments = read_experiments(results)
+
+    assert experiments[0].evaluation_seed == 4
+
+
+@pytest.mark.parametrize("value", ["-1", "1.5", ""])
+def test_seed_schema_rejects_invalid_evaluation_seed(tmp_path, value):
+    results = tmp_path / "results.tsv"
+    experiment = _experiment(1, "aaaaaaa", 0.700, status="keep", evaluation_seed=0)
+    values = _row_values(experiment)
+    values["evaluation_seed"] = value
+    results.write_text(
+        "\t".join(SEED_FIELDS) + "\n" + "\t".join(values[field] for field in SEED_FIELDS) + "\n"
+    )
+
+    with pytest.raises(TrajectoryError, match="evaluation_seed must be a non-negative integer"):
+        read_experiments(results)
+
+
+def test_cache_fill_requires_explicit_cost_comparability_column(tmp_path):
+    results = tmp_path / "results.tsv"
+    _write_results(
+        results,
+        [_experiment(1, "aaaaaaa", 0.700, status="keep", evaluation_mode="cache-fill")],
+        fields=REPLAY_FIELDS,
+    )
+
+    with pytest.raises(TrajectoryError, match="cache-fill requires the cost_is_comparable column"):
+        read_experiments(results)
+
+
+def test_comparability_schema_rejects_invalid_boolean(tmp_path):
+    results = tmp_path / "results.tsv"
+    experiment = _experiment(1, "aaaaaaa", 0.700, status="keep")
+    values = _row_values(experiment)
+    values["cost_is_comparable"] = "yes"
+    results.write_text(
+        "\t".join(COMPARABILITY_FIELDS)
+        + "\n"
+        + "\t".join(values[field] for field in COMPARABILITY_FIELDS)
+        + "\n"
+    )
+
+    with pytest.raises(TrajectoryError, match="cost_is_comparable must be true or false"):
+        read_experiments(results)
+
+
+@pytest.mark.parametrize(
+    ("evaluation_mode", "status", "cost_is_comparable", "message"),
+    [
+        ("cache", "keep", True, "cached cost must not be comparable"),
+        ("cached", "discard", True, "cached cost must not be comparable"),
+        ("fresh", "keep", False, "fresh cost must be comparable"),
+        ("live", "inconclusive", False, "fresh cost must be comparable"),
+        ("cache-fill", "crash", True, "crash cost must not be comparable"),
+    ],
+)
+def test_comparability_schema_rejects_mode_and_status_mismatch(
+    tmp_path, evaluation_mode, status, cost_is_comparable, message
+):
+    results = tmp_path / "results.tsv"
+    _write_results(
+        results,
+        [
+            _experiment(
+                1,
+                "aaaaaaa",
+                0.700,
+                status=status,
+                evaluation_mode=evaluation_mode,
+                cost_is_comparable=cost_is_comparable,
+            )
+        ],
+        fields=COMPARABILITY_FIELDS,
+    )
+
+    with pytest.raises(TrajectoryError, match=message):
+        read_experiments(results)
 
 
 def test_replay_schema_rejects_unsupported_evaluation_mode(tmp_path):
@@ -295,7 +420,10 @@ def test_reordered_header_and_missing_accepted_state_fail_clearly(tmp_path):
     fields = list(CURRENT_FIELDS)
     fields[0], fields[1] = fields[1], fields[0]
     reordered.write_text("\t".join(fields) + "\n")
-    with pytest.raises(TrajectoryError, match="exact 9-, 10-, or 11-column supported header"):
+    with pytest.raises(
+        TrajectoryError,
+        match="exact 9-, 10-, 11-, 12-, or 13-column supported header",
+    ):
         read_experiments(reordered)
 
     results = tmp_path / "results.tsv"
@@ -577,6 +705,8 @@ def _experiment(
     dataset: str = "dev-202k",
     description: str | None = None,
     evaluation_mode: str = "live",
+    cost_is_comparable: bool = True,
+    evaluation_seed: int | None = None,
 ) -> Experiment:
     title = description or f"Experiment {number}"
     return Experiment(
@@ -592,6 +722,8 @@ def _experiment(
         0.01,
         f"Finding {number}",
         evaluation_mode,
+        cost_is_comparable,
+        evaluation_seed,
     )
 
 
@@ -616,6 +748,8 @@ def _row_values(experiment: Experiment) -> dict[str, str]:
         "budget_cost_usd": f"{experiment.budget_cost_usd:.6f}",
         "finding": experiment.finding,
         "evaluation_mode": experiment.evaluation_mode,
+        "cost_is_comparable": "true" if experiment.cost_is_comparable else "false",
+        "evaluation_seed": "" if experiment.evaluation_seed is None else str(experiment.evaluation_seed),
     }
 
 

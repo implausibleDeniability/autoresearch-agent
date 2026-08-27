@@ -85,13 +85,16 @@ class ResponseCache:
             except FileNotFoundError:
                 pass
 
-    def _entry_path(self, *, path: str, body: bytes, headers: Mapping[str, str]) -> Path:
-        digest = _request_digest(
+    def request_key(self, *, path: str, body: bytes, headers: Mapping[str, str]) -> str:
+        return _request_digest(
             upstream_base_url=self._upstream_base_url,
             path=path,
             body=body,
             headers=headers,
         )
+
+    def _entry_path(self, *, path: str, body: bytes, headers: Mapping[str, str]) -> Path:
+        digest = self.request_key(path=path, body=body, headers=headers)
         return self._directory / str(CACHE_SCHEMA_VERSION) / digest[:2] / f"{digest}.json"
 
     def _prepare_directory(self, directory: Path) -> None:

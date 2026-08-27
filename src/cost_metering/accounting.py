@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from decimal import Decimal
+from enum import StrEnum
 from typing import Literal, Mapping, Optional, Tuple, cast
 
 CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
@@ -24,7 +25,32 @@ class CostStatus:
 
 
 CostStatusValue = Literal["pending", "complete", "incomplete"]
-EvaluationMode = Literal["live", "cached"]
+
+
+class EvaluationMode(StrEnum):
+    CACHE_FILL = "cache-fill"
+    FRESH = "fresh"
+    CACHE = "cache"
+
+    @classmethod
+    def all(cls) -> Tuple[str, ...]:
+        return tuple(mode.value for mode in cls)
+
+    @property
+    def reads_cache(self) -> bool:
+        return self in {self.CACHE_FILL, self.CACHE}
+
+    @property
+    def allows_upstream(self) -> bool:
+        return self in {self.CACHE_FILL, self.FRESH}
+
+    @property
+    def writes_cache(self) -> bool:
+        return self is self.CACHE_FILL
+
+    @property
+    def requires_api_key_upfront(self) -> bool:
+        return self is self.FRESH
 
 
 @dataclass(frozen=True)
@@ -60,6 +86,10 @@ class MeteringError(RuntimeError):
 
 
 class SpendingLimitExceededError(MeteringError):
+    pass
+
+
+class CacheFillFailedError(MeteringError):
     pass
 
 
@@ -112,13 +142,20 @@ class MeteringOutcome:
     status: CostStatusValue
     errors: Tuple[str, ...] = ()
     active_request_count: int = 0
-    evaluation_mode: EvaluationMode = "live"
+    evaluation_mode: EvaluationMode = EvaluationMode.FRESH
     cache_hits: int = 0
     cache_misses: int = 0
     live_requests: int = 0
     cache_writes: int = 0
     cache_write_errors: int = 0
     cache_errors: int = 0
+
+
+def cost_is_comparable(outcome: MeteringOutcome, *, result_is_complete: bool) -> bool:
+    return result_is_complete and (
+        outcome.evaluation_mode is EvaluationMode.FRESH
+        or (outcome.evaluation_mode is EvaluationMode.CACHE_FILL and outcome.cache_hits == 0)
+    )
 
 
 class StreamUsageParser:

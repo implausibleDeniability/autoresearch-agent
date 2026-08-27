@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from openai import OpenAI
@@ -6,7 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.evaluation.models import PIIItem
 
 MODEL = "gpt-4o-mini-2024-07-18"
-SEED = 42
+DEFAULT_SEED = 42
+SEED = int(os.environ.get("EVALUATION_SEED", str(DEFAULT_SEED)))
 MAX_COMPLETION_TOKENS = 8192
 
 PROMPT = """

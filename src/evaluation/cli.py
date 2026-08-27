@@ -14,7 +14,14 @@ from typing import Dict, List, Mapping, Sequence, Tuple
 
 import tiktoken
 
-from src.cost_metering.accounting import CostReport, CostStatus, MeteringOutcome, PRICE_TABLE_VERSION
+from src.cost_metering.accounting import (
+    CostReport,
+    CostStatus,
+    EvaluationMode,
+    MeteringOutcome,
+    PRICE_TABLE_VERSION,
+    cost_is_comparable,
+)
 from src.cost_metering.proxy import DEFAULT_SPENDING_LIMIT_USD, MeteringProxy
 from src.evaluation.diagnostics import (
     SCHEMA_VERSION,
@@ -47,6 +54,8 @@ USD_PER_CENT = Decimal("0.01")
 DEFAULT_UPSTREAM_BASE_URL = "https://api.openai.com"
 UPSTREAM_BASE_URL_ENVIRONMENT = "OPENAI_UPSTREAM_BASE_URL"
 RESPONSE_CACHE_DIRECTORY_NAME = ".openai-response-cache"
+DEFAULT_DEVELOPMENT_SEED = 0
+EVALUATION_SEED_ENVIRONMENT = "EVALUATION_SEED"
 SENSITIVE_CHILD_ENVIRONMENT = {
     "AZURE_OPENAI_API_KEY",
     "OPENAI_ADMIN_KEY",
@@ -55,6 +64,7 @@ SENSITIVE_CHILD_ENVIRONMENT = {
     "OPENAI_ORGANIZATION",
     "OPENAI_PROJECT",
     "OPENAI_PROJECT_ID",
+    EVALUATION_SEED_ENVIRONMENT,
     UPSTREAM_BASE_URL_ENVIRONMENT,
 }
 
@@ -106,6 +116,9 @@ def _run_evaluation(arguments: argparse.Namespace) -> int:
     started_at = time.monotonic()
     blind_test = Dataset.is_blind_test(arguments.dataset)
     _preflight_evaluation(arguments, blind_test=blind_test)
+    if not blind_test:
+        print(f"resolved_evaluation_mode={_development_evaluation_mode(arguments).value}", file=sys.stderr)
+        print(f"resolved_evaluation_seed={_development_evaluation_seed(arguments)}", file=sys.stderr)
     run = _evaluate_with_blind_boundary(arguments, blind_test=blind_test)
     _report_evaluation(
         run,
@@ -181,11 +194,17 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
     texts = _load_texts(arguments.dataset)
     document_tokens = _count_document_tokens(texts)
     source_tokens = sum(document_tokens.values())
-    api_key = None if arguments.cache else _required_environment("OPENAI_API_KEY")
+    blind_test = Dataset.is_blind_test(arguments.dataset)
+    evaluation_mode = EvaluationMode.FRESH if blind_test else _development_evaluation_mode(arguments)
+    api_key = (
+        _required_environment("OPENAI_API_KEY")
+        if evaluation_mode.requires_api_key_upfront
+        else os.environ.get("OPENAI_API_KEY") or None
+    )
     upstream_base_url = os.environ.get(UPSTREAM_BASE_URL_ENVIRONMENT, DEFAULT_UPSTREAM_BASE_URL)
     run_id = uuid.uuid4().hex
     started_at = EvaluationRun.timestamp()
-    if Dataset.is_blind_test(arguments.dataset):
+    if blind_test:
         if api_key is None:
             raise RuntimeError("blind evaluation requires an OpenAI API key")
         return _evaluate_blind_dataset(
@@ -200,6 +219,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             max_concurrent_documents=arguments.max_concurrent_documents,
         )
     documents = _not_attempted_documents(texts, document_tokens=document_tokens)
+    evaluation_seed = _development_evaluation_seed(arguments)
     initial = _make_run(
         run_id=run_id,
         dataset=arguments.dataset,
@@ -209,10 +229,11 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         cost=MeteringOutcome(
             CostReport(()),
             CostStatus.PENDING,
-            evaluation_mode="cached" if arguments.cache else "live",
+            evaluation_mode=evaluation_mode,
         ),
         lifecycle_status=LifecycleStatus.RUNNING,
         termination_category="none",
+        evaluation_seed=evaluation_seed,
         started_at=started_at,
     )
     _checkpoint_diagnostics(initial, arguments=arguments)
@@ -221,7 +242,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         api_key=api_key,
         upstream_base_url=upstream_base_url,
         spending_limit_usd=arguments.cents_limit * USD_PER_CENT,
-        evaluation_mode="cached" if arguments.cache else "live",
+        evaluation_mode=evaluation_mode,
         cache_directory=Path.cwd() / RESPONSE_CACHE_DIRECTORY_NAME,
     ) as meter:
 
@@ -238,6 +259,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
                 cost=outcome,
                 lifecycle_status=LifecycleStatus.RUNNING,
                 termination_category="none",
+                evaluation_seed=evaluation_seed,
                 started_at=started_at,
             )
             _checkpoint_diagnostics(running, arguments=arguments)
@@ -247,15 +269,25 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
             module=SOLUTION_MODULE,
             meter=meter,
             deadline=deadline,
-            environment=_solution_environment(meter),
+            environment=_solution_environment(meter, evaluation_seed=evaluation_seed),
             source_tokens=document_tokens,
             on_checkpoint=checkpoint,
             max_concurrent_documents=arguments.max_concurrent_documents,
         )
         cost = meter.finalize(timeout=max(deadline - time.monotonic(), 0.0))
-    if arguments.cache and cost.cache_errors:
+    if evaluation_mode.reads_cache and cost.cache_errors:
         termination_category = "cache_error"
-    elif arguments.cache and cost.cache_misses:
+    elif evaluation_mode is EvaluationMode.CACHE_FILL and cost.cache_write_errors:
+        termination_category = "cache_write_error"
+    elif evaluation_mode is EvaluationMode.CACHE_FILL and any(
+        "OPENAI_API_KEY is unavailable" in error for error in cost.errors
+    ):
+        termination_category = "cache_fill_requires_api_key"
+    elif evaluation_mode is EvaluationMode.CACHE_FILL and any(
+        "previous cache-fill attempt" in error for error in cost.errors
+    ):
+        termination_category = "cache_fill_failed"
+    elif evaluation_mode is EvaluationMode.CACHE and cost.cache_misses:
         termination_category = "cache_miss"
     elif termination_category == "none" and cost.status == CostStatus.INCOMPLETE:
         termination_category = "metering_incomplete"
@@ -272,6 +304,7 @@ def _evaluate_dataset(arguments: argparse.Namespace) -> EvaluationRun:
         cost=cost,
         lifecycle_status=LifecycleStatus.TERMINAL,
         termination_category=termination_category,
+        evaluation_seed=evaluation_seed,
         started_at=started_at,
     )
     _checkpoint_diagnostics(run, arguments=arguments)
@@ -317,6 +350,7 @@ def _evaluate_blind_dataset(
         cost=MeteringOutcome(report, CostStatus.COMPLETE),
         lifecycle_status=LifecycleStatus.TERMINAL,
         termination_category="none",
+        evaluation_seed=None,
         started_at=started_at,
     )
 
@@ -331,6 +365,7 @@ def _make_run(
     cost: MeteringOutcome,
     lifecycle_status: str,
     termination_category: str,
+    evaluation_seed: int | None,
     started_at: str,
 ) -> EvaluationRun:
     completed = tuple(document for document in documents if document.status == DocumentStatus.COMPLETED)
@@ -350,6 +385,7 @@ def _make_run(
         cost=cost,
         lifecycle_status=lifecycle_status,
         termination_category=termination_category,
+        evaluation_seed=evaluation_seed,
         started_at=started_at,
         updated_at=EvaluationRun.timestamp(),
     )
@@ -464,7 +500,7 @@ def _run_solution(
         module=module,
         meter=meter,
         deadline=time.monotonic() + timeout,
-        environment=_solution_environment(meter),
+        environment=_solution_environment(meter, evaluation_seed=DEFAULT_DEVELOPMENT_SEED),
         source_tokens=tokens,
         on_checkpoint=lambda documents, outcome: None,
         max_concurrent_documents=DEFAULT_MAX_CONCURRENT_DOCUMENTS,
@@ -506,10 +542,17 @@ def _run_batch_solution(
     return _parse_worker_result(completed.stdout)
 
 
-def _solution_environment(meter: MeteringProxy, *, source: Mapping[str, str] = os.environ) -> Dict[str, str]:
+def _solution_environment(
+    meter: MeteringProxy,
+    *,
+    evaluation_seed: int | None = None,
+    source: Mapping[str, str] = os.environ,
+) -> Dict[str, str]:
     environment = {key: value for key, value in source.items() if key not in SENSITIVE_CHILD_ENVIRONMENT}
     environment["OPENAI_API_KEY"] = meter.run_token
     environment["OPENAI_BASE_URL"] = meter.base_url
+    if evaluation_seed is not None:
+        environment[EVALUATION_SEED_ENVIRONMENT] = str(evaluation_seed)
     return environment
 
 
@@ -550,6 +593,7 @@ def _print_development_result(run: EvaluationRun, *, duration_seconds: float) ->
     print(f"score_is_final={'true' if status == ResultStatus.COMPLETE else 'false'}")
     print(f"termination_category={run.termination_category}")
     print(f"evaluation_mode={run.cost.evaluation_mode}")
+    print(f"evaluation_seed={run.evaluation_seed}")
     print(f"cache_hits={run.cost.cache_hits}")
     print(f"cache_misses={run.cost.cache_misses}")
     print(f"openai_live_requests={run.cost.live_requests}")
@@ -574,10 +618,15 @@ def _print_development_result(run: EvaluationRun, *, duration_seconds: float) ->
     cost_key = "api_cost_usd" if status == ResultStatus.COMPLETE else "observed_api_cost_usd"
     print(f"{cost_key}={run.cost.report.total_usd:.8f}")
     print(f"cost_status={run.cost.status}")
-    if status == ResultStatus.COMPLETE:
+    comparable_cost = cost_is_comparable(
+        run.cost,
+        result_is_complete=status == ResultStatus.COMPLETE,
+    )
+    print(f"cost_is_comparable={'true' if comparable_cost else 'false'}")
+    if status == ResultStatus.COMPLETE and comparable_cost:
         normalized = run.cost.report.cost_per_million_source_tokens(run.source_tokens)
         print(f"cost_usd_per_million_source_tokens={normalized:.6f}")
-    elif run.completed_source_tokens:
+    elif status != ResultStatus.COMPLETE and run.completed_source_tokens and comparable_cost:
         normalized = run.cost.report.cost_per_million_source_tokens(run.completed_source_tokens)
         print(f"partial_cost_usd_per_million_completed_source_tokens={normalized:.6f}")
     print(f"duration_seconds={duration_seconds:.6f}")
@@ -608,6 +657,11 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
     )
     parser.add_argument("--diagnostics", type=Path, help="write detailed evaluation diagnostics as JSON")
     parser.add_argument(
+        "--seed",
+        type=_non_negative_integer,
+        help=f"development evaluation seed (default: {DEFAULT_DEVELOPMENT_SEED})",
+    )
+    parser.add_argument(
         "--frozen-commit",
         help="current solution commit required for a final blind test",
     )
@@ -624,10 +678,23 @@ def _parse_arguments(arguments: Sequence[str]) -> argparse.Namespace:
         default=DEFAULT_SPENDING_LIMIT_USD / USD_PER_CENT,
         help="absolute API spending limit in cents (default: 8)",
     )
-    parser.add_argument(
+    cache_mode = parser.add_mutually_exclusive_group()
+    cache_mode.add_argument(
+        "--cache-fill",
+        action="store_true",
+        help=(
+            "read cache; call and charge OpenAI on misses; save successful responses; " "development default"
+        ),
+    )
+    cache_mode.add_argument(
+        "--fresh",
+        action="store_true",
+        help="call and charge OpenAI; bypass cache reads and writes",
+    )
+    cache_mode.add_argument(
         "--cache",
         action="store_true",
-        help="replay cached responses only; fail on a miss without calling OpenAI",
+        help="strict response replay; never call OpenAI; fail on a miss",
     )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--module", default="", help=argparse.SUPPRESS)
@@ -643,17 +710,27 @@ def _validate_arguments(parsed: argparse.Namespace, *, parser: argparse.Argument
         parser.error("--dataset is required")
     if parsed.describe_dataset and parsed.diagnostics:
         parser.error("--describe-dataset cannot be combined with --diagnostics")
-    if parsed.cache and parsed.worker:
-        parser.error("--cache is not allowed with --worker")
-    if parsed.cache and parsed.describe_dataset:
-        parser.error("--cache is not allowed with --describe-dataset")
+    if parsed.seed is not None and parsed.worker:
+        parser.error("--seed is not allowed with --worker")
+    if parsed.seed is not None and parsed.describe_dataset:
+        parser.error("--seed is not allowed with --describe-dataset")
+    selected_mode = next(
+        (flag for flag in ("cache_fill", "fresh", "cache") if getattr(parsed, flag)),
+        None,
+    )
+    if selected_mode and parsed.worker:
+        parser.error("development cache modes are not allowed with --worker")
+    if selected_mode and parsed.describe_dataset:
+        parser.error("development cache modes are not allowed with --describe-dataset")
     if parsed.dataset and Dataset.is_blind_test(parsed.dataset):
         if parsed.describe_dataset:
             parser.error("--describe-dataset is not allowed with blind test datasets")
         if parsed.diagnostics:
             parser.error("--diagnostics is not allowed with blind test datasets")
-        if parsed.cache:
-            parser.error("--cache is not allowed with blind test datasets")
+        if selected_mode:
+            parser.error("development cache modes are not allowed with blind test datasets")
+        if parsed.seed is not None:
+            parser.error("--seed is not allowed with blind test datasets")
         if not parsed.frozen_commit:
             parser.error("test-* datasets require --frozen-commit")
     elif parsed.frozen_commit:
@@ -733,11 +810,33 @@ def _positive_integer(value: str) -> int:
     return parsed
 
 
+def _non_negative_integer(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"expected a non-negative integer, got {value!r}") from error
+    if parsed < 0:
+        raise argparse.ArgumentTypeError(f"expected a non-negative integer, got {value!r}")
+    return parsed
+
+
 def _required_environment(name: str) -> str:
     value = os.environ.get(name, "")
     if not value:
         raise RuntimeError(f"required environment variable {name} is not set")
     return value
+
+
+def _development_evaluation_mode(arguments: argparse.Namespace) -> EvaluationMode:
+    if arguments.fresh:
+        return EvaluationMode.FRESH
+    if arguments.cache:
+        return EvaluationMode.CACHE
+    return EvaluationMode.CACHE_FILL
+
+
+def _development_evaluation_seed(arguments: argparse.Namespace) -> int:
+    return DEFAULT_DEVELOPMENT_SEED if arguments.seed is None else arguments.seed
 
 
 if __name__ == "__main__":
