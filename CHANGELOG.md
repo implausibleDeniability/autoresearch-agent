@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.14.0.0] - 2026-08-27
+
+### Added
+
+- Add `--cache-fill` read-through caching as the development default, plus explicit `--fresh` and
+  strict `--cache` modes. `--fresh` preserves uncached live behavior and no longer writes cache
+  entries.
+- Add evaluator-owned `--seed` control for paired development runs and seed-specific cache reuse.
+
+### Changed
+
+- Record cache mode, seed, activity, and cost comparability in development output, schema-v7
+  diagnostics, and research results while retaining legacy trajectory rows.
+- Require every research experiment to log its cache mode and explain why a fresh run is necessary.
+- Require baseline and comparable five-run `dev-202k` candidates to use the paired seed panel `0`–`4`.
+
+### Fixed
+
+- Share one live fill attempt per exact request within an evaluation and fail safely on missing
+  credentials, malformed entries, strict misses, and cache-write failures.
+
 ## [0.13.0.1] - 2026-08-23
 
 ### Changed
