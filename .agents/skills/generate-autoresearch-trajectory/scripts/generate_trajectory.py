@@ -32,7 +32,11 @@ def main(arguments: list[str] | None = None) -> int:
 
 def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate an autoresearch trajectory SVG.")
-    parser.add_argument("--results", default="results.tsv", help="experiment TSV (default: results.tsv)")
+    parser.add_argument(
+        "--results",
+        default="workspace/results.tsv",
+        help="experiment TSV (default: workspace/results.tsv)",
+    )
     blind_input = parser.add_mutually_exclusive_group()
     blind_input.add_argument(
         "--run-log",
