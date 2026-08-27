@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.1.0] - 2026-08-27
+
+### Changed
+
+- Reduce cached `dev-202k` diagnostics generation from about 75.6 seconds to 9.3 seconds by reusing
+  indexed candidate windows and skipping comparisons that cannot reach the evaluator's match
+  threshold, without changing the generated diagnostics.
+
 ## [0.16.0.0] - 2026-08-27
 
 ### Added
